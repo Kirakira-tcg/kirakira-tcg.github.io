@@ -167,3 +167,12 @@ nav .scanNav i{background:linear-gradient(135deg,var(--ac),#ff8a5c);color:#fff;b
 #livePhoto.pulse{animation:shotpulse 1s ease-in-out infinite;box-shadow:0 0 0 0 rgba(255,216,77,.8)}
 @keyframes shotpulse{0%{box-shadow:0 0 0 0 rgba(255,216,77,.8);transform:scale(1)}50%{box-shadow:0 0 0 12px rgba(255,216,77,0);transform:scale(1.07)}100%{box-shadow:0 0 0 0 rgba(255,216,77,0);transform:scale(1)}}
 .camwrap{position:relative}.focusring{position:absolute;width:64px;height:64px;margin:-32px 0 0 -32px;border:3px solid #ffd84d;border-radius:50%;pointer-events:none;z-index:5;animation:fring .9s ease-out forwards}@keyframes fring{0%{transform:scale(1.6);opacity:0}25%{transform:scale(1);opacity:1}100%{transform:scale(.9);opacity:0}}
+
+#scanBanner{position:fixed;left:50%;transform:translateX(-50%);z-index:60;display:flex;align-items:center;gap:10px;max-width:92vw;padding:12px 18px;border-radius:999px;background:linear-gradient(135deg,#ffd84d,#ff8a5c);color:#1a1240;font-weight:800;font-size:1rem;box-shadow:0 6px 24px rgba(0,0,0,.5),0 0 0 3px rgba(255,255,255,.25)}
+#scanBanner.bad{background:linear-gradient(135deg,#ff5c7a,#c2185b);color:#fff}#scanBanner.ok{background:linear-gradient(135deg,#4cd964,#1fa37a);color:#05210f}
+#liveStat{position:absolute;left:50%;bottom:10px;transform:translateX(-50%);z-index:6;display:flex;align-items:center;gap:8px;max-width:90%;padding:8px 14px;border-radius:999px;background:rgba(10,8,30,.82);color:#fff;font-weight:800;font-size:.95rem;border:2px solid #ffd84d;pointer-events:none}
+#liveStat.bad{border-color:#ff5c7a}#liveStat.ok{border-color:#4cd964}
+#scanBanner .spin,#liveStat .spin{display:none;width:18px;height:18px;flex:0 0 18px;border-radius:50%;border:3px solid currentColor;border-top-color:transparent;animation:spinr .8s linear infinite}
+#scanBanner.busy .spin,#liveStat.busy .spin{display:inline-block}@keyframes spinr{to{transform:rotate(360deg)}}
+[hidden]#scanBanner,#scanBanner[hidden],#liveStat[hidden]{display:none!important}
+.camflash{position:absolute;inset:0;background:#fff;z-index:7;pointer-events:none;animation:cflash .45s ease-out forwards}@keyframes cflash{from{opacity:.9}to{opacity:0}}#livePhoto:disabled{opacity:.6}
