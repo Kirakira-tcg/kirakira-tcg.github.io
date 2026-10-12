@@ -74,6 +74,18 @@ const tdxNeed=x=>x.ownPrice==null&&(x.price==null||(x.lang&&x.lang!=='EN'));
 async function tdxFill(x){if(!window.Prices||x.ownPrice!=null)return false;const lang=(x.lang||'DE').toLowerCase(),name=(x.name||'').replace(/\s*\(.*\)\s*$/,'').trim(),num=String(x.number||'').split('/')[0]||null;
  let r=null;try{r=await Prices.lookup(name,lang,x.setId||null,num);if(!(r&&r.best)&&lang!=='en')r=await Prices.lookup(name,'en',null,num)}catch(e){console.warn(e)}
  if(!(r&&r.best))return false;x.price=r.best.eur;x.tdx={label:r.label,id:r.id,src:r.best.source,conv:r.best.umgerechnet,url:r.best.url};return true}
+// Type-ahead mit Bildvorschlägen (Prices.suggest / TCGdex)
+function attachSuggest(inp,onPick,getLang,anchor){if(!inp||!window.Prices||!Prices.suggest)return;const box=document.createElement('div');box.className='sugBox';box.hidden=true;(anchor||inp).insertAdjacentElement('afterend',box);
+ let t=0,seq=0;const hide=()=>{box.hidden=true;box.innerHTML=''};
+ inp.setAttribute('autocomplete','off');
+ inp.addEventListener('input',()=>{clearTimeout(t);const q=inp.value.trim();if(q.length<2){seq++;hide();return}
+  t=setTimeout(async()=>{const my=++seq;let L=[];try{L=await Prices.suggest(q,(getLang&&getLang())||'de',24)}catch(e){}
+   if(my!==seq)return;if(!L.length){hide();return}
+   box.innerHTML=L.map((c,i)=>`<button type="button" class="sugItem" data-i="${i}">${c.img?`<img src="${esc(c.img)}" alt="" loading="lazy">`:'<div class="sugNo">?</div>'}<b>${esc(c.name)}</b><span>${esc(c.set.name)} ${esc(c.localId)}</span></button>`).join('');box.hidden=false;
+   box.querySelectorAll('.sugItem').forEach(b=>b.onclick=()=>{const c=L[+b.dataset.i];hide();onPick(c)})},300)});
+ inp.addEventListener('keydown',e=>{if(e.key==='Escape')hide()});return{hide}}
+const sugMain=attachSuggest($('#qName'),c=>{$('#qName').value=c.name;$('#qNum').value=c.localId.replace(/^0+(?=\d)/,'');window.pendingScan=null;search(c.name,$('#qNum').value,'')},()=>(window.scanLang||'DE').toLowerCase(),$('#searchForm'));
+$('#searchForm').addEventListener('submit',()=>sugMain&&sugMain.hide());
 function addDialog(c,mode,sealed){const manual=!c;const f=$('#dlgForm');const p=c?cmPrice(c):null;
  f.innerHTML=`<h3>${mode==='wish'?'Zur Wunschliste':sealed?'Sealed-Produkt hinzufügen':'Zur Sammlung'}</h3>
  ${manual?`<label>Name<input name="name" required placeholder="${sealed?'z.B. 30 Jahre Booster Bundle':''}"></label><label>Set<input name="set"></label>${sealed?'':'<label>Nummer<input name="number"></label>'}<label>Bild-URL (optional)<input name="img"></label>`:`<p><b>${esc(c.name)}</b> – ${esc(c.set.name)} ${c.number}<br>Cardmarket-Trend: ${money(p)}<br><span class="muted small" id="tdxLbl"></span></p>`}
@@ -83,6 +95,7 @@ function addDialog(c,mode,sealed){const manual=!c;const f=$('#dlgForm');const p=
  <label>Anzahl<input name="qty" type="number" value="1" min="1"></label><label>Kaufpreis pro Stück (€)<input name="buy" type="number" step="0.01" value="0"></label>`}
  <label>${manual?'Aktueller Wert (€)':'Eigener Preis (€, leer = Cardmarket)'}<input name="price" type="number" step="0.01" ${manual?'required':''}></label>
  <div class="row"><button value="ok">Speichern</button><button value="cancel" formnovalidate>Abbrechen</button></div>`;
+ if(manual&&!sealed&&f.name)attachSuggest(f.name,c=>{f.name.value=c.name;if(f.set)f.set.value=c.set.name;if(f.number)f.number.value=c.localId;if(f.img&&c.img)f.img.value=c.img.replace(/\/low\.webp$/,'/high.webp')},()=>(f.lang&&f.lang.value||'DE').toLowerCase(),f.name.closest('label'));
  const dlg=$('#dlg');dlg.returnValue='';dlg.showModal();dlg.onclose=()=>{if(dlg.returnValue!=='ok')return;const v=Object.fromEntries(new FormData(f));
   const base=manual?{manual:true,name:v.name,set:v.set,number:v.number||'',img:v.img}:{apiId:c.id,name:c.name,set:c.set.name,number:c.number,img:c.images.small,apiPrice:p,cm:cmInfo(c),types:c.types||[]};
   if(sealed)base.type='sealed';const own=v.price?parseFloat(v.price):null;

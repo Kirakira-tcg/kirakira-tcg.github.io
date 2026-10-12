@@ -54,6 +54,19 @@ async function lookup(name,lang,setId,number){lang=normLang(lang);
  for(const s of cand){const c=await getCard(s.id,lang);if(c&&c.pricing&&(c.pricing.cardmarket||c.pricing.tcgplayer))return normalize(c,lang)}
  return cand[0]?normalize(await getCard(cand[0].id,lang),lang):null}
 
-root.Prices={lookup,byId:async(id,lang)=>{lang=normLang(lang);const c=await getCard(id,lang);return c?normalize(c,lang):null},search,toEUR,rate,
+// Type-ahead: suggest(query, lang='de', limit=24) -> [{id,name,localId,set:{id,name},img}]
+const SET_TTL=7*24*3600e3;
+async function setNames(lang){const k='sets:'+lang;const c=cget(k,SET_TTL);if(c)return c;
+ try{const d=await getJSON(`${BASE}/${lang}/sets`)||[];const m={};for(const s of d)m[s.id]=s.name;cset(k,m);return m}catch(e){return{}}}
+const setIdOf=c=>{const suf='-'+c.localId;return c.id.endsWith(suf)?c.id.slice(0,-suf.length):c.id.replace(/-[^-]*$/,'')};
+async function suggestLang(q,lang,limit){let list;try{list=await search(q,lang)}catch(e){return[]}
+ if(!Array.isArray(list)||!list.length)return[];const ql=q.toLowerCase(),names=await setNames(lang);
+ const rank=c=>{const n=(c.name||'').toLowerCase();return (n===ql?0:n.startsWith(ql)?1:n.split(/[\s-]/).some(w=>w.startsWith(ql))?2:3)+(c.image?0:4)};
+ return list.filter(c=>c&&c.id&&c.name).map((c,i)=>({c,i,r:rank(c)})).sort((a,b)=>a.r-b.r||a.i-b.i).slice(0,limit).map(({c})=>{const sid=setIdOf(c);
+  return{id:c.id,name:c.name,localId:c.localId||'',set:{id:sid,name:names[sid]||sid},img:c.image?c.image+'/low.webp':null,lang}})}
+async function suggest(query,lang='de',limit=24){const q=String(query||'').trim();if(q.length<2)return[];lang=normLang(lang);limit=Math.max(1,Math.min(+limit||24,100));
+ let r=await suggestLang(q,lang,limit);if(!r.length&&lang!=='en')r=await suggestLang(q,'en',limit);return r}
+
+root.Prices={lookup,suggest,byId:async(id,lang)=>{lang=normLang(lang);const c=await getCard(id,lang);return c?normalize(c,lang):null},search,toEUR,rate,
  clearCache(){mem.clear();store={c:{}};save()},CACHE_KEY:KEY,LANGS};
 })(typeof window!=='undefined'?window:globalThis);
