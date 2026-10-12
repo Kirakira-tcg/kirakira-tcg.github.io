@@ -450,7 +450,7 @@ async function startLive2(){const st=$('#scanStatus2');
 function stopLive(){live.switched=false;clearInterval(live.timer);live.timer=null;if(live.stream){live.stream.getTracks().forEach(t=>t.stop());live.stream=null}
  const v=$('#liveVideo');if(v)v.srcObject=null;$('#scanbox')?.classList.remove('live');live.torch=false;live.ic=null;const fs=$('.frame span');if(fs)fs.textContent='Karte im Rahmen platzieren'}
 const wto=(p,ms,m)=>Promise.race([p,new Promise((_,j)=>setTimeout(()=>j(new Error(m||'Zeitüberschreitung')),ms))]);
-function lStat(t){bannerSet(t);$('#scanStatus2').textContent=t;const s=$('.frame span');if(s)s.textContent=t}
+function lStat(t){$('#scanStatus2').textContent=t}
 function needOCR(){if(window.Tesseract)return true;if(!window._tLoad){window._tLoad=1;const s=document.createElement('script');s.src='https://cdn.jsdelivr.net/npm/tesseract.js@5/dist/tesseract.min.js';s.onload=()=>{window._tLoad=0};s.onerror=()=>{window._tLoad=0};document.head.append(s)}return false}
 // Kamera = nur Sucher; nur '📸 Foto' löst aus
 async function liveTick(){return liveShoot()}
@@ -469,9 +469,15 @@ async function liveShoot(){const btn=$('#livePhoto');if(!live.stream||live.shoot
  catch(e){console.warn('shoot',e);lStat('❌ '+(e&&e.message||e)+' – näher ran / mehr Licht, dann erneut 📸 Foto');if(btn)btn.classList.add('pulse');if(/Texterkennung/.test(e&&e.message||'')){delete ocrW['deu+eng'];delete ocrW.num}}
  finally{live.shooting=false;if(btn)btn.disabled=false}}
 function camFlash(){const w=$('#scanbox .camwrap');if(!w)return;const f=document.createElement('div');f.className='camflash';w.append(f);setTimeout(()=>f.remove(),450)}
+// Standbild: bevorzugt Canvas aus dem laufenden Video (stört den Stream nicht); takePhoto nur bei kleinem Videobild; Magenta/Schwarz-Frames verwerfen
+function frameBad(c){try{const k=document.createElement('canvas');k.width=32;k.height=32;const g=k.getContext('2d',{willReadFrequently:true});g.drawImage(c,0,0,32,32);const d=g.getImageData(0,0,32,32).data;let r=0,G=0,b=0;for(let i=0;i<d.length;i+=4){r+=d[i];G+=d[i+1];b+=d[i+2]}const n=d.length/4;r/=n;G/=n;b/=n;
+ window.frameDbg=[r,G,b].map(Math.round);if(r+G+b<36)return 'dunkel';if(r>60&&b>60&&G<.6*Math.min(r,b))return 'magenta';return ''}catch(e){return ''}}
+function vidFrame(v){if(!v.videoWidth)return null;const c=document.createElement('canvas');c.width=v.videoWidth;c.height=v.videoHeight;c.getContext('2d').drawImage(v,0,0,c.width,c.height);return c}
 async function grabStill(v){try{await wto(focusPass(),1200,'focus')}catch(e){}if(!live.stream)return null;
- if(live.ic&&!live.icBad){try{const b=await wto(live.ic.takePhoto(),3000,'takePhoto');if(b&&b.size)return await toCanvas(b,4000)}catch(e){console.warn('takePhoto',e);live.icBad=true}}
- if(!v.videoWidth)return null;const c=document.createElement('canvas');c.width=v.videoWidth;c.height=v.videoHeight;c.getContext('2d').drawImage(v,0,0,c.width,c.height);return c}
+ let c=null;for(let i=0;i<4;i++){c=vidFrame(v);if(c&&!frameBad(c))break;await new Promise(r=>setTimeout(r,250))}
+ if(c&&!frameBad(c)&&c.width>=1000)return c;
+ if(live.ic&&!live.icBad){try{const b=await wto(live.ic.takePhoto(),3000,'takePhoto');if(b&&b.size){const p=await toCanvas(b,1920);if(!frameBad(p))return p}}catch(e){console.warn('takePhoto',e)}live.icBad=true}
+ return c}
 const CAMKEY='kartenapp_cam';
 const isBackLbl=l=>/back|rear|rück|environment|facing back|\b0\b/i.test(l),isBadLbl=l=>/ultra|wide|weit|tele|macro|makro|depth|tiefe|front|user/i.test(l);
 async function backCams(){try{const d=(await navigator.mediaDevices.enumerateDevices()).filter(x=>x.kind==='videoinput');const b=d.filter(x=>!/front|user|selfie/i.test(x.label));
@@ -483,7 +489,7 @@ async function camSetup(tr,caps){const fm=caps.focusMode||[];live.fm=fm;live.cap
  if(!fm.length&&!live.switched){live.switched=true;let sv='';try{sv=localStorage.getItem(CAMKEY)||''}catch(e){}
   const cur=tr.getSettings?.().deviceId,lbl=tr.label||'',best=cams[0];
   if(!sv&&best&&best.deviceId&&best.deviceId!==cur&&(isBadLbl(lbl)||!isBackLbl(lbl))){if(await camOpen(best.deviceId))return true}
-  try{const w=(caps.width&&caps.width.max)||0;await tr.applyConstraints({width:{ideal:w>=3840?3840:1920},height:{ideal:w>=3840?2160:1080}})}catch(e){}}
+}
  return false}
 async function camOpen(id){try{const s=await navigator.mediaDevices.getUserMedia({video:{deviceId:{exact:id},width:{ideal:1920},height:{ideal:1080}},audio:false});
  if(live.stream)live.stream.getTracks().forEach(t=>t.stop());live.stream=s;return true}catch(e){console.warn('camOpen',e);return false}}
@@ -492,11 +498,11 @@ async function camNext(){const cams=live.cams||await backCams();if(cams.length<2
  if(await camOpen(n.deviceId)){try{localStorage.setItem(CAMKEY,n.deviceId)}catch(e){}lStat('📷 Kamera: '+(n.label||'Kamera '+((i+1)%cams.length+1)));clearInterval(live.timer);await startLive2()}}
 async function doFocus(x,y,wait){const tr=live.stream?.getVideoTracks()[0];if(!tr)return;let caps={};try{caps=tr.getCapabilities?.()||{}}catch(e){}const fm=caps.focusMode||[];const adv={};
  if(caps.pointsOfInterest&&x!=null)adv.pointsOfInterest=[{x,y}];
- if(fm.includes('single-shot'))adv.focusMode='single-shot';else if(fm.includes('manual')&&caps.focusDistance){adv.focusMode='manual';adv.focusDistance=Math.min(caps.focusDistance.max,Math.max(caps.focusDistance.min,0.12))}else if(fm.includes('continuous'))adv.focusMode='continuous';
- if(!Object.keys(adv).length)return;try{await tr.applyConstraints({advanced:[adv]})}catch(e){console.warn('focus',e)}
+ if(fm.includes('single-shot'))adv.focusMode='single-shot';else if(fm.includes('continuous'))adv.focusMode='continuous';
+ if(!adv.focusMode)return;try{await tr.applyConstraints({advanced:[adv]})}catch(e){console.warn('focus',e)}
  if(wait)await new Promise(r=>setTimeout(r,wait));
  if(adv.focusMode!=='continuous'&&fm.includes('continuous'))setTimeout(()=>{const t=live.stream?.getVideoTracks()[0];t&&t.applyConstraints({advanced:[{focusMode:'continuous'}]}).catch(()=>{})},wait?300:1500)}
-function focusPass(){return doFocus(.5,.5,600)}
+function focusPass(){const tr=live.stream?.getVideoTracks()[0];let fm=[];try{fm=tr.getCapabilities?.().focusMode||[]}catch(e){}return fm.includes('single-shot')?doFocus(null,null,600):Promise.resolve()}
 function focusRing(px,py){const w=$('#scanbox .camwrap');if(!w)return;const r=w.getBoundingClientRect(),d=document.createElement('div');d.className='focusring';d.style.left=(px-r.left)+'px';d.style.top=(py-r.top)+'px';w.append(d);setTimeout(()=>d.remove(),900)}
 $('#liveVideo').addEventListener('click',e=>{if(!live.stream)return;const r=e.currentTarget.getBoundingClientRect();focusRing(e.clientX,e.clientY);$('#scanStatus2').textContent='Scharfstellen…';doFocus((e.clientX-r.left)/r.width,(e.clientY-r.top)/r.height,0)});
 $('#camSwitch')?.addEventListener('click',e=>{e.preventDefault();camNext()});
@@ -526,7 +532,7 @@ function bannerEls(){let b=$('#scanBanner');if(!b){b=document.createElement('div
  let o=$('#liveStat');if(!o){o=document.createElement('div');o.id='liveStat';o.innerHTML='<i class="spin"></i><span></span>';$('#scanbox .camwrap')?.append(o)}return[b,o]}
 let bT=0;function bannerSet(t){t=(t||'').trim();const [b,o]=bannerEls();const busy=/^[⏳🔍📸]|…$|lädt|wird/.test(t)&&!/^❌|^✅|^Erkannt/.test(t),bad=/^❌|^⚠️|Nicht/.test(t);
  const h=$('header');b.style.top=(h?h.getBoundingClientRect().bottom:0)+6+'px';
- for(const e of [b,o]){e.querySelector('span').textContent=t;e.classList.toggle('busy',busy);e.classList.toggle('bad',bad);e.classList.toggle('ok',/^✅|^Erkannt/.test(t))}
- const onScan=$('#v-scan')?.classList.contains('active');b.hidden=!t||!onScan;o.hidden=!t||!live.stream;clearTimeout(bT);if(t&&!busy)bT=setTimeout(()=>{b.hidden=true},bad?9000:5000)}
+ for(const e of [b,o]){e.querySelector('span').textContent=t;e.classList.toggle('busy',busy);e.classList.toggle('bad',bad);e.classList.toggle('ok',/^✅|^Erkannt/.test(t))}o.hidden=true;
+ const onScan=$('#v-scan')?.classList.contains('active');b.hidden=!t||!onScan;clearTimeout(bT);if(t&&!busy)bT=setTimeout(()=>{b.hidden=true},bad?9000:5000)}
 (()=>{const s=$('#scanStatus2');if(!s)return;new MutationObserver(()=>bannerSet(s.textContent)).observe(s,{childList:true,characterData:true,subtree:true});
  $$('nav button').forEach(x=>x.addEventListener('click',()=>{if(x.dataset.v!=='v-scan'){const b=$('#scanBanner');if(b)b.hidden=true}}))})();
