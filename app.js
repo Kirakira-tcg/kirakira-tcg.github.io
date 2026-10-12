@@ -273,13 +273,22 @@ async function analyze(src,st=()=>{}){const t0=performance.now();src=cardCrop(sr
 function langLatin(t){const l=detectLang(t.replace(/[\u3040-\u9fff\uac00-\ud7af]/g,''));if(l)return l;if(/\b(BASIS|PHASE|ENERGIE|Energie|Entwickelt|KP)\b/.test(t))return'DE';if(/\b(BASIC|STAGE|ENERGY|Energy|HP)\b/.test(t))return'EN';return'DE'}
 // Müll-Namen (z.B. 'dhs') verwerfen
 function okName(x){const l=(x.match(/[A-Za-zÄÖÜäöüßé]/g)||[]).length;if(l<3||!/[aeiouyäöüé]/i.test(x))return false;if(x===x.toLowerCase()&&l<4)return false;return true}
+// Fuzzy-Korrektur gegen DE/EN-Namensliste (OCR-Verwechsler kosten weniger)
+const OCRC=['ou0qd','nhmr','il1jt','ce','b8','s5','g9'];const ocrSim=(a,b)=>OCRC.some(g=>g.includes(a)&&g.includes(b));
+function lev(a,b){let p=Array.from({length:b.length+1},(_,j)=>j);for(let i=1;i<=a.length;i++){const c=[i];for(let j=1;j<=b.length;j++)c[j]=Math.min(p[j]+1,c[j-1]+1,p[j-1]+(a[i-1]===b[j-1]?0:ocrSim(a[i-1],b[j-1])?.5:1));p=c}return p[b.length]}
+const nrm=x=>(x||'').toLowerCase().replace(/[^a-zäöüß]/g,'');let NAMES=null;
+function fuzzyName(x){const q=nrm(x);if(q.length<3)return null;if(!NAMES){NAMES=new Map();for(const[k,v]of Object.entries(DE)){NAMES.set(nrm(k),k.charAt(0).toUpperCase()+k.slice(1));NAMES.set(nrm(v),v)}}
+ if(NAMES.has(q))return NAMES.get(q);let best=null,bd=1e9;for(const[k,v]of NAMES){if(Math.abs(k.length-q.length)>2)continue;const d=lev(q,k);if(d<bd){bd=d;best=v}}
+ return best&&bd<=Math.max(1,0.4*Math.max(q.length,nrm(best).length))?best:null}
+window.fuzzyName=fuzzyName;
 const knownName=x=>!!DE[x.toLowerCase()]||Object.values(DE).some(v=>v.toLowerCase()===x.toLowerCase());
 // Name aus dem Namensstreifen oben links (nach BASIS/PHASE), Energie-Karten erkennen
 function parseTop(t){t=t||'';const e=t.match(/basis[^\n]{0,4}?([A-Za-zäöü]{4,})?[^\n]{0,4}?energie/i)||t.match(/basic\s+(\w+)\s+energy/i);
  if(e||/basis-?\s*energie/i.test(t)||/ENERGIE\b/.test(t)&&!/\bKP\b|\d{2,3}\s*$/m.test(t)){let ty=e&&e[1]&&ENERGY[e[1].toLowerCase()];if(!ty)ty=window.energyHue||'';if(ty)return{name:'',energy:ty};if(/basis.{0,6}energie/i.test(t))return{name:'',energy:window.energyHue||'Psychic',guess:1}}
  const lines=t.split('\n').map(l=>l.trim()).filter(Boolean);
  for(const l of lines.slice(0,4)){const w=l.replace(/[^A-Za-zÄÖÜäöüßé\- ]/g,' ').split(/\s+/).map(x=>x.replace(/^-+|-+$/g,'')).filter(x=>x.length>=3&&/[a-zäöü]/.test(x)&&okName(x)&&!/^(BASIS|BASIC|STAGE|PHASE|KP|HP|PV|PS|Entwickelt|Evolves|aus|from)$/i.test(x));
-  if(w.length){const k=w.find(knownName)||w[0];return{name:/\bex\b/.test(l)?k+' ex':k,energy:''}}}
+  const fz=fuzzyName(l.replace(/[^A-Za-zÄÖÜäöüßé\- ]/g,' ').trim().split(/\s+/).filter(x=>!/^(BASIS|BASIC|STAGE|PHASE|KP|HP)$/i.test(x)).slice(0,2).join(''));if(fz)return{name:/\bex\b/.test(l)?fz+' ex':fz,energy:''};
+  if(w.length){const k=w.find(knownName)||w.map(fuzzyName).find(Boolean)||w[0];return{name:/\bex\b/.test(l)?k+' ex':k,energy:''}}}
  return{name:'',energy:''}}
 // Set über Set-Code (z.B. 30C) + Gesamtzahl
 function findSet(t,num){const tot=(num||'').split('/')[1];const codes=Object.assign({},SETCODES);for(const s of SETS)if(s.ptcgoCode&&!codes[s.ptcgoCode])codes[s.ptcgoCode]={id:s.id,name:s.name,total:s.printedTotal};
@@ -306,7 +315,8 @@ function scanPick(r){const P=$('#scanPick');P.hidden=false;const noNum=r.name&&!
  const G=$('#spGrid');let gT=0,gN=0;
  async function grid(){const n=++gN,name=$('#spName').value.trim();if(name.length<3||!window.Prices){G.innerHTML='';return}G.innerHTML='<p class="muted small">Lädt Karten…</p>';
   let lang=($('#spLang').value||'DE').toLowerCase();if(lang==='jp')lang='ja';let L=[];
-  try{L=(await Prices.search(name,lang)||[]).filter(c=>c.image);if(!L.length&&lang!=='en')L=(await Prices.search(name,'en')||[]).filter(c=>c.image)}catch(e){}
+  const get=async(q,lg)=>Prices.suggest?(await Prices.suggest(q,lg,60)||[]).map(c=>({id:c.id,localId:c.localId,name:c.name,image:(c.img||'').replace(/\/(low|high)\.webp$/,'')})).filter(c=>c.image):(await Prices.search(q,lg)||[]).filter(c=>c.image);
+  try{L=await get(name,lang);if(!L.length&&lang!=='en'&&!Prices.suggest)L=await get(name,'en');if(!L.length&&name.length>2)L=await get(name.slice(0,2),lang)}catch(e){}
   if(n!==gN)return;if(!L.length){G.innerHTML='<p class="muted small">Keine Bilder gefunden</p>';return}
   const SR=['me','sv','swsh','sm','xy','bw','hgss','pl','dp','ex','ecard','neo','gym','base'],sr=c=>{const i=SR.indexOf((c.image.match(/\/[a-z]{2}\/([^/]+)\//)||[])[1]);return i<0?SR.length:i};L=L.map((c,i)=>[c,i]).sort((x,y)=>sr(x[0])-sr(y[0])||y[1]-x[1]).map(x=>x[0]).slice(0,40);G.innerHTML='';
   for(const c of L){const sid=c.id.slice(0,c.id.lastIndexOf('-')),b=document.createElement('button');b.type='button';b.className='spThumb';
@@ -374,7 +384,8 @@ document.addEventListener('visibilitychange',()=>{if(document.hidden)stopLive()}
 window.detectLang=detectLang;
 function parseOCR(t){const m=t.match(/(\d{1,3})\s*\/\s*(\d{2,3})/)||t.match(/\b([A-Z]{2,5}(?:-[A-Z]{1,2})?\d{0,2})\s*[-–]?\s*(\d{2,3})\b/);const lines=t.split('\n').map(l=>l.trim()).filter(Boolean);
  let name='';for(const l of lines.slice(0,6)){const w=l.replace(/[^A-Za-zÄÖÜäöüßé\- ]/g,' ').split(/\s+/).filter(x=>x.length>=3&&okName(x)&&!/^(BASIS|BASIC|STAGE|PHASE|KP|HP|PV|PS|Entwickelt)$/i.test(x));
-  if(w.length){const kn=w.find(knownName);name=kn||w.slice(0,2).join(' ');if(/\bex\b/i.test(l))name=w[0]+' ex';break}}
+  {const fz=fuzzyName(l.replace(/[^A-Za-zÄÖÜäöüßé\- ]/g,' ').trim().split(/\s+/).filter(x=>!/^(BASIS|BASIC|STAGE|PHASE|KP|HP)$/i.test(x)).slice(0,2).join(''));if(fz){name=/\bex\b/i.test(l)?fz+' ex':fz;break}}
+  if(w.length){const kn=w.find(knownName)||w.map(fuzzyName).find(Boolean);name=kn||w.slice(0,2).join(' ');if(/\bex\b/i.test(l))name=w[0]+' ex';break}}
  const number=m?(/^\d/.test(m[1])?m[1].replace(/^0+(?=\d)/,''):m[2].replace(/^0+(?=\d)/,'')):'';
  return{name,number}}
 window.parseOCR=parseOCR;
