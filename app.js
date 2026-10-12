@@ -108,18 +108,31 @@ $('#manualBtn').onclick=()=>addDialog(null,'coll');$('#sealedBtn').onclick=()=>a
 
 // Detail / Preisguide
 const GRADE={'PSA 10':[3.5,'grobe Schätzung'],'PSA 9':[1.6,''],'CGC 10':[2.5,''],'BGS 9.5':[2,'']};
+// Sprach-Flaggen im Detail: tauscht nur img.src (kompatibel mit Tilt/Holo)
+async function langFlags(f,{name,number,lang,tid}){const box=f.querySelector('#lfl'),im=f.querySelector('.dcard img');if(!box||!im||!window.Prices)return;
+ const L=[['de','🇩🇪'],['en','🇬🇧'],['ja','🇯🇵']],own=({DE:'de',EN:'en',JP:'ja',JA:'ja'})[(lang||'').toUpperCase()]||null;
+ box.innerHTML=L.map(([l,e])=>`<button type="button" class="chip" data-l="${l}" disabled style="opacity:.3;font-size:1.2rem;padding:.15rem .5rem">${e}</button>`).join('');
+ const num=String(number||'').split('/')[0]||null;let id=tid;
+ if(!id){try{const r=await Prices.lookup((name||'').replace(/\s*\(.*\)\s*$/,'').trim(),own||'en',null,num);id=r&&r.id}catch(e){}}
+ if(!id||!box.isConnected)return;const imgs={};
+ await Promise.all(L.map(async([l])=>{try{const r=await Prices.byId(id,l);if(r&&r.image)imgs[l]=r.image}catch(e){}}));
+ const mark=a=>box.querySelectorAll('button').forEach(b=>{const ok=!!imgs[b.dataset.l];b.disabled=!ok;b.style.opacity=ok?(b.dataset.l===a?'1':'.55'):'.2';b.style.outline=b.dataset.l===a?'2px solid #a78bfa':'none'});
+ const set=l=>{if(!imgs[l])return;im.src=imgs[l];mark(l)};
+ box.querySelectorAll('button').forEach(b=>b.onclick=e=>{e.preventDefault();set(b.dataset.l)});
+ if(own&&imgs[own])set(own);else mark(null)}
 function detail({api:c,item,list}){const f=$('#dlgForm');const it=item||{};const ci=c?cmInfo(c):it.cm;const price=item?item.price:cmPrice(c);
  const img=c?c.images.large||c.images.small:(it.img||'').replace('/small','/large');const name=c?c.name:it.name;
  const rows=ci?[['Trend',ci.trend],['Ø 1 Tag',ci.avg1],['Ø 7 Tage',ci.avg7],['Ø 30 Tage',ci.avg30],['Ab-Preis',ci.low],['Ø Verkauf',ci.sell]].filter(r=>r[1]!=null):[];
  const raw=price||0;
- const ty=((c?c.types:it.types)||[])[0];f.innerHTML=`<div class="detail" data-type="${esc((ty||'none').toLowerCase())}">${img?`<div class="dcard tiltable"><img src="${esc(img)}" alt=""><i class="holo"></i></div><button type="button" class="chip gyroBtn" onclick="FX.gyro()">📱 Bewegungssensor</button>`:''}<h3>${esc(name)}</h3><p class="muted small">${esc(c?c.set.name:it.set)} ${esc(c?c.number:it.number)}${item?` · ${esc(it.lang)} · ${esc(it.cond)} · ${it.qty}×`:''}</p>
+ const ty=((c?c.types:it.types)||[])[0];f.innerHTML=`<div class="detail" data-type="${esc((ty||'none').toLowerCase())}">${img?`<div class="dcard tiltable"><img src="${esc(img)}" alt=""><i class="holo"></i></div><div class="langFlags" id="lfl" style="display:flex;gap:.4rem;justify-content:center;margin:.35rem 0"></div><button type="button" class="chip gyroBtn" onclick="FX.gyro()">📱 Bewegungssensor</button>`:''}<h3>${esc(name)}</h3><p class="muted small">${esc(c?c.set.name:it.set)} ${esc(c?c.number:it.number)}${item?` · ${esc(it.lang)} · ${esc(it.cond)} · ${it.qty}×`:''}</p>
  <div class="big" style="font-size:1.8rem">${money(price)}</div>${item?`<div class="${cls(itemChange(it,S.settings.tf))}">${pct(itemChange(it,S.settings.tf))||'Noch keine Änderung'}</div>`:''}
- <h3>Preisguide (Cardmarket)</h3><table class="ptable">${rows.map(r=>`<tr><td>${r[0]}</td><td>${money(r[1])}</td></tr>`).join('')||'<tr><td colspan=2 class="muted">Keine Cardmarket-Daten (manuell/JP)</td></tr>'}</table>
+ <h3>Preisguide (Cardmarket)</h3><table class="ptable">${rows.map(r=>`<tr><td>${r[0]}</td><td>${money(r[1])}</td></tr>`).join('')||'<tr><td colspan=2 class="muted">Keine Cardmarket-Daten in dieser Quelle (siehe TCGdex-Zeile unten)</td></tr>'}</table>
  ${raw?`<h3>Graded (Schätzung)</h3><table class="ptable">${Object.entries(GRADE).map(([g,[k]])=>`<tr><td>${g}</td><td>≈ ${money(raw*k)}</td></tr>`).join('')}</table><p class="muted small">Faktor-Schätzung auf Raw-Preis, keine echten Graded-Verkäufe/Pop-Reports.</p>`:''}
  ${item&&it.buy?`<p>Einstand ${money(it.buy*it.qty)} · <span class="${cls(raw-it.buy)}">${raw-it.buy>=0?'+':''}${money((raw-it.buy)*it.qty)}</span></p>`:''}
  ${it.tdx?`<p class="muted small">Preis: ${esc(it.tdx.label)}${it.tdx.url?` · <a href="${esc(it.tdx.url)}" target="_blank" rel="noopener" style="color:#a78bfa">Cardmarket ↗</a>`:''}</p>`:''}<p class="muted small" id="tdxDet"></p>${it.note?`<p class="muted small">${esc(it.note)}</p>`:''}${ci&&ci.url?`<p><a href="${ci.url}" target="_blank" rel="noopener" style="color:#a78bfa">Auf Cardmarket ansehen ↗</a></p>`:''}</div>
  <div class="row">${item?'<button value="edit">Preis ändern</button><button value="del" class="danger">Entfernen</button>':`<button value="add">+ Sammlung</button><button value="wish">☆ Wunsch</button>`}<button value="cancel">Schließen</button></div>`;
  const dlg=$('#dlg');dlg.returnValue='';dlg.showModal();
+ langFlags(f,{name,number:c?c.number:it.number,lang:item?it.lang:(window.scanLang||''),tid:it.tdx&&it.tdx.id});
  if(window.Prices&&!it.tdx&&(price==null||(item&&it.lang&&it.lang!=='EN'))){const q=item?{...it,ownPrice:null,price:null}:{name:c.name,number:c.number,lang:window.scanLang||'EN'};tdxFill(q).then(ok=>{const l=$('#tdxDet');if(ok&&l)l.textContent='TCGdex: '+q.tdx.label})}
  dlg.onclose=()=>{const r=dlg.returnValue;
   if(r==='add')setTimeout(()=>addDialog(c,'coll'));if(r==='wish')setTimeout(()=>addDialog(c,'wish'));
