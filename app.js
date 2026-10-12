@@ -420,18 +420,20 @@ function startLive(){const st=$('#scanStatus2');const sp=$('#scanPick');if(sp)sp
  if(live.stream||live.starting)return Promise.resolve();live.starting=true;st.textContent='Kamera wird geöffnet…';
  // getUserMedia direkt im Klick-Handler (kein await davor), Fallback auf einfachere Constraints
  const gum=c=>navigator.mediaDevices.getUserMedia(c);
- const p=gum({video:{facingMode:{ideal:'environment'},width:{ideal:1920},height:{ideal:1080}},audio:false})
+ let sv='';try{sv=localStorage.getItem(CAMKEY)||''}catch(e){}
+ const p=(sv?gum({video:{deviceId:{exact:sv},width:{ideal:1920},height:{ideal:1080}},audio:false}).catch(e=>{if(e&&(e.name==='NotAllowedError'||e.name==='SecurityError'))throw e;try{localStorage.removeItem(CAMKEY)}catch(x){}return Promise.reject(e)}):Promise.reject(0))
+  .catch(e=>{if(e&&(e.name==='NotAllowedError'||e.name==='SecurityError'))throw e;return gum({video:{facingMode:{ideal:'environment'},width:{ideal:1920},height:{ideal:1080}},audio:false})})
   .catch(e=>{if(e&&(e.name==='NotAllowedError'||e.name==='SecurityError'))throw e;return gum({video:{facingMode:'environment'},audio:false})})
   .catch(e=>{if(e&&(e.name==='NotAllowedError'||e.name==='SecurityError'))throw e;return gum({video:true,audio:false})});
  return p.then(s=>{live.starting=false;live.stream=s;return startLive2()},e=>{live.starting=false;console.warn('getUserMedia',e);camErr(camMsg(e))})}
 async function startLive2(){const st=$('#scanStatus2');
  const v=$('#liveVideo');v.muted=true;v.setAttribute('playsinline','');v.setAttribute('autoplay','');v.srcObject=live.stream;$('#scanbox').classList.add('live');try{await v.play()}catch(e){console.warn('play',e)}$('#scanbox').classList.add('live');$('#liveText').textContent='';st.textContent=window.Tesseract?'Kamera läuft, Texterkennung wird geladen…':'Kamera läuft – Texterkennung lädt noch (Internet?)…';
  const tr=live.stream.getVideoTracks()[0];let caps={};try{caps=tr.getCapabilities?.()||{}}catch(e){}$('#torchBtn').hidden=!caps.torch;
- if((caps.focusMode||[]).includes('continuous'))tr.applyConstraints({advanced:[{focusMode:'continuous'}]}).catch(()=>{});
+ if(await camSetup(tr,caps))return startLive2();
  try{live.ic=window.ImageCapture?new ImageCapture(tr):null}catch(e){live.ic=null}live.icBad=false;
  $('.frame span').textContent='Näher ran – Karte füllt den Rahmen · Tippen = scharfstellen';
  window.scanLang='';window.pendingScan=null;live.last=null;live.nameOnly=0;live.nameKey='';live.tries=0;live.best=null;live.nm=null;live.nb=null;if(window.Tesseract){try{getWorker().catch(()=>{});getW('num').catch(()=>{})}catch(e){}}live.timer=setInterval(liveTick,1500);liveTick()}
-function stopLive(){clearInterval(live.timer);live.timer=null;if(live.stream){live.stream.getTracks().forEach(t=>t.stop());live.stream=null}
+function stopLive(){live.switched=false;clearInterval(live.timer);live.timer=null;if(live.stream){live.stream.getTracks().forEach(t=>t.stop());live.stream=null}
  const v=$('#liveVideo');if(v)v.srcObject=null;$('#scanbox')?.classList.remove('live');live.torch=false;live.ic=null;const fs=$('.frame span');if(fs)fs.textContent='Karte im Rahmen platzieren'}
 const wto=(p,ms,m)=>Promise.race([p,new Promise((_,j)=>setTimeout(()=>j(new Error(m||'Zeitüberschreitung')),ms))]);
 function lStat(t){$('#scanStatus2').textContent=t;const s=$('.frame span');if(s)s.textContent=t}
@@ -452,13 +454,37 @@ async function liveTick(shot){if(live.busy){if(shot)live.shot=true;return}if(!li
   if(live.tries>=3||shot){const b=live.best.r;navigator.vibrate?.([80,60,80]);stopLive();$('#scanStatus2').textContent=b.name?`Erkannt: ${b.name}${b.lang?' · '+b.lang:''} – bitte prüfen / Karte antippen`:'Nicht sicher erkannt – bitte Name eintippen';window.lastScan=b;scanPick(b);return}
   lStat(`❌ Nicht erkannt – näher ran / mehr Licht, oder Foto drücken (Versuch ${live.tries}/3)`);$('#livePhoto')?.classList.add('pulse')}
  catch(e){console.warn('liveTick',e);lStat('❌ '+(e&&e.message||e)+' – näher ran / mehr Licht');if(/Texterkennung/.test(e&&e.message||'')){delete ocrW['deu+eng'];delete ocrW.num}}finally{live.busy=false}}
-async function grabStill(v){
+async function grabStill(v){await focusPass();if(!live.stream)return null;
  if(live.ic&&!live.icBad){try{const b=await wto(live.ic.takePhoto(),3000,'takePhoto');if(b&&b.size)return await toCanvas(b,4000)}catch(e){console.warn('takePhoto',e);live.icBad=true}}
  if(!v.videoWidth)return null;const c=document.createElement('canvas');c.width=v.videoWidth;c.height=v.videoHeight;c.getContext('2d').drawImage(v,0,0,c.width,c.height);return c}
-$('#liveVideo').addEventListener('click',async e=>{const tr=live.stream?.getVideoTracks()[0];if(!tr)return;const caps=tr.getCapabilities?.()||{};const r=e.currentTarget.getBoundingClientRect();
- const adv={};if(caps.pointsOfInterest)adv.pointsOfInterest=[{x:(e.clientX-r.left)/r.width,y:(e.clientY-r.top)/r.height}];
- const fm=caps.focusMode||[];if(fm.includes('single-shot'))adv.focusMode='single-shot';else if(fm.includes('continuous'))adv.focusMode='continuous';
- $('#scanStatus2').textContent='Scharfstellen…';try{await tr.applyConstraints({advanced:[adv]});if(adv.focusMode==='single-shot'&&fm.includes('continuous'))setTimeout(()=>tr.applyConstraints({advanced:[{focusMode:'continuous'}]}).catch(()=>{}),1500)}catch(x){}});
+const CAMKEY='kartenapp_cam';
+const isBackLbl=l=>/back|rear|rück|environment|facing back|\b0\b/i.test(l),isBadLbl=l=>/ultra|wide|weit|tele|macro|makro|depth|tiefe|front|user/i.test(l);
+async function backCams(){try{const d=(await navigator.mediaDevices.enumerateDevices()).filter(x=>x.kind==='videoinput');const b=d.filter(x=>!/front|user|selfie/i.test(x.label));
+ return (b.length?b:d).sort((x,y)=>((isBadLbl(x.label)?2:0)-(isBackLbl(x.label)?1:0))-((isBadLbl(y.label)?2:0)-(isBackLbl(y.label)?1:0)))}catch(e){return[]}}
+// true = Stream wurde gewechselt (startLive2 erneut)
+async function camSetup(tr,caps){const fm=caps.focusMode||[];live.fm=fm;live.caps=caps;
+ if(fm.includes('continuous')){try{await tr.applyConstraints({advanced:[{focusMode:'continuous'}]})}catch(e){}}
+ const cams=await backCams();live.cams=cams;const sw=$('#camSwitch');if(sw)sw.hidden=cams.length<2;
+ if(!fm.length&&!live.switched){live.switched=true;let sv='';try{sv=localStorage.getItem(CAMKEY)||''}catch(e){}
+  const cur=tr.getSettings?.().deviceId,lbl=tr.label||'',best=cams[0];
+  if(!sv&&best&&best.deviceId&&best.deviceId!==cur&&(isBadLbl(lbl)||!isBackLbl(lbl))){if(await camOpen(best.deviceId))return true}
+  try{const w=(caps.width&&caps.width.max)||0;await tr.applyConstraints({width:{ideal:w>=3840?3840:1920},height:{ideal:w>=3840?2160:1080}})}catch(e){}}
+ return false}
+async function camOpen(id){try{const s=await navigator.mediaDevices.getUserMedia({video:{deviceId:{exact:id},width:{ideal:1920},height:{ideal:1080}},audio:false});
+ if(live.stream)live.stream.getTracks().forEach(t=>t.stop());live.stream=s;return true}catch(e){console.warn('camOpen',e);return false}}
+async function camNext(){const cams=live.cams||await backCams();if(cams.length<2||!live.stream)return;const cur=live.stream.getVideoTracks()[0].getSettings?.().deviceId;
+ const i=cams.findIndex(c=>c.deviceId===cur),n=cams[(i+1)%cams.length];live.switched=true;
+ if(await camOpen(n.deviceId)){try{localStorage.setItem(CAMKEY,n.deviceId)}catch(e){}lStat('📷 Kamera: '+(n.label||'Kamera '+((i+1)%cams.length+1)));clearInterval(live.timer);await startLive2()}}
+async function doFocus(x,y,wait){const tr=live.stream?.getVideoTracks()[0];if(!tr)return;let caps={};try{caps=tr.getCapabilities?.()||{}}catch(e){}const fm=caps.focusMode||[];const adv={};
+ if(caps.pointsOfInterest&&x!=null)adv.pointsOfInterest=[{x,y}];
+ if(fm.includes('single-shot'))adv.focusMode='single-shot';else if(fm.includes('manual')&&caps.focusDistance){adv.focusMode='manual';adv.focusDistance=Math.min(caps.focusDistance.max,Math.max(caps.focusDistance.min,0.12))}else if(fm.includes('continuous'))adv.focusMode='continuous';
+ if(!Object.keys(adv).length)return;try{await tr.applyConstraints({advanced:[adv]})}catch(e){console.warn('focus',e)}
+ if(wait)await new Promise(r=>setTimeout(r,wait));
+ if(adv.focusMode!=='continuous'&&fm.includes('continuous'))setTimeout(()=>{const t=live.stream?.getVideoTracks()[0];t&&t.applyConstraints({advanced:[{focusMode:'continuous'}]}).catch(()=>{})},wait?300:1500)}
+function focusPass(){return doFocus(.5,.5,600)}
+function focusRing(px,py){const w=$('#scanbox .camwrap');if(!w)return;const r=w.getBoundingClientRect(),d=document.createElement('div');d.className='focusring';d.style.left=(px-r.left)+'px';d.style.top=(py-r.top)+'px';w.append(d);setTimeout(()=>d.remove(),900)}
+$('#liveVideo').addEventListener('click',e=>{if(!live.stream)return;const r=e.currentTarget.getBoundingClientRect();focusRing(e.clientX,e.clientY);$('#scanStatus2').textContent='Scharfstellen…';doFocus((e.clientX-r.left)/r.width,(e.clientY-r.top)/r.height,0)});
+$('#camSwitch')?.addEventListener('click',e=>{e.preventDefault();camNext()});
 $('.frame')?.addEventListener('click',e=>{$('#liveVideo').dispatchEvent(new MouseEvent('click',{clientX:e.clientX,clientY:e.clientY}))});
 $('#liveBtn').onclick=e=>{e.preventDefault();startLive()};$('#liveCancel').onclick=()=>{stopLive();$('#scanStatus2').textContent='Live-Scan abgebrochen.'};
 $('#torchBtn').onclick=async()=>{const tr=live.stream?.getVideoTracks()[0];if(!tr)return;live.torch=!live.torch;try{await tr.applyConstraints({advanced:[{torch:live.torch}]})}catch(e){}};
