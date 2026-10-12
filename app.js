@@ -273,10 +273,12 @@ async function analyze(src,st=()=>{}){const t0=performance.now();src=cardCrop(sr
   else{jp=jpName(text);lang=detectLang(r1.text||'');if(jp||(b&&/[\u3040-\u30ff]{2,}/.test(b.data.text.replace(/\s/g,'')))){kana=true;lang='JP'}}
   if(!energy)energy=parseTop(r1.text).energy}
  const p=pT.name?pT:parseOCR(r1.text||'');if(!number){const m=text.match(/(\d{2,3})\s*\/\s*(\d{2,3})/);if(m)number=m[1].replace(/^0+(?=\d)/,'')+'/'+m[2]}
- const sc=findSet(text+'\n'+numTxt,number);
+ let sc=findSet(text+'\n'+numTxt,number);
  if(!number&&!energy){const m=(numTxt+'\n'+text).match(/\b(?:30C|3OC)\s*[^\d\n]{0,3}(\d{3})\b/i);if(m){number=m[1].replace(/^0+(?=\d)/,'');numWeak=true}}
  if(energy){if(!number){const m=(numTxt+'\n'+text).match(/\b(\d{3})\b/);if(m)number=m[1]}if(lang===''||lang==='JP'&&latin)lang='DE'}
  if((!number||numWeak)&&!energy&&src.width>=380){st('Kartennummer wird genau gelesen…');const n2=await readNumberHi(src);if(n2){number=n2;numWeak=false}}
+ if(number&&number.includes('/')&&!energy&&!jp&&!numOK(number)){st('Kartennummer wird genau gelesen…');const n2=src.width>=380?await readNumberHi(src):'';if(n2&&numOK(n2)){number=n2;numWeak=false}else{number='';numWeak=false}}
+ if(!sc&&number)sc=findSet(text+'\n'+numTxt,number);if(sc&&sc.total&&number&&number.includes('/')){const[a0,t0]=number.split('/');if(+t0!==sc.total&&d1(t0,sc.total))number=a0+'/'+sc.total}
  let name=jp?jp.en:'',confident=!!jp&&!numWeak;
  if(energy){name='Basic '+energy+' Energy';confident=true}
  else if(!jp&&!kana&&p.name&&p.name.length>=3&&(latin||conf>=65)){name=deName(p.name);confident=!!number&&!numWeak&&(conf>=55||name!==p.name||latin)}
@@ -296,7 +298,7 @@ function fuzzyName(x){x=String(x||'');const sm=x.match(SUF);if(sm){const b=fuzzy
  const mg=x.match(/^\s*mega[\s-]+/i);if(mg){const b=fuzzyName(x.slice(mg[0].length));return b?'Mega-'+b:null}
  const q=nrm(x);if(q.length<3)return null;nameMap();
  if(NAMES.has(q))return NAMES.get(q);let best=null,bd=1e9;for(const[k,v]of NAMES){if(Math.abs(k.length-q.length)>2)continue;const d=lev(q,k);if(d<bd){bd=d;best=v}}
- const L=Math.max(q.length,nrm(best||'').length);return best&&q.length>=4&&bd<=(L<=4?1:L===5?2:0.3*L)?best:null}
+ const L=Math.max(q.length,nrm(best||'').length);return best&&q.length>=4&&bd<=(L<=4?1.5:L===5?2:0.3*L)?best:null}
 window.fuzzyName=fuzzyName;
 // Trainer-/Energie-Namen (trainers.js), mehrteilig; gleiche strenge Schwelle, Pokémon haben Vorrang
 let TMAP=null;function tMap(){if(!TMAP){TMAP=new Map();for(const r of (window.TNAMES||[]))for(const n of r.slice(0,2))if(n&&nrm(n).length>=4&&!TMAP.has(nrm(n)))TMAP.set(nrm(n),n);
@@ -304,17 +306,17 @@ let TMAP=null;function tMap(){if(!TMAP){TMAP=new Map();for(const r of (window.TN
  for(const[d,e]of Object.entries(ET)){for(const n of[d+'-Energie','Basis-'+d+'-Energie'])TMAP.set(nrm(n),n);for(const n of[e+' Energy','Basic '+e+' Energy'])if(!TMAP.has(nrm(n)))TMAP.set(nrm(n),n)}}return TMAP}
 function trainerName(l){const w=String(l||'').replace(/[^A-Za-zÄÖÜäöüßé'’.\- ]/g,' ').trim().split(/\s+/).filter(Boolean);tMap();let best=null,bd=1e9,bL=0;
  for(let n=Math.min(5,w.length);n>=1;n--){const q=nrm(w.slice(0,n).join(' '));if(q.length<4)continue;if(TMAP.has(q))return TMAP.get(q);
-  for(const[k,v]of TMAP){if(Math.abs(k.length-q.length)>2)continue;const d=lev(q,k);if(d<bd){bd=d;best=v;bL=Math.max(q.length,k.length)}}}
+  for(const[k,v]of TMAP){if(Math.abs(k.length-q.length)>2||k[0]!==q[0]&&!ocrSim(k[0],q[0]))continue;const d=lev(q,k);if(d<bd){bd=d;best=v;bL=Math.max(q.length,k.length)}}}
  return best&&bd<=(bL<=4?1:bL===5?2:Math.min(3,0.2*bL))?best:null}
 const anyName=l=>{const w=String(l||'').replace(/[^A-Za-zÄÖÜäöüßé\- ]/g,' ').trim().split(/\s+/).filter(x=>x&&!/^(BASIS|BASIC|STAGE|PHASE|KP|HP|TRAINER|ITEM|ARTEFAKT|UNTERST[ÜU]TZER|SUPPORTER|STADION|STADIUM|ENERGIE|ENERGY)$/.test(x));
  const ex=x=>{const q=nrm(x);return q.length>=3&&nameMap().get(q)};const j=w.length>1&&w[0].length<=3&&w[1].length<=3?w[0]+w[1]:'';
  let p=w.map(ex).find(Boolean);if(p)return addSfx(p,l);const tq=nrm(w.join(' '));tMap();for(let n=Math.min(5,w.length);n>=1;n--){const k=nrm(w.slice(0,n).join(' '));if(TMAP.has(k))return TMAP.get(k)}
- p=(j&&fuzzyName(j))||w.map(fuzzyName).find(Boolean);if(p)return addSfx(p,l);return trainerName(w.join(' '))};
+ p=(j&&fuzzyName(j))||w.map(fuzzyName).find(Boolean);if(p)return addSfx(p,l);return window._trn===false?null:trainerName(w.join(' '))};
 window.trainerName=trainerName;
 function addSfx(n,l){if(SUF.test(n))return n;const m=(l||'').match(/\b(VMAX|VSTAR|V-UNION|GX|ex|EX|V)\b/);return m?n+' '+m[1]:n}
 const knownName=x=>!!DE[x.toLowerCase()]||Object.values(DE).some(v=>v.toLowerCase()===x.toLowerCase());
 // Name aus dem Namensstreifen oben links (nach BASIS/PHASE), Energie-Karten erkennen
-function parseTop(t){t=t||'';const e=t.match(/basis[^\n]{0,4}?([A-Za-zäöü]{4,})?[^\n]{0,4}?energie/i)||t.match(/basic\s+(\w+)\s+energy/i);
+function parseTop(t){t=t||'';window._trn=/\b(TRAINER|UNTERSTÜTZER|UNTERSTUTZER|ARTEFAKT|ITEM|STADION|STADIUM|SUPPORTER|WERKZEUG|TOOL|ENERGIE|ENERGY)\b/.test(t);const e=t.match(/basis[^\n]{0,4}?([A-Za-zäöü]{4,})?[^\n]{0,4}?energie/i)||t.match(/basic\s+(\w+)\s+energy/i);
  if(e||/basis-?\s*energie/i.test(t)||/ENERGIE\b/.test(t)&&!/\bKP\b|\d{2,3}\s*$/m.test(t)){let ty=e&&e[1]&&ENERGY[e[1].toLowerCase()];if(!ty)ty=window.energyHue||'';if(ty)return{name:'',energy:ty};if(/basis.{0,6}energie/i.test(t))return{name:'',energy:window.energyHue||'Psychic',guess:1}}
  const lines=t.split('\n').map(l=>l.trim()).filter(Boolean);
  for(const l of lines.slice(0,4)){const w=l.replace(/[^A-Za-zÄÖÜäöüßé\- ]/g,' ').split(/\s+/).map(x=>x.replace(/^-+|-+$/g,'')).filter(x=>x.length>=3&&/[a-zäöü]/.test(x)&&okName(x)&&!/^(BASIS|BASIC|STAGE|PHASE|KP|HP|PV|PS|Entwickelt|Evolves|aus|from)$/i.test(x));
@@ -322,8 +324,12 @@ function parseTop(t){t=t||'';const e=t.match(/basis[^\n]{0,4}?([A-Za-zäöü]{4,
   if(w.length){const k=w.map(fuzzyName).find(Boolean);if(k)return{name:addSfx(k,l),energy:''}}}
  return{name:'',energy:''}}
 // Set über Set-Code (z.B. 30C) + Gesamtzahl
+const d1=(a,b)=>{a=String(a);b=String(b);return a.length===b.length&&[...a].filter((x,i)=>x!==b[i]).length===1};// eine Ziffer verlesen (8↔6)
+// Plausibilität: Nummer ≤ Gesamtzahl (Secret Rares bis ×1,6 bei ≥50), Gesamtzahl muss ein bekanntes Set sein
+function numOK(num){const[a,b]=String(num||'').split('/').map(x=>parseInt(x,10));if(!(a>0&&b>0))return false;if(!(a<=b||b>=50&&a<=b*1.6))return false;
+ return !SETS.length||Object.values(SETCODES).some(x=>x.total===b)||SETS.some(x=>x.printedTotal===b)}
 function findSet(t,num){const tot=(num||'').split('/')[1];const codes=Object.assign({},SETCODES);for(const s of SETS)if(s.ptcgoCode&&!codes[s.ptcgoCode])codes[s.ptcgoCode]={id:s.id,name:s.name,total:s.printedTotal};
- for(const m of (t||'').matchAll(/\b([0-9A-Z]{2,4})\b/g)){const c=m[1].replace(/^3O/,'30');const s=codes[c];if(s&&/\d/.test(c)&&/[A-Z]/.test(c)&&(!tot||!s.total||+tot===s.total))return s}
+ for(const m of (t||'').matchAll(/\b([0-9A-Z]{2,4})\b/g)){const c=m[1].replace(/^3O/,'30');const s=codes[c];if(s&&/\d/.test(c)&&/[A-Z]/.test(c)&&(!tot||!s.total||+tot===s.total||d1(tot,s.total)))return s}
  if(tot)for(const c in SETCODES)if(SETCODES[c].total===+tot)return SETCODES[c];return null}
 // Energietyp grob über Farbton der Kartenmitte
 function hueType(src){try{const W=src.width,H=src.height,c=document.createElement('canvas');c.width=40;c.height=40;const g=c.getContext('2d',{willReadFrequently:true});g.drawImage(src,W*.2,H*.25,W*.6,H*.45,0,0,40,40);
@@ -381,28 +387,23 @@ async function startLive(){const st=$('#scanStatus2');$('#scanPick').hidden=true
  if((caps.focusMode||[]).includes('continuous'))tr.applyConstraints({advanced:[{focusMode:'continuous'}]}).catch(()=>{});
  try{live.ic=window.ImageCapture?new ImageCapture(tr):null}catch(e){live.ic=null}
  $('.frame span').textContent='Näher ran – Karte füllt den Rahmen · Tippen = scharfstellen';
- window.scanLang='';window.pendingScan=null;live.last=null;live.nameOnly=0;live.nameKey='';getWorker().catch(()=>{});getW('num').catch(()=>{});live.timer=setInterval(liveTick,1500)}
+ window.scanLang='';window.pendingScan=null;live.last=null;live.nameOnly=0;live.nameKey='';live.tries=0;live.best=null;live.nm=null;live.nb=null;getWorker().catch(()=>{});getW('num').catch(()=>{});live.timer=setInterval(liveTick,1500)}
 function stopLive(){clearInterval(live.timer);live.timer=null;if(live.stream){live.stream.getTracks().forEach(t=>t.stop());live.stream=null}
  const v=$('#liveVideo');if(v)v.srcObject=null;$('#scanbox')?.classList.remove('live');live.torch=false;live.ic=null;const fs=$('.frame span');if(fs)fs.textContent='Karte im Rahmen platzieren'}
 async function liveTick(){if(live.busy||!live.stream)return;const v=$('#liveVideo');if(!v.videoWidth)return;live.busy=true;
- try{const fr=$('.frame').getBoundingClientRect(),vr=v.getBoundingClientRect();
-  const sc=Math.max(vr.width/v.videoWidth,vr.height/v.videoHeight),ox=(v.videoWidth*sc-vr.width)/2,oy=(v.videoHeight*sc-vr.height)/2;
-  let sx=(fr.left-vr.left+ox)/sc,sy=(fr.top-vr.top+oy)/sc,sw=fr.width/sc,sh=fr.height/sc;
-  sx=Math.max(0,sx);sy=Math.max(0,sy);sw=Math.min(sw,v.videoWidth-sx);sh=Math.min(sh,v.videoHeight-sy);
-  const c=$('#liveCanvas');c.width=Math.round(sw);c.height=Math.round(sh);c.getContext('2d').drawImage(v,sx,sy,sw,sh,0,0,c.width,c.height);
-  const r=await analyze(c,m=>$('#scanStatus2').textContent=m);if(!live.stream)return;
+ try{// Wie Foto-Scan: Standbild in voller Auflösung (ImageCapture/Video), auf 1600px skaliert, gleiche Pipeline
+  const hi=await grabStill(v);if(!live.stream||!hi)return;const c=document.createElement('canvas'),k=(live.tries||0)%2?1600/Math.max(hi.width,hi.height):Math.min(1,1600/Math.max(hi.width,hi.height));c.width=Math.round(hi.width*k);c.height=Math.round(hi.height*k);c.getContext('2d').drawImage(hi,0,0,c.width,c.height);
+  const r=await analyze(c,m=>$('#scanStatus2').textContent=m);if(!live.stream)return;live.tries=(live.tries||0)+1;
   $('#liveText').textContent=`→ ${r.name||'?'}${r.jp?' ('+r.jp+')':''} · ${r.full||'?'}${r.lang?' · '+r.lang:''}${r.confident&&(r.number||r.energy)?'':' · nicht sicher'}`;
-  if(r.name&&!r.number&&!r.energy&&(r.jp||r.conf>=65||r.lang&&r.lang!=='JP')){// Name sicher, Nummer fehlt → scharfes Foto in voller Auflösung
-   const k=r.name;live.nameOnly=live.nameKey===k?live.nameOnly+1:1;live.nameKey=k;$('#scanStatus2').textContent=`Name erkannt (${live.nameOnly}/3) – scharfes Foto für die Nummer…`;
-   const hi=await grabStill(v);if(!live.stream)return;if(hi){const n=await readNumberHi(cardCrop(hi));if(!live.stream)return;if(n){r.full=n;r.number=n.split('/')[0];r.confident=true;navigator.vibrate?.(200);stopLive();scanResult(r);return}}
-   if(live.nameOnly>=3){navigator.vibrate?.([80,60,80]);stopLive();$('#scanStatus2').textContent=`Erkannt: ${r.name}${r.jp?' ('+r.jp+')':''}${r.lang?' · '+r.lang:''} – Nummer bitte eintippen`;window.lastScan=r;scanPick(r);return}
-   $('#scanStatus2').textContent='Nummer noch nicht lesbar – näher ran, Karte füllt den Rahmen';return}
-  live.nameOnly=0;
-  if(r.confident&&(r.number||r.energy)){const key=(r.name+'|'+r.number).toLowerCase();
-   if(live.last===key){navigator.vibrate?.(200);stopLive();scanResult(r);return}
-   live.last=key;$('#scanStatus2').textContent='Fast erkannt – Karte ruhig halten…'}else{live.last=null;$('#scanStatus2').textContent='Noch nicht sicher – Karte näher, gerade und gut beleuchtet halten'}}
+  const sc=(r.name?2:0)+(r.number?1:0)+(r.confident?1:0);if(!live.best||sc>live.best.sc)live.best={r,sc};
+  // Name und Nummer aus verschiedenen Versuchen zusammenführen
+  if(r.name&&!live.nm)live.nm=r;if(r.number&&numOK(r.full))live.nb=r;
+  if(!(r.confident&&r.name&&(r.number||r.energy))&&live.nm&&live.nb){const m=live.nm,n=live.nb;r={...m,number:n.number,full:n.full,set:n.set||m.set,setId:n.setId||m.setId,confident:true}}
+  if(r.confident&&r.name&&(r.number||r.energy)){navigator.vibrate?.(200);stopLive();scanResult(r);return}
+  if(live.tries>=3){const b=live.best.r;navigator.vibrate?.([80,60,80]);stopLive();$('#scanStatus2').textContent=b.name?`Erkannt: ${b.name}${b.lang?' · '+b.lang:''} – bitte prüfen / Karte antippen`:'Nicht sicher erkannt – bitte Name eintippen';window.lastScan=b;scanPick(b);return}
+  $('#scanStatus2').textContent=`Versuch ${live.tries}/3 – Karte ruhig, gerade und gut beleuchtet halten`}
  catch(e){$('#scanStatus2').textContent='Fehler: '+e.message}finally{live.busy=false}}
-async function grabStill(v){try{if(live.ic){const b=await live.ic.takePhoto();return await toCanvas(b,3000)}}catch(e){}
+async function grabStill(v){try{if(live.ic){const b=await live.ic.takePhoto();return await toCanvas(b,1600)}}catch(e){}
  if(!v.videoWidth)return null;const c=document.createElement('canvas');c.width=v.videoWidth;c.height=v.videoHeight;c.getContext('2d').drawImage(v,0,0);return c}
 $('#liveVideo').addEventListener('click',async e=>{const tr=live.stream?.getVideoTracks()[0];if(!tr)return;const caps=tr.getCapabilities?.()||{};const r=e.currentTarget.getBoundingClientRect();
  const adv={};if(caps.pointsOfInterest)adv.pointsOfInterest=[{x:(e.clientX-r.left)/r.width,y:(e.clientY-r.top)/r.height}];
