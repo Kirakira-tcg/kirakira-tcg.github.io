@@ -372,7 +372,7 @@ function hueType(src){try{const W=src.width,H=src.height,c=document.createElemen
 // Worker vorwärmen, sobald der Scan-Tab geöffnet wird
 function warmOCR(){if(!window.Tesseract||window._warm)return;window._warm=1;['deu+eng','jpn','num','dig'].forEach(l=>getW(l).catch(()=>{delete ocrW[l];window._warm=0}))}
 function ptcgId(code){code=(code||'').trim();if(!code)return'';for(const c in SETCODES){const s=SETCODES[c];if(s.tdx===code||s.id===code||c===code||s.name===code)return s.id}const s=(window.SETS||SETS||[]).find(x=>x.id===code||x.ptcgoCode===code);return s?s.id:''}
-function scanPick(r){const P=$('#scanPick');P.hidden=false;const noNum=r.name&&!r.number;
+function scanPick(r,o){const P=$('#scanPick');P.hidden=false;const noNum=r.name&&!r.number;
  P.innerHTML=`<b>${!r.name&&!r.energy?'⚠️ Name nicht erkannt':r.confident&&r.number?'✅ Erkannt: '+esc(r.name)+(r.jp?' ('+esc(r.jp)+')':'')+' · '+esc(r.full||r.number):noNum?'✅ Erkannt: '+esc(r.name)+(r.jp?' ('+esc(r.jp)+')':'')+' – Nummer fehlt':'⚠️ Nicht sicher erkannt'}</b><p class="muted small">${noNum?'Die Nummer konnte nicht gelesen werden. Bitte eintippen oder ohne Nummer suchen.':'Bitte prüfen oder ergänzen – es wird nichts automatisch übernommen.'}</p>
  <label>Name<input id="spName" value="${esc(r.name||'')}" placeholder="z.B. Glurak / Charizard"></label><label>Nummer<input id="spNum" value="${esc(r.full||r.number||'')}" placeholder="Nummer unten links, z.B. 137/103" inputmode="numeric"></label>
  <label>Set-Code (optional)<input id="spSet" value="${esc(r.set||'')}" placeholder="z.B. s8a"></label>
@@ -381,7 +381,8 @@ function scanPick(r){const P=$('#scanPick');P.hidden=false;const noNum=r.name&&!
  <div id="spGrid" class="spgrid"></div>
  ${r.lang==='JP'?'<p class="muted small">Japanische Sets sind nicht in der Preisdatenbank – „Manuell hinzufügen“ legt die Karte mit Name, Nummer, Set &amp; Sprache an, den Preis trägst du selbst ein.</p>':''}`;
  const v=()=>({name:$('#spName').value,number:$('#spNum').value,set:$('#spSet').value,lang:$('#spLang').value});
- $('#spGo').onclick=()=>{const x=v();P.hidden=true;applyScan({name:x.name,jp:r.jp,number:x.number.split('/')[0],full:x.number,set:x.set,setId:ptcgId(x.set)},x.lang)};
+ if(o){$('#spGo').textContent='Übernehmen';$('#spX').textContent='🗑️ Entfernen';$('#spNoNum').hidden=true;$('#spMan').hidden=true}
+ $('#spGo').onclick=()=>{const x=v();P.hidden=true;if(o)return o.save(x);applyScan({name:x.name,jp:r.jp,number:x.number.split('/')[0],full:x.number,set:x.set,setId:ptcgId(x.set)},x.lang)};
  const G=$('#spGrid');let gT=0,gN=0;
  async function grid(){const n=++gN,name=$('#spName').value.trim();if(name.length<3||!window.Prices){G.innerHTML='';return}G.innerHTML='<p class="muted small">Lädt Karten…</p>';
   let lang=($('#spLang').value||'DE').toLowerCase();if(lang==='jp')lang='ja';let L=[];
@@ -396,7 +397,7 @@ function scanPick(r){const P=$('#scanPick');P.hidden=false;const noNum=r.name&&!
  $('#spName').addEventListener('input',()=>{clearTimeout(gT);gT=setTimeout(grid,400)});
  $('#spNoNum').onclick=()=>{const x=v();P.hidden=true;applyScan({name:x.name,jp:r.jp,number:'',set:x.set},x.lang);window.pendingScan.number=x.number};
  $('#spMan').onclick=()=>{const x=v();manualAdd({...x,name:r.jp&&x.name===r.name?`${x.name} (${r.jp})`:x.name})};
- $('#spX').onclick=()=>P.hidden=true;
+ $('#spX').onclick=()=>{P.hidden=true;o&&o.remove()};
  if(noNum)setTimeout(()=>{const n=$('#spNum');n.focus();n.scrollIntoView({block:'center'})},50)}
 function scanResult(r){window.lastScan=r;const st=$('#scanStatus2');
  st.textContent=`Erkannt: ${r.name||'?'}${r.jp?' ('+r.jp+')':''} · Nr. ${r.full||r.number||'?'}${r.lang?' · '+r.lang:''}`;
@@ -408,8 +409,8 @@ async function handleFile(f){window.scanLang='';window.pendingScan=null;const st
  try{const c=await toCanvas(f);const r=await analyze(c,m=>st.textContent='⏳ '+m);scanResult(r)}
  catch(err){st.textContent='❌ Fehler bei der Erkennung: '+(err&&err.message||err)}finally{$('#scanbox').classList.remove('busy')}}
 $('#scanBtn').addEventListener('click',()=>{stopLive();$('#scanStatus2').textContent='Kamera wird geöffnet…'});
-$('#livePhoto').addEventListener('click',()=>stopLive());$('#uploadBtn').addEventListener('click',()=>{stopLive();$('#scanStatus2').textContent='Bildauswahl wird geöffnet…'});
-['#scanFile','#uploadFile'].forEach(id=>$(id).addEventListener('change',e=>{const f=e.target.files&&e.target.files[0];handleFile(f).finally(()=>{e.target.value=''})}));
+$('#scanBtn')?.addEventListener('click',e=>{e.preventDefault();if(!live.stream)startLive()});$('#uploadBtn').addEventListener('click',()=>{stopLive();$('#scanStatus2').textContent='Bildauswahl wird geöffnet…'});
+['#uploadFile'].forEach(id=>$(id).addEventListener('change',e=>{const f=e.target.files&&e.target.files[0];handleFile(f).finally(()=>{e.target.value=''})}));
 // Live-Scan
 let live={stream:null,timer:null,busy:false,last:null,torch:false,nameOnly:0,nameKey:''};
 async function startLive(){const st=$('#scanStatus2');$('#scanPick').hidden=true;if(!navigator.mediaDevices?.getUserMedia){st.textContent='Kamera wird von diesem Browser nicht unterstützt (HTTPS nötig).';return}
@@ -420,10 +421,16 @@ async function startLive(){const st=$('#scanStatus2');$('#scanPick').hidden=true
  if((caps.focusMode||[]).includes('continuous'))tr.applyConstraints({advanced:[{focusMode:'continuous'}]}).catch(()=>{});
  try{live.ic=window.ImageCapture?new ImageCapture(tr):null}catch(e){live.ic=null}
  $('.frame span').textContent='Näher ran – Karte füllt den Rahmen · Tippen = scharfstellen';
- window.scanLang='';window.pendingScan=null;live.last=null;live.nameOnly=0;live.nameKey='';live.tries=0;live.best=null;live.nm=null;live.nb=null;getWorker().catch(()=>{});getW('num').catch(()=>{});live.timer=setInterval(liveTick,1500)}
+ window.scanLang='';window.pendingScan=null;live.last=null;live.nameOnly=0;live.nameKey='';live.tries=0;live.best=null;live.nm=null;live.nb=null;live.wait=null;live.prevSig=null;trayShow();getWorker().catch(()=>{});getW('num').catch(()=>{});live.timer=setInterval(liveTick,1500)}
 function stopLive(){clearInterval(live.timer);live.timer=null;if(live.stream){live.stream.getTracks().forEach(t=>t.stop());live.stream=null}
  const v=$('#liveVideo');if(v)v.srcObject=null;$('#scanbox')?.classList.remove('live');live.torch=false;live.ic=null;const fs=$('.frame span');if(fs)fs.textContent='Karte im Rahmen platzieren'}
-async function liveTick(){if(live.busy||!live.stream)return;const v=$('#liveVideo');if(!v.videoWidth)return;live.busy=true;
+async function liveTick(){if(live.busy||!live.stream)return;const v=$('#liveVideo');if(!v.videoWidth)return;
+ // Serien-Scan: warten bis die Karte gewechselt hat, und bis sie ruhig im Rahmen liegt (Auslöser überspringt das)
+ const sg=frameSig(v),shot=live.shot;live.shot=false;
+ if(!shot){const prev=live.prevSig;live.prevSig=sg;
+  if(live.wait){if(sigDiff(sg,live.wait)<14){$('#scanStatus2').textContent='✅ Nächste Karte in den Rahmen legen…';return}live.wait=null;live.tries=0;live.best=null;live.nm=null;live.nb=null;$('#scanStatus2').textContent='Karte ruhig halten…';return}
+  if(prev&&sigDiff(sg,prev)>10){$('#scanStatus2').textContent='Karte ruhig halten…';return}}
+ live.busy=true;
  try{// Wie Foto-Scan: Standbild in voller Auflösung (ImageCapture/Video), auf 1600px skaliert, gleiche Pipeline
   const hi=await grabStill(v);if(!live.stream||!hi)return;const c=document.createElement('canvas'),k=(live.tries||0)%2?1600/Math.max(hi.width,hi.height):Math.min(1,1600/Math.max(hi.width,hi.height));c.width=Math.round(hi.width*k);c.height=Math.round(hi.height*k);c.getContext('2d').drawImage(hi,0,0,c.width,c.height);
   const r=await analyze(c,m=>$('#scanStatus2').textContent=m);if(!live.stream)return;live.tries=(live.tries||0)+1;
@@ -432,8 +439,8 @@ async function liveTick(){if(live.busy||!live.stream)return;const v=$('#liveVide
   // Name und Nummer aus verschiedenen Versuchen zusammenführen
   if(r.name&&!live.nm)live.nm=r;if(r.number&&numOK(r.full))live.nb=r;
   if(!(r.confident&&r.name&&(r.number||r.energy))&&live.nm&&live.nb){const m=live.nm,n=live.nb;r={...m,number:n.number,full:n.full,set:n.set||m.set,setId:n.setId||m.setId,confident:true}}
-  if(r.confident&&r.name&&(r.number||r.energy)){navigator.vibrate?.(200);stopLive();scanResult(r);return}
-  if(live.tries>=3){const b=live.best.r;navigator.vibrate?.([80,60,80]);stopLive();$('#scanStatus2').textContent=b.name?`Erkannt: ${b.name}${b.lang?' · '+b.lang:''} – bitte prüfen / Karte antippen`:'Nicht sicher erkannt – bitte Name eintippen';window.lastScan=b;scanPick(b);return}
+  if(r.confident&&r.name&&(r.number||r.energy)){navigator.vibrate?.(200);liveDone(sg);serialAdd(r);return}
+  if(live.tries>=3||shot){const b=live.best.r;navigator.vibrate?.([80,60,80]);liveDone(sg);$('#scanStatus2').textContent=b.name?`Erkannt: ${b.name}${b.lang?' · '+b.lang:''} – bitte prüfen / Karte antippen`:'Nicht sicher erkannt – bitte Name eintippen';window.lastScan=b;scanPick(b);return}
   $('#scanStatus2').textContent=`Versuch ${live.tries}/3 – Karte ruhig, gerade und gut beleuchtet halten`}
  catch(e){$('#scanStatus2').textContent='Fehler: '+e.message}finally{live.busy=false}}
 async function grabStill(v){try{if(live.ic){const b=await live.ic.takePhoto();return await toCanvas(b,1600)}}catch(e){}
@@ -462,3 +469,38 @@ $('#resetBtn').onclick=()=>{if(confirm('Wirklich alle Daten löschen?')){localSt
 
 if('serviceWorker' in navigator)navigator.serviceWorker.register('sw.js').catch(()=>{});
 S.collection.forEach(trackPrice);snapshot();render();refreshPrices();loadSets();
+
+// ===== Serien-Scan: Stapel unten, automatische Übernahme, Fertig → Sammlung =====
+function frameSig(v){const c=frameSig.c||(frameSig.c=document.createElement('canvas'));c.width=24;c.height=32;const g=c.getContext('2d',{willReadFrequently:true});
+ try{g.drawImage(v,0,0,24,32);const d=g.getImageData(0,0,24,32).data,o=new Uint8Array(768);for(let i=0;i<768;i++)o[i]=(d[i*4]+d[i*4+1]+d[i*4+2])/3;return o}catch(e){return null}}
+function sigDiff(a,b){if(!a||!b)return 255;let t=0;for(let i=0;i<a.length;i++)t+=Math.abs(a[i]-b[i]);return t/a.length}
+function liveDone(sg){live.wait=sg||frameSig($('#liveVideo'));live.tries=0;live.best=null;live.nm=null;live.nb=null}
+const TCOL={Fire:'#ff6a3d',Water:'#3da5ff',Grass:'#4cd964',Lightning:'#ffd84d',Psychic:'#c65bff',Fighting:'#c9783a',Darkness:'#4b4b6b',Metal:'#a8b3c2',Fairy:'#ff8fd1',Dragon:'#c9a227',Colorless:'#e8e8e8'};
+let TRAY=[];
+async function resolveCard(r){const lang=(r.lang||'DE').toLowerCase().replace('jp','ja'),num=String(r.number||'').replace(/^0+(?=\d)/,'');const out={name:r.name,number:r.full||r.number||'',lang:r.lang||'DE',set:r.set||'',eur:null,img:'',id:'',type:''};
+ if(!window.Prices)return out;const tset=r.set&&/^[a-z0-9.]+$/i.test(r.set)?r.set:null;
+ const same=n=>{const a=nrm(n),b=nrm(r.name);return a===b||a===nrm(deName(r.name))||a.startsWith(b)||b.startsWith(a)};
+ try{let p=await Prices.lookup(r.name,lang,tset,num||null);if(p&&!same(p.name))p=await Prices.lookup(r.name,lang,null,num||null);if(p&&!same(p.name))p=null;if(p){out.id=p.id;out.eur=p.best?p.best.eur:null;out.img=p.image||'';out.name=p.name||out.name;out.set=p.set&&p.set.id||out.set;out.setName=p.set&&p.set.name}}catch(e){}
+ if(!out.id)try{const L=(await Prices.search(r.name,lang))||[];const c=L.find(c=>(!tset||c.id.startsWith(tset+'-'))&&same(c.name)&&String(c.localId).replace(/^0+/,'')===num)||(num?null:L[0]);if(c){out.id=c.id;out.img=c.image?c.image+'/high.webp':'';out.name=c.name;out.set=c.id.slice(0,c.id.lastIndexOf('-'))}}catch(e){}
+ if(out.id)try{const j=await (await fetch('https://api.tcgdex.net/v2/en/cards/'+encodeURIComponent(out.id))).json();out.type=(j.types||[])[0]||'';if(out.eur==null&&j.pricing&&j.pricing.cardmarket){const cm=j.pricing.cardmarket;out.eur=cm.trend??cm.avg30??cm.avg??null}}catch(e){}
+ return out}
+function trayEl(){let T=$('#tray');if(!T){T=document.createElement('div');T.id='tray';T.className='tray';T.hidden=true;$('#scanbox .camwrap').after(T)}return T}
+function trayShow(){trayEl().hidden=false;trayRender()}
+async function serialAdd(r){const fr=$('.frame');fr.style.setProperty('--glow','#fff');fr.classList.add('glow');$('#scanStatus2').textContent=`✅ ${r.name} ${r.full||r.number||''} – Preis wird geladen…`;
+ const x=await resolveCard(r);fr.style.setProperty('--glow',TCOL[x.type]||'#ffd84d');setTimeout(()=>fr.classList.remove('glow'),900);
+ const key=(x.id||x.name+'|'+x.number).toLowerCase(),ex=TRAY.find(t=>t.key===key);if(ex)ex.qty++;else TRAY.push({...x,key,qty:1});
+ flyToTray(x);trayRender();$('#scanStatus2').textContent=`✅ ${x.name} ${x.number}${x.eur!=null?' · '+money(x.eur):''} – nächste Karte…`}
+function flyToTray(x){try{const fr=$('.frame').getBoundingClientRect(),T=trayEl().getBoundingClientRect();if(!x.img||!document.body.animate)return;const i=document.createElement('img');i.src=x.img.replace('/high.webp','/low.webp');i.className='flycard';
+ Object.assign(i.style,{left:fr.left+'px',top:fr.top+'px',width:fr.width+'px'});document.body.append(i);
+ i.animate([{transform:'translate(0,0) rotate(0)',opacity:1},{transform:`translate(${T.left+20-fr.left}px,${T.top-fr.top}px) scale(${48/fr.width}) rotate(-8deg)`,opacity:.9}],{duration:650,easing:'cubic-bezier(.5,0,.3,1)'}).onfinish=()=>i.remove()}catch(e){}}
+function trayRender(){const T=trayEl();const n=TRAY.reduce((a,t)=>a+t.qty,0),sum=TRAY.reduce((a,t)=>a+(t.eur||0)*t.qty,0);
+ T.innerHTML=`<div class="trayhead"><b>Stapel: ${n} Karte${n===1?'':'n'}</b><span>${money(sum)}</span><button type="button" class="primary" id="trayDone"${n?'':' disabled'}>Fertig ✓</button></div><div class="traylist"></div>`;
+ const L=T.querySelector('.traylist');TRAY.forEach((t,i)=>{const b=document.createElement('button');b.type='button';b.className='trayit';
+  b.innerHTML=`${t.img?`<img src="${esc(t.img.replace('/high.webp','/low.webp'))}" alt="">`:'<i>?</i>'}${t.qty>1?`<em>×${t.qty}</em>`:''}<span>${esc(t.name)}<br>${t.eur!=null?money(t.eur):'–'}</span>`;
+  b.onclick=()=>trayEdit(i);L.append(b)});$('#trayDone').onclick=trayCommit}
+function trayEdit(i){const t=TRAY[i];if(!t)return;scanPick({name:t.name,number:String(t.number).split('/')[0],full:t.number,set:t.set,lang:t.lang,confident:true},{
+ save:async x=>{const y=await resolveCard({name:x.name,number:x.number.split('/')[0],full:x.number,set:x.set,lang:x.lang});Object.assign(t,y,{key:(y.id||y.name+'|'+y.number).toLowerCase()});trayRender()},
+ remove:()=>{if(t.qty>1)t.qty--;else TRAY.splice(TRAY.indexOf(t),1);trayRender()}});$('#scanPick').scrollIntoView({block:'center'})}
+function trayCommit(){if(!TRAY.length)return;for(const t of TRAY){const it={uid:uid(),manual:true,name:t.name,set:t.setName||t.set||'',number:t.number||'',img:t.img||'',lang:t.lang||'DE',cond:'NM',qty:t.qty,buy:0,price:t.eur,ownPrice:null,added:today(),tdxId:t.id||undefined,setId:t.set||undefined,types:t.type?[t.type]:[]};
+  trackPrice(it);S.collection.push(it)}const n=TRAY.reduce((a,t)=>a+t.qty,0);TRAY=[];save();snapshot();render();trayRender();$('#scanStatus2').textContent=`✅ ${n} Karte${n===1?'':'n'} zur Sammlung hinzugefügt`;navigator.vibrate?.(120)}
+$('#liveShot')?.addEventListener('click',()=>{if(!live.stream)return;live.shot=true;live.wait=null;$('#scanStatus2').textContent='📸 Foto wird gelesen…';liveTick()});
