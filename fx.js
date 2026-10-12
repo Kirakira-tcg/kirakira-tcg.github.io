@@ -3,22 +3,33 @@
 window.FX=(()=>{
 const RM=matchMedia('(prefers-reduced-motion: reduce)').matches;
 const TC={grass:'#3ccf6e',fire:'#ff6a3d',water:'#3aa7ff',lightning:'#ffd23f',psychic:'#c65bff',fighting:'#e0803a',darkness:'#5b5f8f',metal:'#9fb3c8',fairy:'#ff7ad9',dragon:'#d9a73a',colorless:'#cfd3e0',none:'#8d7bff'};
-// Tilt per Pointer
-function setTilt(el,x,y){el.style.setProperty('--rx',((.5-y)*16).toFixed(2)+'deg');el.style.setProperty('--ry',((x-.5)*20).toFixed(2)+'deg');el.style.setProperty('--mx',(x*100).toFixed(1)+'%');el.style.setProperty('--my',(y*100).toFixed(1)+'%');el.style.setProperty('--ho',Math.min(1,.35+Math.hypot(x-.5,y-.5)*1.4).toFixed(2))}
+// Folien-Effekt: Finger/Maus oder Handy-Neigung verschiebt Regenbogen, Glitzer & Glanzpunkt (geglättet per rAF)
+function setTilt(el,x,y){const dx=x-.5,dy=y-.5;el.style.setProperty('--rx',(-dy*18).toFixed(2)+'deg');el.style.setProperty('--ry',(dx*22).toFixed(2)+'deg');
+ el.style.setProperty('--mx',(x*100).toFixed(1)+'%');el.style.setProperty('--my',(y*100).toFixed(1)+'%');
+ el.style.setProperty('--bx',(50+dx*120).toFixed(1)+'%');el.style.setProperty('--by',(50+dy*120).toFixed(1)+'%');
+ el.style.setProperty('--sx',(50-dx*60).toFixed(1)+'%');el.style.setProperty('--sy',(50-dy*60).toFixed(1)+'%');
+ el.style.setProperty('--ho',Math.min(.9,.4+Math.hypot(dx,dy)*1.2).toFixed(2))}
 function target(e){return e.target.closest&&e.target.closest('.tile .im,.dcard')}
-let cur=null,raf=0;
+const st=new Map();let loop=0;// el -> {x,y,tx,ty}
+function aim(el,tx,ty){let o=st.get(el);if(!o){o={x:.5,y:.5};st.set(el,o);el.classList.add('tilting')}o.tx=tx;o.ty=ty;o.rel=0;if(!loop)loop=requestAnimationFrame(tick)}
+function tick(){loop=0;for(const [el,o] of st){o.x+=(o.tx-o.x)*.18;o.y+=(o.ty-o.y)*.18;setTilt(el,o.x,o.y);
+  if(o.rel&&Math.abs(o.x-.5)<.01&&Math.abs(o.y-.5)<.01||!el.isConnected){st.delete(el);reset(el)}}if(st.size)loop=requestAnimationFrame(tick)}
+function release(el){const o=st.get(el);if(o){o.tx=.5;o.ty=.5;o.rel=1;if(!loop)loop=requestAnimationFrame(tick)}}
+let cur=null;
 if(!RM){
- document.addEventListener('pointermove',e=>{const el=target(e);if(cur&&cur!==el)reset(cur);cur=el;if(!el)return;const r=el.getBoundingClientRect(),x=(e.clientX-r.left)/r.width,y=(e.clientY-r.top)/r.height;
-  cancelAnimationFrame(raf);raf=requestAnimationFrame(()=>{el.classList.add('tilting');setTilt(el,x,y)})},{passive:true});
- document.addEventListener('pointerleave',()=>cur&&reset(cur));document.addEventListener('pointerup',e=>{if(e.pointerType!=='mouse'&&cur)reset(cur)});
+ document.addEventListener('pointermove',e=>{const el=target(e);if(cur&&cur!==el)release(cur);cur=el;if(!el)return;const r=el.getBoundingClientRect();
+  aim(el,Math.max(0,Math.min(1,(e.clientX-r.left)/r.width)),Math.max(0,Math.min(1,(e.clientY-r.top)/r.height)))},{passive:true});
+ document.addEventListener('pointerleave',()=>cur&&release(cur));document.addEventListener('pointerup',e=>{if(e.pointerType!=='mouse'&&cur&&!gyroOn)release(cur)});
 }
-function reset(el){el.classList.remove('tilting');['--rx','--ry','--ho'].forEach(p=>el.style.removeProperty(p))}
-// Gyro (iOS braucht Erlaubnis per Tipp)
-let gyroOn=false;
+function reset(el){el.classList.remove('tilting');['--rx','--ry','--ho','--mx','--my','--bx','--by','--sx','--sy'].forEach(p=>el.style.removeProperty(p))}
+// Gyro (iOS braucht Erlaubnis per Tipp) – wirkt auf Detailkarte und sichtbare Kacheln
+let gyroOn=false,g0=null,gq=0;
+function onScreen(el){const r=el.getBoundingClientRect();return r.bottom>0&&r.top<innerHeight&&r.width>0}
 async function gyro(){try{if(typeof DeviceOrientationEvent!=='undefined'&&DeviceOrientationEvent.requestPermission){const r=await DeviceOrientationEvent.requestPermission();if(r!=='granted')return}
- if(gyroOn)return;gyroOn=true;addEventListener('deviceorientation',e=>{if(e.gamma==null)return;const x=Math.max(0,Math.min(1,.5+e.gamma/50)),y=Math.max(0,Math.min(1,.5+(e.beta-45)/50));
-  cancelAnimationFrame(raf);raf=requestAnimationFrame(()=>document.querySelectorAll('.dcard').forEach(el=>{el.classList.add('tilting');setTilt(el,x,y)}))})}catch(e){}}
-// Android: ohne Erlaubnis automatisch
+ if(gyroOn)return;gyroOn=true;addEventListener('deviceorientation',e=>{if(e.gamma==null)return;g0??=e.beta;g0+=(e.beta-g0)*.01;// Ruhelage langsam nachführen
+  const x=Math.max(0,Math.min(1,.5+e.gamma/40)),y=Math.max(0,Math.min(1,.5+(e.beta-g0)/40));if(gq)return;gq=requestAnimationFrame(()=>{gq=0;
+  const els=[...document.querySelectorAll('.dcard')].filter(onScreen);const tiles=[...document.querySelectorAll('.view.active .tile .im')].filter(onScreen).slice(0,12);
+  for(const el of [...els,...tiles])if(el!==cur)aim(el,x,y)})})}catch(e){}}
 if(typeof DeviceOrientationEvent!=='undefined'&&!DeviceOrientationEvent.requestPermission&&matchMedia('(pointer:coarse)').matches&&!RM)gyro();
 // Hochzählen
 const last=new WeakMap();

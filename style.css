@@ -140,3 +140,12 @@ nav .scanNav i{background:linear-gradient(135deg,var(--ac),#ff8a5c);color:#fff;b
 #scanStatus2{font-weight:700;color:var(--tx);margin-top:8px;min-height:1.4em}.scanbox.busy .scanbtns{opacity:.5;pointer-events:none}
 .frame span{position:absolute;top:-26px;left:0;right:0;font-size:.8rem}.frame{position:relative}
 .row.wrap{flex-wrap:wrap;gap:6px}.scanbox.live .frame{cursor:crosshair}
+/* Folie v6: Regenbogen + Glitzer + Glanzpunkt wandern mit der Neigung */
+.holo{background:radial-gradient(circle at var(--mx,50%) var(--my,30%),rgba(255,255,255,.8),rgba(255,255,255,.15) 22%,transparent 45%),
+ linear-gradient(115deg,transparent 18%,#ff7ad9 30%,#ffd84d 40%,#5af0c8 50%,#5ab8ff 60%,#c65bff 70%,transparent 82%);
+ background-size:100% 100%,300% 300%;background-position:center,var(--bx,0%) var(--by,0%)}
+.holo::after{content:'';position:absolute;inset:0;border-radius:inherit;mix-blend-mode:overlay;opacity:.3;
+ background:repeating-radial-gradient(circle at var(--sx,50%) var(--sy,50%),rgba(255,255,255,.8) 0 1px,transparent 1px 11px),
+ repeating-linear-gradient(60deg,rgba(255,255,255,.25) 0 2px,transparent 2px 9px);background-size:120% 120%,140% 140%;background-position:var(--sx,50%) var(--sy,50%),var(--bx,50%) var(--by,50%)}
+.tile .im.tilting .holo,.dcard.tilting .holo{transition:none}
+.detail .dcard{touch-action:none}
