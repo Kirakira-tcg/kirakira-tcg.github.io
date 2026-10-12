@@ -161,16 +161,8 @@ nav .scanNav i{background:linear-gradient(135deg,var(--ac),#ff8a5c);color:#fff;b
  background-size:100% 100%,300% 300%;background-position:center,var(--bx,0%) var(--by,0%)}
 .holo::after{opacity:.18}
 
-/* Serien-Scan: Glow, Stapel, Flug */
-.frame.glow{border-color:var(--glow)!important;box-shadow:0 0 0 9999px rgba(0,0,0,.45),0 0 28px 8px var(--glow),0 0 18px var(--glow) inset!important;transition:box-shadow .2s}
-.tray{margin:10px 0;padding:10px;border-radius:18px;background:var(--card);border:2px solid var(--ac2);text-align:left}
-.trayhead{display:flex;align-items:center;gap:10px}.trayhead span{margin-left:auto;font-weight:800}.trayhead button:disabled{opacity:.4}
-.traylist{display:flex;gap:8px;overflow-x:auto;padding:8px 2px 2px}
-.trayit{position:relative;flex:0 0 72px;padding:3px;border-radius:10px;font-size:.62rem;display:flex;flex-direction:column;align-items:center;overflow:hidden}
-.trayit img{width:100%;aspect-ratio:63/88;object-fit:cover;border-radius:6px}.trayit i{display:grid;place-items:center;width:100%;aspect-ratio:63/88;font-size:1.6rem}
-.trayit::after{content:'';position:absolute;inset:3px 3px auto;aspect-ratio:63/88;border-radius:6px;background:linear-gradient(115deg,transparent 30%,rgba(255,255,255,.35) 45%,transparent 60%);background-size:250% 250%;animation:sheen 4s ease-in-out infinite;mix-blend-mode:soft-light;pointer-events:none}
-.trayit em{position:absolute;top:4px;right:4px;background:var(--ac2);color:#000;font-style:normal;font-weight:800;border-radius:8px;padding:0 5px;font-size:.7rem}
-.trayit span{white-space:nowrap;overflow:hidden;text-overflow:ellipsis;max-width:100%;line-height:1.2}
-.flycard{position:fixed;z-index:999;border-radius:10px;pointer-events:none;transform-origin:0 0;box-shadow:0 8px 24px rgba(0,0,0,.5)}
-
 .camerr{background:#5a1a24;border:2px solid #ff5c7a;color:#fff;border-radius:12px;padding:10px 12px;margin:8px auto;max-width:480px;text-align:left;font-weight:700}
+
+.bigshot{font-size:1.25rem;padding:14px 26px;min-width:150px}
+#livePhoto.pulse{animation:shotpulse 1s ease-in-out infinite;box-shadow:0 0 0 0 rgba(255,216,77,.8)}
+@keyframes shotpulse{0%{box-shadow:0 0 0 0 rgba(255,216,77,.8);transform:scale(1)}50%{box-shadow:0 0 0 12px rgba(255,216,77,0);transform:scale(1.07)}100%{box-shadow:0 0 0 0 rgba(255,216,77,0);transform:scale(1)}}
