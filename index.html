@@ -28,9 +28,12 @@
  <h2>Sets durchsuchen</h2><input id="setFilter" class="full" placeholder="Set filtern…"><div id="setList" class="setlist"><p class="muted small">Lade Sets…</p></div>
 </section>
 <section id="v-scan" class="view">
- <div class="scanbox"><div class="frame"><span>Karte im Rahmen platzieren</span></div>
- <button id="scanBtn" class="primary">📷 Karte scannen</button><input type="file" id="scanFile" accept="image/*" capture="environment" hidden>
- <p class="muted small">Foto der Karte aufnehmen – Name &amp; Kartennummer werden per Texterkennung gelesen und gesucht.</p><div id="scanStatus2" class="muted small"></div></div>
+ <div class="scanbox" id="scanbox"><div class="camwrap"><video id="liveVideo" playsinline muted></video><div class="frame"><span>Karte im Rahmen platzieren</span></div></div>
+ <pre id="liveText" class="small"></pre><canvas id="liveCanvas" hidden></canvas>
+ <div class="scanbtns"><button id="liveBtn" class="primary">🎥 Live-Scan</button><button id="scanBtn">📷 Foto aufnehmen</button><button id="uploadBtn">🖼️ Bild hochladen</button></div>
+ <div class="livebtns"><button id="torchBtn" hidden>🔦 Licht</button><button id="liveCancel">✕ Abbrechen</button></div>
+ <input type="file" id="scanFile" accept="image/*" capture="environment" hidden>
+ <p class="muted small">Live-Scan: Karte vor die Kamera halten – Name, Nummer &amp; Sprache werden automatisch erkannt. Oder Foto aufnehmen / Bild hochladen.</p><div id="scanStatus2" class="muted small"></div></div>
 </section>
 <section id="v-wish" class="view"><h2>Wunschliste</h2><div id="wishGrid" class="cgrid"></div><p class="muted small">Karten in der Suche über ☆ hinzufügen. Grün = unter Zielpreis.</p>
  <h2>Trade-Analyse</h2><div class="trade"><div><h3>Du gibst</h3><div id="tGive"></div><button class="chip" id="tGiveAdd">+ aus Sammlung</button><b id="tGiveSum"></b></div><div><h3>Du bekommst</h3><div id="tGet"></div><button class="chip" id="tGetAdd">+ Wert eingeben</button><b id="tGetSum"></b></div></div>

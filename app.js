@@ -29,7 +29,7 @@ function itemChange(it,days){
 function trackPrice(it){if(it.price==null)return;it.ph??=[];const d=today();it.ph=it.ph.filter(x=>x.d!==d);it.ph.push({d,p:it.price});if(it.ph.length>400)it.ph.shift()}
 
 // Navigation
-function go(v){$$('nav button').forEach(x=>x.classList.toggle('on',x.dataset.v===v));$$('.view').forEach(s=>s.classList.toggle('active',s.id===v));render();window.scrollTo(0,0)}
+function go(v){if(v!=='v-scan')stopLive();$$('nav button').forEach(x=>x.classList.toggle('on',x.dataset.v===v));$$('.view').forEach(s=>s.classList.toggle('active',s.id===v));render();window.scrollTo(0,0)}
 $$('nav button').forEach(b=>b.onclick=()=>go(b.dataset.v));
 $('#cur').value=S.settings.cur;$('#cur').onchange=e=>{S.settings.cur=e.target.value;save();render()};
 $$('#tf button').forEach(b=>{b.classList.toggle('on',+b.dataset.d===S.settings.tf);b.onclick=()=>{S.settings.tf=+b.dataset.d;$$('#tf button').forEach(x=>x.classList.toggle('on',x===b));save();render()}});
@@ -63,7 +63,7 @@ $('#setFilter').oninput=renderSets;
 function addDialog(c,mode,sealed){const manual=!c;const f=$('#dlgForm');const p=c?cmPrice(c):null;
  f.innerHTML=`<h3>${mode==='wish'?'Zur Wunschliste':sealed?'Sealed-Produkt hinzufügen':'Zur Sammlung'}</h3>
  ${manual?`<label>Name<input name="name" required placeholder="${sealed?'z.B. 30 Jahre Booster Bundle':''}"></label><label>Set<input name="set"></label>${sealed?'':'<label>Nummer<input name="number"></label>'}<label>Bild-URL (optional)<input name="img"></label>`:`<p><b>${esc(c.name)}</b> – ${esc(c.set.name)} ${c.number}<br>Cardmarket-Trend: ${money(p)}</p>`}
- <label>Sprache<select name="lang"><option>DE</option><option>EN</option><option>JP</option></select></label>
+ <label>Sprache<select name="lang">${LANGS.map(l=>`<option${l===(window.scanLang||'DE')?' selected':''}>${l}</option>`).join('')}</select></label>${window.scanLang?'<p class="muted small">Sprache per Scan erkannt: '+window.scanLang+'</p>':''}
  ${mode==='wish'?`<label>Zielpreis (€)<input name="target" type="number" step="0.01" required></label>`:
  `${sealed?'<input type="hidden" name="cond" value="Sealed">':`<label>Zustand<select name="cond"><option>NM</option><option>EX</option><option>GD</option><option>LP</option><option>PL</option><option>PSA 10</option><option>PSA 9</option><option>CGC 10</option><option>BGS 9.5</option><option>PSA/Graded</option></select></label>`}
  <label>Anzahl<input name="qty" type="number" value="1" min="1"></label><label>Kaufpreis pro Stück (€)<input name="buy" type="number" step="0.01" value="0"></label>`}
@@ -149,18 +149,55 @@ $('#tGiveAdd').onclick=()=>{const opts=S.collection.map((c,i)=>`${i+1}: ${c.name
 $('#tGetAdd').onclick=()=>{const n=prompt('Name der Karte:');if(!n)return;const v=parseFloat((prompt('Wert in €:')||'').replace(',','.'));if(!isNaN(v)){S.trade.get.push({n,v});save();renderTrade()}};
 
 // Scan / OCR
-$('#scanBtn').onclick=()=>$('#scanFile').click();
+const LANGS=['DE','EN','JP','FR','IT','ES','PT','KR','CN'];
+function detectLang(t){if(/[\u3040-\u30ff]/.test(t))return'JP';if(/[\uac00-\ud7af]/.test(t))return'KR';if(/[\u4e00-\u9fff]/.test(t))return'CN';
+ const T=t.toLowerCase(),k={DE:/schw[aä]che|r[uü]ckzug|resistenz|f[aä]higkeit|entwickelt/,FR:/faiblesse|retraite|r[ée]sistance|talent/,IT:/debolezza|ritirata|resistenza|abilit/,ES:/debilidad|retirada|resistencia|habilidad/,PT:/fraqueza|recuo|habilidade/,EN:/weakness|retreat|resistance|ability|evolves/};
+ for(const[l,r]of Object.entries(k))if(r.test(T))return l;return''}
+function applyScan(r,lang){window.scanLang=lang||'';$('#scanStatus').textContent=`Scan erkannt: ${r.name||'?'} ${r.number?'· Nr. '+r.number:''}${lang?' · Sprache '+lang:''}`;
+ $('#qName').value=r.name||'';$('#qNum').value=r.number||'';go('v-search');search(r.name,r.number,'')}
+let ocrWorker=null;async function getWorker(){if(!ocrWorker)ocrWorker=await Tesseract.createWorker('deu+eng');return ocrWorker}
+$('#scanBtn').onclick=()=>{stopLive();$('#scanFile').setAttribute('capture','environment');$('#scanFile').click()};
+$('#uploadBtn').onclick=()=>{stopLive();$('#scanFile').removeAttribute('capture');$('#scanFile').click()};
 $('#scanFile').onchange=async e=>{const f=e.target.files[0];if(!f)return;const st=$('#scanStatus2');
  if(!window.Tesseract){st.textContent='OCR-Bibliothek nicht geladen (Internet?).';return}
  st.textContent='Texterkennung läuft… (beim ersten Mal ~10–20 s)';
- try{const {data}=await Tesseract.recognize(f,'deu+eng',{logger:m=>{if(m.status==='recognizing text')st.textContent='Erkenne Text… '+Math.round(m.progress*100)+'%'}});
-  const r=parseOCR(data.text);st.textContent='';$('#scanStatus').textContent=`Scan erkannt: ${r.name||'?'} ${r.number?'· Nr. '+r.number:''}`;
-  $('#qName').value=r.name||'';$('#qNum').value=r.number||'';go('v-search');search(r.name,r.number,'')}catch(err){st.textContent='Fehler bei der Erkennung: '+err.message}
+ try{const w=await getWorker();const {data}=await w.recognize(f);st.textContent='';applyScan(parseOCR(data.text),detectLang(data.text))}catch(err){st.textContent='Fehler bei der Erkennung: '+err.message}
  e.target.value=''};
-function parseOCR(t){const m=t.match(/(\d{1,3})\s*\/\s*(\d{2,3})/);const lines=t.split('\n').map(l=>l.trim()).filter(Boolean);
- let name='';for(const l of lines.slice(0,6)){const w=l.replace(/[^A-Za-zÄÖÜäöüßé\- ]/g,' ').split(/\s+/).filter(x=>x.length>=3&&!/^(BASIS|BASIC|STAGE|PHASE|KP|HP|Entwickelt)$/i.test(x));
+// Live-Scan
+let live={stream:null,timer:null,busy:false,last:null,torch:false};
+async function startLive(){const st=$('#scanStatus2');if(!navigator.mediaDevices?.getUserMedia){st.textContent='Kamera wird von diesem Browser nicht unterstützt (HTTPS nötig).';return}
+ if(!window.Tesseract){st.textContent='OCR-Bibliothek nicht geladen (Internet?).';return}
+ try{live.stream=await navigator.mediaDevices.getUserMedia({video:{facingMode:'environment',width:{ideal:1280},height:{ideal:720}},audio:false})}catch(e){st.textContent='Kein Kamerazugriff: '+e.message;return}
+ const v=$('#liveVideo');v.srcObject=live.stream;await v.play().catch(()=>{});$('#scanbox').classList.add('live');$('#liveText').textContent='';st.textContent='Kamera startet, Texterkennung wird geladen…';
+ const tr=live.stream.getVideoTracks()[0];const caps=tr.getCapabilities?.()||{};$('#torchBtn').hidden=!caps.torch;
+ live.last=null;getWorker().catch(()=>{});live.timer=setInterval(liveTick,1200)}
+function stopLive(){clearInterval(live.timer);live.timer=null;if(live.stream){live.stream.getTracks().forEach(t=>t.stop());live.stream=null}
+ const v=$('#liveVideo');if(v)v.srcObject=null;$('#scanbox')?.classList.remove('live');live.torch=false}
+async function liveTick(){if(live.busy||!live.stream)return;const v=$('#liveVideo');if(!v.videoWidth)return;live.busy=true;
+ try{const w=await getWorker();if(!live.stream)return;
+  const fr=$('.frame').getBoundingClientRect(),vr=v.getBoundingClientRect();
+  // object-fit:cover Umrechnung Bildschirm -> Videopixel
+  const sc=Math.max(vr.width/v.videoWidth,vr.height/v.videoHeight),ox=(v.videoWidth*sc-vr.width)/2,oy=(v.videoHeight*sc-vr.height)/2;
+  let sx=(fr.left-vr.left+ox)/sc,sy=(fr.top-vr.top+oy)/sc,sw=fr.width/sc,sh=fr.height/sc;
+  sx=Math.max(0,sx);sy=Math.max(0,sy);sw=Math.min(sw,v.videoWidth-sx);sh=Math.min(sh,v.videoHeight-sy);
+  const W=Math.min(720,Math.round(sw)),H=Math.round(sh*W/sw),c=$('#liveCanvas');c.width=W;c.height=H;
+  const x=c.getContext('2d');x.filter='grayscale(1) contrast(1.4)';x.drawImage(v,sx,sy,sw,sh,0,0,W,H);
+  $('#scanStatus2').textContent='Suche Karte…';
+  const {data}=await w.recognize(c);if(!live.stream)return;const t=data.text||'';const r=parseOCR(t),lang=detectLang(t);
+  $('#liveText').textContent=(t.replace(/\s+/g,' ').trim().slice(0,140)||'(kein Text)')+(r.number||r.name?`\n→ ${r.name||'?'} · ${r.number||'?'}${lang?' · '+lang:''}`:'');
+  if(r.number&&r.name){const key=(r.name+'|'+r.number).toLowerCase();
+   if(live.last===key){navigator.vibrate?.(200);stopLive();$('#scanStatus2').textContent='Karte erkannt ✓';applyScan(r,lang);return}
+   live.last=key;$('#scanStatus2').textContent='Fast erkannt – Karte ruhig halten…'}else live.last=null}
+ catch(e){$('#scanStatus2').textContent='Fehler: '+e.message}finally{live.busy=false}}
+$('#liveBtn').onclick=startLive;$('#liveCancel').onclick=()=>{stopLive();$('#scanStatus2').textContent='Live-Scan abgebrochen.'};
+$('#torchBtn').onclick=async()=>{const tr=live.stream?.getVideoTracks()[0];if(!tr)return;live.torch=!live.torch;try{await tr.applyConstraints({advanced:[{torch:live.torch}]})}catch(e){}};
+document.addEventListener('visibilitychange',()=>{if(document.hidden)stopLive()});
+window.detectLang=detectLang;
+function parseOCR(t){const m=t.match(/(\d{1,3})\s*\/\s*(\d{2,3})/)||t.match(/\b([A-Z]{2,5}(?:-[A-Z]{1,2})?\d{0,2})\s*[-–]?\s*(\d{2,3})\b/);const lines=t.split('\n').map(l=>l.trim()).filter(Boolean);
+ let name='';for(const l of lines.slice(0,6)){const w=l.replace(/[^A-Za-zÄÖÜäöüßé\- ]/g,' ').split(/\s+/).filter(x=>x.length>=3&&!/^(BASIS|BASIC|STAGE|PHASE|KP|HP|PV|PS|Entwickelt)$/i.test(x));
   if(w.length){name=w.slice(0,2).join(' ');if(/\bex\b/i.test(l))name=w[0]+' ex';break}}
- return{name,number:m?m[1].replace(/^0+(?=\d)/,''):''}}
+ const number=m?(/^\d/.test(m[1])?m[1].replace(/^0+(?=\d)/,''):m[2].replace(/^0+(?=\d)/,'')):'';
+ return{name,number}}
 window.parseOCR=parseOCR;
 
 // Export / Import

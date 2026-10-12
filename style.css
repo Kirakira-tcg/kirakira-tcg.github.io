@@ -37,3 +37,11 @@ nav .scanNav i{background:var(--ac);color:#fff;border-radius:50%;width:42px;heig
 dialog{background:var(--card);color:var(--tx);border:1px solid var(--bd);border-radius:18px;width:min(94vw,440px);padding:16px}dialog::backdrop{background:rgba(0,0,0,.6)}
 dialog label{display:block;margin:8px 0;font-size:.85rem;color:var(--mu)}dialog input,dialog select{width:100%;margin-top:3px}.row{display:flex;gap:8px;margin-top:12px}.row button{flex:1}
 .detail img{width:60%;display:block;margin:0 auto 10px;border-radius:10px}.ptable{width:100%;border-collapse:collapse;font-size:.85rem}.ptable td{padding:5px 2px;border-bottom:1px solid var(--bd)}.ptable td:last-child{text-align:right}
+
+.camwrap{position:relative;width:260px;margin:0 auto}.camwrap video{display:none}
+.scanbox.live .camwrap{width:100%;max-width:480px;height:62vh;border-radius:16px;overflow:hidden;background:#000}
+.scanbox.live .camwrap video{display:block;width:100%;height:100%;object-fit:cover}
+.scanbox.live .frame{position:absolute;left:50%;top:50%;transform:translate(-50%,-50%);margin:0;width:62%;max-height:90%;border-style:solid;box-shadow:0 0 0 9999px rgba(0,0,0,.45);color:#fff}
+.scanbtns{display:flex;gap:8px;justify-content:center;flex-wrap:wrap}.livebtns{display:none;gap:8px;justify-content:center;margin-top:8px}
+.scanbox.live .scanbtns{display:none}.scanbox.live .livebtns{display:flex}
+#liveText{display:none;white-space:pre-wrap;text-align:left;max-width:480px;margin:8px auto;color:var(--mu);font-family:inherit}.scanbox.live #liveText{display:block}
