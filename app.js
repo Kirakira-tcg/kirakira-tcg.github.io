@@ -283,8 +283,21 @@ function fuzzyName(x){x=String(x||'');const sm=x.match(SUF);if(sm){const b=fuzzy
  const mg=x.match(/^\s*mega[\s-]+/i);if(mg){const b=fuzzyName(x.slice(mg[0].length));return b?'Mega-'+b:null}
  const q=nrm(x);if(q.length<3)return null;nameMap();
  if(NAMES.has(q))return NAMES.get(q);let best=null,bd=1e9;for(const[k,v]of NAMES){if(Math.abs(k.length-q.length)>2)continue;const d=lev(q,k);if(d<bd){bd=d;best=v}}
- const L=Math.max(q.length,nrm(best||'').length);return best&&q.length>=4&&bd<=(L<=5?2:0.3*L)?best:null}
+ const L=Math.max(q.length,nrm(best||'').length);return best&&q.length>=4&&bd<=(L<=4?1:L===5?2:0.3*L)?best:null}
 window.fuzzyName=fuzzyName;
+// Trainer-/Energie-Namen (trainers.js), mehrteilig; gleiche strenge Schwelle, Pokémon haben Vorrang
+let TMAP=null;function tMap(){if(!TMAP){TMAP=new Map();for(const r of (window.TNAMES||[]))for(const n of r.slice(0,2))if(n&&nrm(n).length>=4&&!TMAP.has(nrm(n)))TMAP.set(nrm(n),n);
+ const ET={Pflanzen:'Grass',Feuer:'Fire',Wasser:'Water',Elektro:'Lightning',Psycho:'Psychic',Kampf:'Fighting',Finsternis:'Darkness',Metall:'Metal',Fee:'Fairy'};
+ for(const[d,e]of Object.entries(ET)){for(const n of[d+'-Energie','Basis-'+d+'-Energie'])TMAP.set(nrm(n),n);for(const n of[e+' Energy','Basic '+e+' Energy'])if(!TMAP.has(nrm(n)))TMAP.set(nrm(n),n)}}return TMAP}
+function trainerName(l){const w=String(l||'').replace(/[^A-Za-zÄÖÜäöüßé'’.\- ]/g,' ').trim().split(/\s+/).filter(Boolean);tMap();let best=null,bd=1e9,bL=0;
+ for(let n=Math.min(5,w.length);n>=1;n--){const q=nrm(w.slice(0,n).join(' '));if(q.length<4)continue;if(TMAP.has(q))return TMAP.get(q);
+  for(const[k,v]of TMAP){if(Math.abs(k.length-q.length)>2)continue;const d=lev(q,k);if(d<bd){bd=d;best=v;bL=Math.max(q.length,k.length)}}}
+ return best&&bd<=(bL<=4?1:bL===5?2:Math.min(3,0.2*bL))?best:null}
+const anyName=l=>{const w=String(l||'').replace(/[^A-Za-zÄÖÜäöüßé\- ]/g,' ').trim().split(/\s+/).filter(x=>x&&!/^(BASIS|BASIC|STAGE|PHASE|KP|HP|TRAINER|ITEM|ARTEFAKT|UNTERST[ÜU]TZER|SUPPORTER|STADION|STADIUM|ENERGIE|ENERGY)$/.test(x));
+ const ex=x=>{const q=nrm(x);return q.length>=3&&nameMap().get(q)};const j=w.length>1&&w[0].length<=3&&w[1].length<=3?w[0]+w[1]:'';
+ let p=w.map(ex).find(Boolean);if(p)return addSfx(p,l);const tq=nrm(w.join(' '));tMap();for(let n=Math.min(5,w.length);n>=1;n--){const k=nrm(w.slice(0,n).join(' '));if(TMAP.has(k))return TMAP.get(k)}
+ p=(j&&fuzzyName(j))||w.map(fuzzyName).find(Boolean);if(p)return addSfx(p,l);return trainerName(w.join(' '))};
+window.trainerName=trainerName;
 function addSfx(n,l){if(SUF.test(n))return n;const m=(l||'').match(/\b(VMAX|VSTAR|V-UNION|GX|ex|EX|V)\b/);return m?n+' '+m[1]:n}
 const knownName=x=>!!DE[x.toLowerCase()]||Object.values(DE).some(v=>v.toLowerCase()===x.toLowerCase());
 // Name aus dem Namensstreifen oben links (nach BASIS/PHASE), Energie-Karten erkennen
@@ -292,7 +305,7 @@ function parseTop(t){t=t||'';const e=t.match(/basis[^\n]{0,4}?([A-Za-zäöü]{4,
  if(e||/basis-?\s*energie/i.test(t)||/ENERGIE\b/.test(t)&&!/\bKP\b|\d{2,3}\s*$/m.test(t)){let ty=e&&e[1]&&ENERGY[e[1].toLowerCase()];if(!ty)ty=window.energyHue||'';if(ty)return{name:'',energy:ty};if(/basis.{0,6}energie/i.test(t))return{name:'',energy:window.energyHue||'Psychic',guess:1}}
  const lines=t.split('\n').map(l=>l.trim()).filter(Boolean);
  for(const l of lines.slice(0,4)){const w=l.replace(/[^A-Za-zÄÖÜäöüßé\- ]/g,' ').split(/\s+/).map(x=>x.replace(/^-+|-+$/g,'')).filter(x=>x.length>=3&&/[a-zäöü]/.test(x)&&okName(x)&&!/^(BASIS|BASIC|STAGE|PHASE|KP|HP|PV|PS|Entwickelt|Evolves|aus|from)$/i.test(x));
-  const fz=fuzzyName(l.replace(/[^A-Za-zÄÖÜäöüßé\- ]/g,' ').trim().split(/\s+/).filter(x=>!/^(BASIS|BASIC|STAGE|PHASE|KP|HP)$/i.test(x)).slice(0,2).join(''));if(fz)return{name:addSfx(fz,l),energy:''};
+  const fz=anyName(l);if(fz)return{name:fz,energy:''};
   if(w.length){const k=w.map(fuzzyName).find(Boolean);if(k)return{name:addSfx(k,l),energy:''}}}
  return{name:'',energy:''}}
 // Set über Set-Code (z.B. 30C) + Gesamtzahl
@@ -389,7 +402,7 @@ document.addEventListener('visibilitychange',()=>{if(document.hidden)stopLive()}
 window.detectLang=detectLang;
 function parseOCR(t){const m=t.match(/(\d{1,3})\s*\/\s*(\d{2,3})/)||t.match(/\b([A-Z]{2,5}(?:-[A-Z]{1,2})?\d{0,2})\s*[-–]?\s*(\d{2,3})\b/);const lines=t.split('\n').map(l=>l.trim()).filter(Boolean);
  let name='';for(const l of lines.slice(0,6)){const w=l.replace(/[^A-Za-zÄÖÜäöüßé\- ]/g,' ').split(/\s+/).filter(x=>x.length>=3&&okName(x)&&!/^(BASIS|BASIC|STAGE|PHASE|KP|HP|PV|PS|Entwickelt)$/i.test(x));
-  {const fz=fuzzyName(l.replace(/[^A-Za-zÄÖÜäöüßé\- ]/g,' ').trim().split(/\s+/).filter(x=>!/^(BASIS|BASIC|STAGE|PHASE|KP|HP)$/i.test(x)).slice(0,2).join(''));if(fz){name=addSfx(fz,l);break}}
+  {const fz=anyName(l);if(fz){name=fz;break}}
   if(w.length){const kn=w.map(fuzzyName).find(Boolean);if(kn){name=addSfx(kn,l);break}}}
  const number=m?(/^\d/.test(m[1])?m[1].replace(/^0+(?=\d)/,''):m[2].replace(/^0+(?=\d)/,'')):'';
  return{name,number}}
