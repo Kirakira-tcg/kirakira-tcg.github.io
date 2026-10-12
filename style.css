@@ -139,3 +139,4 @@ nav .scanNav i{background:linear-gradient(135deg,var(--ac),#ff8a5c);color:#fff;b
 .scanpick{background:var(--card);border:2px solid var(--ac2);border-radius:20px;padding:12px;margin:12px 0;text-align:left}.scanpick label{display:block;margin:6px 0;font-size:.85rem;color:var(--mu)}.scanpick input,.scanpick select{width:100%}
 #scanStatus2{font-weight:700;color:var(--tx);margin-top:8px;min-height:1.4em}.scanbox.busy .scanbtns{opacity:.5;pointer-events:none}
 .frame span{position:absolute;top:-26px;left:0;right:0;font-size:.8rem}.frame{position:relative}
+.row.wrap{flex-wrap:wrap;gap:6px}.scanbox.live .frame{cursor:crosshair}

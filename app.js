@@ -29,7 +29,7 @@ function itemChange(it,days){
 function trackPrice(it){if(it.price==null)return;it.ph??=[];const d=today();it.ph=it.ph.filter(x=>x.d!==d);it.ph.push({d,p:it.price});if(it.ph.length>400)it.ph.shift()}
 
 // Navigation
-function go(v){if(v!=='v-scan')stopLive();$$('nav button').forEach(x=>x.classList.toggle('on',x.dataset.v===v));$$('.view').forEach(s=>s.classList.toggle('active',s.id===v));render();window.scrollTo(0,0)}
+function go(v){if(v!=='v-scan')stopLive();else setTimeout(()=>window.warmOCR&&warmOCR(),0);$$('nav button').forEach(x=>x.classList.toggle('on',x.dataset.v===v));$$('.view').forEach(s=>s.classList.toggle('active',s.id===v));render();window.scrollTo(0,0)}
 $$('nav button').forEach(b=>b.onclick=()=>go(b.dataset.v));
 $('#cur').value=S.settings.cur;$('#cur').onchange=e=>{S.settings.cur=e.target.value;save();render()};
 $$('#tf button').forEach(b=>{b.classList.toggle('on',+b.dataset.d===S.settings.tf);b.onclick=()=>{S.settings.tf=+b.dataset.d;$$('#tf button').forEach(x=>x.classList.toggle('on',x===b));save();render()}});
@@ -37,20 +37,25 @@ let filt='all';$$('#filt button').forEach(b=>b.onclick=()=>{filt=b.dataset.f;$$(
 $('#sort').onchange=render;
 
 // Suche
-$('#searchForm').onsubmit=e=>{e.preventDefault();search($('#qName').value,$('#qNum').value,$('#qSet').value)};
+$('#searchForm').onsubmit=e=>{e.preventDefault();if(window.pendingScan&&$('#qName').value!==pendingScan.name)window.pendingScan=null;search($('#qName').value,$('#qNum').value,$('#qSet').value)};
 let lastResults=[];
+function manualAdd(x){window.scanLang=x.lang||window.scanLang||'';addDialog(null,'coll');const f=$('#dlgForm');
+ if(f.name)f.name.value=x.name||'';if(f.number)f.number.value=x.number||'';if(f.set)f.set.value=x.set||'';if(f.lang&&x.lang)f.lang.value=x.lang}
+function bindMan(name,num,set){const ps=window.pendingScan||{};const x={name:ps.jp?`${ps.name} (${ps.jp})`:(ps.name||name),number:ps.number||num,set:ps.set||set,lang:ps.lang};
+ ['#manScan','#manScan2'].forEach(id=>{const b=$(id);if(b)b.onclick=()=>manualAdd(x)})}
 async function search(name,num,set,setId){const q=[];name=deName(clean(name||''));num=clean(num||'').split('/')[0].replace(/^0+(?=\d)/,'');set=clean(set||'');
  if(name)q.push(name.includes(' ')?`name:"${name}"`:`name:${name}*`);if(num)q.push(`number:${num}`);if(set)q.push(`set.name:"${set}*"`);if(setId)q.push(`set.id:${setId}`);
  if(!q.length)return;const R=$('#results');R.innerHTML='<p class="muted">Suche…</p>';
  try{const d=await api(`${API}/cards?q=${encodeURIComponent(q.join(' '))}&pageSize=60&select=id,name,number,set,images,cardmarket,rarity,types,supertype`);
-  if(!d.data.length){R.innerHTML='<p class="muted">Nichts gefunden. Japanische/deutsche Sonderkarten bitte manuell eintragen.</p>';return}
+  const ps=window.pendingScan,jpB=ps&&ps.lang&&ps.lang!=='EN'?`<div class="scanpick"><b>${ps.lang==='JP'?'🇯🇵 Japanische Karte':'Karte ('+ps.lang+')'}: ${esc(ps.name||'')} ${esc(ps.number||'')}</b><p class="muted small">${ps.lang==='JP'?'Japanische Sets sind nicht in der Preisdatenbank.':'Preise gibt es nur für die englische Version.'} Lege sie direkt an, den Preis trägst du selbst ein.</p><button type="button" class="primary big" id="manScan">➕ Manuell hinzufügen</button></div>`:'';
+  if(!d.data.length){R.innerHTML=jpB+'<p class="muted">Nichts gefunden.'+(jpB?'':' <button type="button" id="manScan2">➕ Manuell hinzufügen</button>')+'</p>';bindMan(name,num,set);return}
   d.data.sort((a,b)=>setId?(parseInt(a.number)||0)-(parseInt(b.number)||0):(b.set.releaseDate||'').localeCompare(a.set.releaseDate||''));lastResults=d.data;
   R.innerHTML='';R.classList.toggle('binder-src',!!setId);for(const c of d.data){const p=cmPrice(c);const ci=cmInfo(c);const ch=ci&&ci.avg7&&p?(p-ci.avg7)/ci.avg7*100:null;
    const el=tile({type:c.types&&c.types[0],img:c.images.small,name:c.name,sub:`${c.set.name} · ${c.number}/${c.set.printedTotal}`,price:p,chg:ch,badge:c.rarity&&/Special|Hyper|Secret|Illustration/i.test(c.rarity)?'SAR/SIR':''});
    el.onclick=()=>detail({api:c});
    const a=document.createElement('div');a.className='acts';a.innerHTML='<button>+ Sammlung</button><button>☆</button>';
    a.children[0].onclick=e=>{e.stopPropagation();addDialog(c,'coll')};a.children[1].onclick=e=>{e.stopPropagation();addDialog(c,'wish')};el.append(a);R.append(el)}
-  if(setId&&window.FX)FX.binder(R,SETS.find(s=>s.id===setId));
+  if(setId&&window.FX)FX.binder(R,SETS.find(s=>s.id===setId));if(jpB){R.insertAdjacentHTML('afterbegin',jpB);bindMan(name,num,set)}
  }catch(e){R.innerHTML=`<p class="neg">${e.message}. Bitte später erneut versuchen.</p>`}}
 
 // Sets
@@ -58,7 +63,7 @@ let SETS=[];async function loadSets(){try{const d=await api(`${API}/sets?orderBy
 function renderSets(){const f=$('#setFilter').value.toLowerCase();$('#setList').innerHTML='';
  for(const s of SETS.filter(s=>!f||(s.name+s.series).toLowerCase().includes(f)).slice(0,60)){const d=document.createElement('div');d.className='set';
   d.innerHTML=`<img loading="lazy" src="${s.images.logo}" alt=""><b>${esc(s.name)}</b><br><span class="muted">${esc(s.series)} · ${s.total} Karten · ${(s.releaseDate||'').slice(0,4)}</span>`;
-  d.onclick=()=>{$('#qName').value='';$('#qNum').value='';search('','','',s.id);window.scrollTo(0,0)};$('#setList').append(d)}}
+  d.onclick=()=>{window.pendingScan=null;$('#qName').value='';$('#qNum').value='';search('','','',s.id);window.scrollTo(0,0)};$('#setList').append(d)}}
 $('#setFilter').oninput=renderSets;
 
 function addDialog(c,mode,sealed){const manual=!c;const f=$('#dlgForm');const p=c?cmPrice(c):null;
@@ -154,15 +159,27 @@ const LANGS=['DE','EN','JP','FR','IT','ES','PT','KR','CN'];
 function detectLang(t){if(/[\u3040-\u30ff]/.test(t))return'JP';if(/[\uac00-\ud7af]/.test(t))return'KR';if(/[\u4e00-\u9fff]/.test(t))return'CN';
  const T=t.toLowerCase(),k={DE:/schw[aä]che|r[uü]ckzug|resistenz|f[aä]higkeit|entwickelt/,FR:/faiblesse|retraite|r[ée]sistance|talent/,IT:/debolezza|ritirata|resistenza|abilit/,ES:/debilidad|retirada|resistencia|habilidad/,PT:/fraqueza|recuo|habilidade/,EN:/weakness|retreat|resistance|ability|evolves/};
  for(const[l,r]of Object.entries(k))if(r.test(T))return l;return''}
-function applyScan(r,lang){window.scanLang=lang||'';$('#scanStatus').textContent=`Scan erkannt: ${r.name||'?'} ${r.number?'· Nr. '+r.number:''}${lang?' · Sprache '+lang:''}`;
+function applyScan(r,lang){window.scanLang=lang||'';window.pendingScan={name:r.name,jp:r.jp,number:r.full||r.number,set:r.set,lang};$('#scanStatus').textContent=`Scan erkannt: ${r.name||'?'} ${r.number?'· Nr. '+r.number:''}${lang?' · Sprache '+lang:''}`;
  $('#qName').value=r.name||'';$('#qNum').value=r.number||'';go('v-search');search(r.name,r.number,'')}
 const JPN={'ミュウツー':'Mewtwo','ミュウ':'Mew','リザードン':'Charizard','リザード':'Charmeleon','ヒトカゲ':'Charmander','ピカチュウ':'Pikachu','ライチュウ':'Raichu','ピチュー':'Pichu','ゲンガー':'Gengar','ゴースト':'Haunter','ゴース':'Gastly','ブラッキー':'Umbreon','イーブイ':'Eevee','エーフィ':'Espeon','シャワーズ':'Vaporeon','サンダース':'Jolteon','ブースター':'Flareon','リーフィア':'Leafeon','グレイシア':'Glaceon','ニンフィア':'Sylveon','フシギバナ':'Venusaur','フシギダネ':'Bulbasaur','カメックス':'Blastoise','ゼニガメ':'Squirtle','カイリュー':'Dragonite','カビゴン':'Snorlax','ルギア':'Lugia','ホウオウ':'Ho-Oh','レックウザ':'Rayquaza','ルカリオ':'Lucario','ギャラドス':'Gyarados','フーディン':'Alakazam','ピッピ':'Clefairy','プリン':'Jigglypuff','ラプラス':'Lapras','メタモン':'Ditto','サンダー':'Zapdos','ファイヤー':'Moltres','フリーザー':'Articuno','スイクン':'Suicune','セレビィ':'Celebi','ジラーチ':'Jirachi','ダークライ':'Darkrai','アルセウス':'Arceus','ゲッコウガ':'Greninja','ミミッキュ':'Mimikyu','サーナイト':'Gardevoir','ガブリアス':'Garchomp','バンギラス':'Tyranitar','ウインディ':'Arcanine','コダック':'Psyduck','ニャース':'Meowth','ポッチャマ':'Piplup','ヒノアラシ':'Cyndaquil','ワニノコ':'Totodile','チコリータ':'Chikorita','ミロカロス':'Milotic','パルキア':'Palkia','ディアルガ':'Dialga','ギラティナ':'Giratina','ザシアン':'Zacian','テラパゴス':'Terapagos','マリル':'Marill','ヤドン':'Slowpoke','ガルーラ':'Kangaskhan','カイロス':'Pinsir','ストライク':'Scyther','エンテイ':'Entei','ライコウ':'Raikou','グラードン':'Groudon','カイオーガ':'Kyogre'};
 const dv=t=>t.normalize('NFD').replace(/[\u3099\u309a]/g,'').normalize('NFC');const JPD={};for(const k in JPN)JPD[dv(k)]=k;const JPK=Object.keys(JPD).sort((a,b)=>b.length-a.length);
 function jpName(t){const n=dv(t||'').replace(/[\s・]/g,'').replace(/[ｰ―‐-]/g,'ー');for(const k of JPK){let i=-1;while((i=n.indexOf(k,i+1))>=0){if(n.substr(i+k.length,2)!=='から')return{jp:JPD[k],en:JPN[JPD[k]]}}}
  // Toleranz: 1 Zeichen falsch bei Namen ab 4 Zeichen
  for(const k of JPK){if(k.length<5)continue;for(let i=0;i+k.length<=n.length;i++){let d=0;for(let j=0;j<k.length&&d<2;j++)if(n[i+j]!==k[j])d++;if(d<2&&n.substr(i+k.length,2)!=='から'&&n.substr(i+k.length-1,2)!=='から')return{jp:JPD[k],en:JPN[JPD[k]]}}}return null}
-const ocrW={};function getW(l){if(!ocrW[l])ocrW[l]=(async()=>{const w=await Tesseract.createWorker(l==='num'?'eng':l);
- if(l==='num')await w.setParameters({tessedit_pageseg_mode:'6'});return w})();return ocrW[l]}
+const ocrW={};function getW(l){if(!ocrW[l])ocrW[l]=(async()=>{const w=await Tesseract.createWorker(l==='num'||l==='dig'?'eng':l);
+ if(l==='num')await w.setParameters({tessedit_pageseg_mode:'6'});if(l==='dig')await w.setParameters({tessedit_pageseg_mode:'7',tessedit_char_whitelist:'0123456789/'});return w})();return ocrW[l]}
+// Nummer aus hochaufgelöstem Bild: unterer ~12%-Streifen, 3-4x hochskaliert, binarisiert, nur Ziffern (psm 7), mehrere Schwellen
+function binC(src,x,y,w,h,scale,th){const W=src.width,H=src.height;const c=document.createElement('canvas');c.width=Math.round(W*w*scale);c.height=Math.round(H*h*scale);
+ const g=c.getContext('2d',{willReadFrequently:true});g.imageSmoothingQuality='high';g.drawImage(src,W*x,H*y,W*w,H*h,0,0,c.width,c.height);
+ const im=g.getImageData(0,0,c.width,c.height),d=im.data;for(let i=0;i<d.length;i+=4){const v=Math.max(d[i],d[i+1],d[i+2])<th?0:255;d[i]=d[i+1]=d[i+2]=v}g.putImageData(im,0,0);return c}
+async function readNumberHi(src){const w=await getW('dig');const re=/(\d{1,3})\/(\d{2,3})/;window.hiDbg=[];
+ const sc=Math.max(3,Math.min(4,1600/(src.width*.45)));
+ for(const [x,y,ww,h] of [[0,.88,.45,.12],[.05,.91,.4,.08]])for(const th of [80,115,150]){
+  const t=((await w.recognize(binC(src,x,y,ww,h,sc,th))).data.text||'').replace(/\s/g,'');window.hiDbg.push(th+':'+t);const m=t.match(re);
+  if(m&&m[1].length===m[2].length&&+m[1]>0)return m[1].replace(/^0+(?=\d)/,'')+'/'+m[2]}
+ return ''}
+// Set-Code (z.B. s8a, sv2a) aus OCR-Text
+function setCode(t){const m=(t||'').match(/\b(s[v]?\d{1,2}[a-z]?|SV\d{1,2}[a-z]?|M\d[a-z]?)\b/);return m?m[1].toLowerCase():''}
 function getWorker(){return getW('deu+eng')}
 function cropC(src,x,y,w,h,scale,mode){const W=src.width||src.videoWidth,H=src.height||src.videoHeight;const c=document.createElement('canvas');
  c.width=Math.round(W*w*scale);c.height=Math.round(H*h*scale);const g=c.getContext('2d',{willReadFrequently:true});g.imageSmoothingQuality='high';
@@ -180,34 +197,51 @@ function cardCrop(src){const W=src.width,H=src.height,k=200/Math.max(W,H),w=Math
  const span=(A,n,f)=>{let a=0,b=n-1;while(a<n&&A[a]<f)a++;while(b>a&&A[b]<f)b--;return[a,b]};const [y0,y1]=span(R,h,w*.35),[x0,x1]=span(C,w,h*.35);
  const cw=(x1-x0+1)/k,ch=(y1-y0+1)/k,ar=cw/ch;if(x1<=x0||y1<=y0||ar<.55||ar>.9||cw*ch<W*H*.15||cw*ch>W*H*.95)return src;
  const o=document.createElement('canvas');o.width=Math.round(cw);o.height=Math.round(ch);o.getContext('2d').drawImage(src,x0/k,y0/k,cw,ch,0,0,o.width,o.height);window.cropDbg=[x0/k,y0/k,cw,ch].map(Math.round);return o}
-async function toCanvas(file){let bm;try{bm=await createImageBitmap(file)}catch(e){bm=await new Promise((res,rej)=>{const i=new Image();i.onload=()=>res(i);i.onerror=()=>rej(new Error('Bild nicht lesbar'));i.src=URL.createObjectURL(file)})}
- const W=bm.width,H=bm.height,k=Math.min(1,1600/Math.max(W,H));const c=document.createElement('canvas');c.width=Math.round(W*k);c.height=Math.round(H*k);c.getContext('2d').drawImage(bm,0,0,c.width,c.height);return c}
+async function toCanvas(file,max=1600){window.warmOCR&&warmOCR();let bm;try{bm=await createImageBitmap(file)}catch(e){bm=await new Promise((res,rej)=>{const i=new Image();i.onload=()=>res(i);i.onerror=()=>rej(new Error('Bild nicht lesbar'));i.src=URL.createObjectURL(file)})}
+ const W=bm.width,H=bm.height,k=Math.min(1,max/Math.max(W,H));const c=document.createElement('canvas');c.width=Math.round(W*k);c.height=Math.round(H*k);c.getContext('2d').drawImage(bm,0,0,c.width,c.height);return c}
 async function readNumber(src){const w=await getW('num');const re=/(\d{1,3})\s*\/\s*(\d{2,3})/g;window.numDbg=[];let weak='';
  for(const [x,y,ww,h,k,m] of [[.12,.93,.3,.07,8,'dark'],[.08,.92,.36,.08,6,'dark2'],[0,.935,.42,.06,6,'dark'],[0,.935,.42,.06,6,'dark2'],[0,.91,.45,.08,5,'dark'],[0,.86,.5,.14,4,'dark'],[.5,.9,.5,.1,4,'dark'],[0,.75,1,.25,3,'dark']]){
   const {data}=await w.recognize(cropC(src,x,y,ww,h,k,m));window.numDbg.push(data.text);
   for(const mm of (data.text||'').matchAll(re)){const v=mm[1]+'/'+mm[2];if(mm[1].length===mm[2].length)return mm[1].replace(/^0+(?=\d)/,'')+'/'+mm[2];weak||=v}}
  return weak?{weak}:''}
 // Gesamtanalyse: Text (DE/EN), bei Kana/schwacher Erkennung Japanisch, Nummer aus unterem Streifen
-async function analyze(src,st=()=>{}){src=cardCrop(src);st('Text wird gelesen…');const w=await getW('deu+eng');const r1=(await w.recognize(cropC(src,0,0,1,1,1))).data;
- let text=r1.text||'',lang=detectLang(text),jp=jpName(text),kana=/[\u3040-\u30ff]/.test(text);
- st('Kartennummer wird gelesen…');let number=await readNumber(src),numWeak=false;if(number&&number.weak){number=number.weak;numWeak=true}
- if(!jp&&(kana||r1.confidence<60)){st('Japanische Schrift wird geprüft… (beim 1. Mal Download ~2 MB)');const wj=await getW('jpn');
-  const tTop=((await wj.recognize(cropC(src,.15,.04,.65,.12,3,'dark'))).data.text||'');const t2=tTop+'\n'+((await wj.recognize(cropC(src,0,0,1,1,1))).data.text||'');
-  jp=jpName(window.topDbg=tTop)||jpName(t2);if(/[\u3040-\u30ff]{2,}/.test(t2.replace(/\s/g,''))){kana=true;lang='JP'}text+='\n'+t2}
- if(jp)lang='JP';const p=parseOCR(r1.text||'');if(!number){const m=text.match(/(\d{2,3})\s*\/\s*(\d{2,3})/);if(m)number=m[1].replace(/^0+(?=\d)/,'')+'/'+m[2]}
+async function analyze(src,st=()=>{}){const t0=performance.now();src=cardCrop(src);st('Name & Nummer werden gelesen…');
+ // parallel: Name-Streifen oben (JP + DE/EN) und Nummer-Streifen unten – keine Ganzkarten-OCR, solange das reicht
+ const top=cropC(src,.15,.04,.65,.12,3,'dark'),topG=cropC(src,0,.02,1,.12,2);
+ const pJ=getW('jpn').then(w=>w.recognize(top)).then(r=>r.data.text||'');
+ const pE=getW('deu+eng').then(w=>w.recognize(topG)).then(r=>r.data);
+ const pN=readNumber(src);
+ const [tTop,rE,num0]=await Promise.all([pJ,pE,pN]);window.topDbg=tTop;
+ let number=num0,numWeak=false;if(number&&number.weak){number=number.weak;numWeak=true}
+ let jp=jpName(tTop),text=tTop+'\n'+(rE.text||''),kana=/[\u3040-\u30ff]{2,}/.test(tTop.replace(/\s/g,'')),lang=jp?'JP':'';
+ let r1=rE,conf=rE.confidence;
+ if(!jp){// Fallback: ganze Karte (Sprache über Wörter wie Schwäche/Weakness)
+  st('Ganze Karte wird gelesen…');const [a,b]=await Promise.all([getW('deu+eng').then(w=>w.recognize(cropC(src,0,0,1,1,1))),getW('jpn').then(w=>w.recognize(cropC(src,0,0,1,1,1)))]);
+  r1=a.data;conf=r1.confidence;text+='\n'+r1.text+(b?'\n'+b.data.text:'');jp=jpName(text);lang=detectLang(r1.text||'');if(jp||(b&&/[\u3040-\u30ff]{2,}/.test(b.data.text.replace(/\s/g,'')))){kana=true;lang='JP'}}
+ const p=parseOCR(r1.text||'');if(!number){const m=text.match(/(\d{2,3})\s*\/\s*(\d{2,3})/);if(m)number=m[1].replace(/^0+(?=\d)/,'')+'/'+m[2]}
+ if((!number||numWeak)&&src.width>=500){st('Kartennummer wird genau gelesen…');const n2=await readNumberHi(src);if(n2){number=n2;numWeak=false}}
  let name=jp?jp.en:'',confident=!!jp&&!numWeak;
- if(!jp&&!kana&&p.name&&r1.confidence>=65&&p.name.length>=4){name=p.name;confident=!!number}
- if(!name&&p.name&&!kana)name=p.name;
- return{name,jp:jp&&jp.jp,number:(number||'').split('/')[0],full:number,lang,confident,raw:text,conf:Math.round(r1.confidence)}}
-function scanPick(r){const P=$('#scanPick');P.hidden=false;
- P.innerHTML=`<b>⚠️ Nicht sicher erkannt</b><p class="muted small">Bitte prüfen oder ergänzen – es wird nichts automatisch übernommen.</p>
- <label>Name<input id="spName" value="${esc(r.name||'')}" placeholder="z.B. Glurak / Charizard"></label><label>Nummer<input id="spNum" value="${esc(r.number||'')}" placeholder="z.B. 152"></label>
+ if(!jp&&!kana&&p.name&&conf>=65&&p.name.length>=4){name=p.name;confident=!!number}
+ if(!name&&p.name&&!kana)name=p.name;window.scanMs=Math.round(performance.now()-t0);
+ return{name,jp:jp&&jp.jp,number:(number||'').split('/')[0],full:number,lang,confident,set:setCode(text+'\n'+(window.numDbg||[]).join('\n')),raw:text,conf:Math.round(conf),ms:window.scanMs}}
+// Worker vorwärmen, sobald der Scan-Tab geöffnet wird
+function warmOCR(){if(!window.Tesseract||window._warm)return;window._warm=1;['deu+eng','jpn','num','dig'].forEach(l=>getW(l).catch(()=>{delete ocrW[l];window._warm=0}))}
+function scanPick(r){const P=$('#scanPick');P.hidden=false;const noNum=r.name&&!r.number;
+ P.innerHTML=`<b>${r.confident&&r.number?'✅ Erkannt: '+esc(r.name)+(r.jp?' ('+esc(r.jp)+')':'')+' · '+esc(r.full||r.number):noNum?'✅ Erkannt: '+esc(r.name)+(r.jp?' ('+esc(r.jp)+')':'')+' – Nummer fehlt':'⚠️ Nicht sicher erkannt'}</b><p class="muted small">${noNum?'Die Nummer konnte nicht gelesen werden. Bitte eintippen oder ohne Nummer suchen.':'Bitte prüfen oder ergänzen – es wird nichts automatisch übernommen.'}</p>
+ <label>Name<input id="spName" value="${esc(r.name||'')}" placeholder="z.B. Glurak / Charizard"></label><label>Nummer<input id="spNum" value="${esc(r.full||r.number||'')}" placeholder="Nummer unten links, z.B. 137/103" inputmode="numeric"></label>
+ <label>Set-Code (optional)<input id="spSet" value="${esc(r.set||'')}" placeholder="z.B. s8a"></label>
  <label>Sprache<select id="spLang">${LANGS.map(l=>`<option${l===(r.lang||'DE')?' selected':''}>${l}</option>`).join('')}</select></label>
- <div class="row"><button type="button" class="primary" id="spGo">Suchen</button><button type="button" id="spX">Verwerfen</button></div>`;
- $('#spGo').onclick=()=>{P.hidden=true;applyScan({name:$('#spName').value,number:$('#spNum').value},$('#spLang').value)};$('#spX').onclick=()=>P.hidden=true}
+ <div class="row wrap"><button type="button" class="primary" id="spGo">Suchen</button><button type="button" id="spNoNum">Ohne Nummer suchen</button><button type="button" id="spMan"${r.lang==='JP'?' class="primary"':''}>Manuell hinzufügen</button><button type="button" id="spX">Verwerfen</button></div>
+ ${r.lang==='JP'?'<p class="muted small">Japanische Sets sind nicht in der Preisdatenbank – „Manuell hinzufügen“ legt die Karte mit Name, Nummer, Set &amp; Sprache an, den Preis trägst du selbst ein.</p>':''}`;
+ const v=()=>({name:$('#spName').value,number:$('#spNum').value,set:$('#spSet').value,lang:$('#spLang').value});
+ $('#spGo').onclick=()=>{const x=v();P.hidden=true;applyScan({name:x.name,jp:r.jp,number:x.number.split('/')[0],full:x.number,set:x.set},x.lang)};
+ $('#spNoNum').onclick=()=>{const x=v();P.hidden=true;applyScan({name:x.name,jp:r.jp,number:'',set:x.set},x.lang);window.pendingScan.number=x.number};
+ $('#spMan').onclick=()=>{const x=v();manualAdd({...x,name:r.jp&&x.name===r.name?`${x.name} (${r.jp})`:x.name})};
+ $('#spX').onclick=()=>P.hidden=true;
+ if(noNum)setTimeout(()=>{const n=$('#spNum');n.focus();n.scrollIntoView({block:'center'})},50)}
 function scanResult(r){window.lastScan=r;const st=$('#scanStatus2');
  st.textContent=`Erkannt: ${r.name||'?'}${r.jp?' ('+r.jp+')':''} · Nr. ${r.full||r.number||'?'}${r.lang?' · '+r.lang:''}`;
- if(r.confident&&r.number){$('#scanPick').hidden=true;applyScan(r,r.lang)}else scanPick(r)}
+ if(r.confident&&r.number&&r.lang!=='JP'){$('#scanPick').hidden=true;applyScan(r,r.lang)}else scanPick(r)}
 async function handleFile(f){const st=$('#scanStatus2');$('#scanPick').hidden=true;
  if(!f){st.textContent='Kein Bild ausgewählt.';return}
  if(!window.Tesseract){st.textContent='❌ Texterkennung nicht geladen – Internet prüfen und neu laden.';return}
@@ -218,15 +252,18 @@ $('#scanBtn').addEventListener('click',()=>{stopLive();$('#scanStatus2').textCon
 $('#livePhoto').addEventListener('click',()=>stopLive());$('#uploadBtn').addEventListener('click',()=>{stopLive();$('#scanStatus2').textContent='Bildauswahl wird geöffnet…'});
 ['#scanFile','#uploadFile'].forEach(id=>$(id).addEventListener('change',e=>{const f=e.target.files&&e.target.files[0];handleFile(f).finally(()=>{e.target.value=''})}));
 // Live-Scan
-let live={stream:null,timer:null,busy:false,last:null,torch:false};
+let live={stream:null,timer:null,busy:false,last:null,torch:false,nameOnly:0,nameKey:''};
 async function startLive(){const st=$('#scanStatus2');$('#scanPick').hidden=true;if(!navigator.mediaDevices?.getUserMedia){st.textContent='Kamera wird von diesem Browser nicht unterstützt (HTTPS nötig).';return}
  if(!window.Tesseract){st.textContent='OCR-Bibliothek nicht geladen (Internet?).';return}
- try{live.stream=await navigator.mediaDevices.getUserMedia({video:{facingMode:'environment',width:{ideal:1920},height:{ideal:1080}},audio:false})}catch(e){st.textContent='Kein Kamerazugriff: '+e.message;return}
+ try{live.stream=await navigator.mediaDevices.getUserMedia({video:{facingMode:'environment',width:{ideal:2560},height:{ideal:1440}},audio:false})}catch(e){st.textContent='Kein Kamerazugriff: '+e.message;return}
  const v=$('#liveVideo');v.srcObject=live.stream;await v.play().catch(()=>{});$('#scanbox').classList.add('live');$('#liveText').textContent='';st.textContent='Kamera startet, Texterkennung wird geladen…';
  const tr=live.stream.getVideoTracks()[0];const caps=tr.getCapabilities?.()||{};$('#torchBtn').hidden=!caps.torch;
- live.last=null;getWorker().catch(()=>{});getW('num').catch(()=>{});live.timer=setInterval(liveTick,1500)}
+ if((caps.focusMode||[]).includes('continuous'))tr.applyConstraints({advanced:[{focusMode:'continuous'}]}).catch(()=>{});
+ try{live.ic=window.ImageCapture?new ImageCapture(tr):null}catch(e){live.ic=null}
+ $('.frame span').textContent='Näher ran – Karte füllt den Rahmen · Tippen = scharfstellen';
+ live.last=null;live.nameOnly=0;live.nameKey='';getWorker().catch(()=>{});getW('num').catch(()=>{});live.timer=setInterval(liveTick,1500)}
 function stopLive(){clearInterval(live.timer);live.timer=null;if(live.stream){live.stream.getTracks().forEach(t=>t.stop());live.stream=null}
- const v=$('#liveVideo');if(v)v.srcObject=null;$('#scanbox')?.classList.remove('live');live.torch=false}
+ const v=$('#liveVideo');if(v)v.srcObject=null;$('#scanbox')?.classList.remove('live');live.torch=false;live.ic=null;const fs=$('.frame span');if(fs)fs.textContent='Karte im Rahmen platzieren'}
 async function liveTick(){if(live.busy||!live.stream)return;const v=$('#liveVideo');if(!v.videoWidth)return;live.busy=true;
  try{const fr=$('.frame').getBoundingClientRect(),vr=v.getBoundingClientRect();
   const sc=Math.max(vr.width/v.videoWidth,vr.height/v.videoHeight),ox=(v.videoWidth*sc-vr.width)/2,oy=(v.videoHeight*sc-vr.height)/2;
@@ -235,10 +272,23 @@ async function liveTick(){if(live.busy||!live.stream)return;const v=$('#liveVide
   const c=$('#liveCanvas');c.width=Math.round(sw);c.height=Math.round(sh);c.getContext('2d').drawImage(v,sx,sy,sw,sh,0,0,c.width,c.height);
   const r=await analyze(c,m=>$('#scanStatus2').textContent=m);if(!live.stream)return;
   $('#liveText').textContent=`→ ${r.name||'?'}${r.jp?' ('+r.jp+')':''} · ${r.full||'?'}${r.lang?' · '+r.lang:''}${r.confident&&r.number?'':' · nicht sicher'}`;
+  if(r.name&&!r.number&&(r.jp||r.conf>=65)){// Name sicher, Nummer fehlt → scharfes Foto in voller Auflösung
+   const k=r.name;live.nameOnly=live.nameKey===k?live.nameOnly+1:1;live.nameKey=k;$('#scanStatus2').textContent=`Name erkannt (${live.nameOnly}/3) – scharfes Foto für die Nummer…`;
+   const hi=await grabStill(v);if(!live.stream)return;if(hi){const n=await readNumberHi(cardCrop(hi));if(!live.stream)return;if(n){r.full=n;r.number=n.split('/')[0];r.confident=true;navigator.vibrate?.(200);stopLive();scanResult(r);return}}
+   if(live.nameOnly>=3){navigator.vibrate?.([80,60,80]);stopLive();$('#scanStatus2').textContent=`Erkannt: ${r.name}${r.jp?' ('+r.jp+')':''}${r.lang?' · '+r.lang:''} – Nummer bitte eintippen`;window.lastScan=r;scanPick(r);return}
+   $('#scanStatus2').textContent='Nummer noch nicht lesbar – näher ran, Karte füllt den Rahmen';return}
+  live.nameOnly=0;
   if(r.confident&&r.number){const key=(r.name+'|'+r.number).toLowerCase();
    if(live.last===key){navigator.vibrate?.(200);stopLive();scanResult(r);return}
    live.last=key;$('#scanStatus2').textContent='Fast erkannt – Karte ruhig halten…'}else{live.last=null;$('#scanStatus2').textContent='Noch nicht sicher – Karte näher, gerade und gut beleuchtet halten'}}
  catch(e){$('#scanStatus2').textContent='Fehler: '+e.message}finally{live.busy=false}}
+async function grabStill(v){try{if(live.ic){const b=await live.ic.takePhoto();return await toCanvas(b,3000)}}catch(e){}
+ if(!v.videoWidth)return null;const c=document.createElement('canvas');c.width=v.videoWidth;c.height=v.videoHeight;c.getContext('2d').drawImage(v,0,0);return c}
+$('#liveVideo').addEventListener('click',async e=>{const tr=live.stream?.getVideoTracks()[0];if(!tr)return;const caps=tr.getCapabilities?.()||{};const r=e.currentTarget.getBoundingClientRect();
+ const adv={};if(caps.pointsOfInterest)adv.pointsOfInterest=[{x:(e.clientX-r.left)/r.width,y:(e.clientY-r.top)/r.height}];
+ const fm=caps.focusMode||[];if(fm.includes('single-shot'))adv.focusMode='single-shot';else if(fm.includes('continuous'))adv.focusMode='continuous';
+ $('#scanStatus2').textContent='Scharfstellen…';try{await tr.applyConstraints({advanced:[adv]});if(adv.focusMode==='single-shot'&&fm.includes('continuous'))setTimeout(()=>tr.applyConstraints({advanced:[{focusMode:'continuous'}]}).catch(()=>{}),1500)}catch(x){}});
+$('.frame')?.addEventListener('click',e=>{$('#liveVideo').dispatchEvent(new MouseEvent('click',{clientX:e.clientX,clientY:e.clientY}))});
 $('#liveBtn').onclick=startLive;$('#liveCancel').onclick=()=>{stopLive();$('#scanStatus2').textContent='Live-Scan abgebrochen.'};
 $('#torchBtn').onclick=async()=>{const tr=live.stream?.getVideoTracks()[0];if(!tr)return;live.torch=!live.torch;try{await tr.applyConstraints({advanced:[{torch:live.torch}]})}catch(e){}};
 document.addEventListener('visibilitychange',()=>{if(document.hidden)stopLive()});
