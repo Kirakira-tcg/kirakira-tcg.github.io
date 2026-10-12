@@ -30,9 +30,10 @@
 <section id="v-scan" class="view">
  <div class="scanbox" id="scanbox"><div class="camwrap"><video id="liveVideo" playsinline muted></video><div class="frame"><span>Karte im Rahmen platzieren</span></div></div>
  <pre id="liveText" class="small"></pre><canvas id="liveCanvas" hidden></canvas>
- <div class="scanbtns"><button id="liveBtn" class="primary">🎥 Live-Scan</button><button id="scanBtn">📷 Foto aufnehmen</button><button id="uploadBtn">🖼️ Bild hochladen</button></div>
- <div class="livebtns"><button id="torchBtn" hidden>🔦 Licht</button><button id="liveCancel">✕ Abbrechen</button></div>
- <input type="file" id="scanFile" accept="image/*" capture="environment" hidden>
+ <div class="scanbtns"><button id="liveBtn" class="primary" type="button">🎥 Live-Scan</button><label id="scanBtn" class="btn" for="scanFile">📷 Foto aufnehmen</label><label id="uploadBtn" class="btn" for="uploadFile">🖼️ Bild hochladen</label></div>
+ <div class="livebtns"><button id="torchBtn" type="button" hidden>🔦 Licht</button><label class="btn" for="scanFile" id="livePhoto">📷 Foto</label><button id="liveCancel" type="button">✕ Abbrechen</button></div>
+ <input type="file" id="scanFile" class="vh" accept="image/*" capture="environment"><input type="file" id="uploadFile" class="vh" accept="image/*">
+ <div id="scanPick" class="scanpick" hidden></div>
  <p class="muted small">Live-Scan: Karte vor die Kamera halten – Name, Nummer &amp; Sprache werden automatisch erkannt. Oder Foto aufnehmen / Bild hochladen.</p><div id="scanStatus2" class="muted small"></div></div>
 </section>
 <section id="v-wish" class="view"><h2>Wunschliste</h2><div id="wishGrid" class="cgrid"></div><p class="muted small">Karten in der Suche über ☆ hinzufügen. Grün = unter Zielpreis.</p>
