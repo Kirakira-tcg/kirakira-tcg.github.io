@@ -64,8 +64,16 @@ async function suggestLang(q,lang,limit){let list;try{list=await search(q,lang)}
  const rank=c=>{const n=(c.name||'').toLowerCase();return (n===ql?0:n.startsWith(ql)?1:n.split(/[\s-]/).some(w=>w.startsWith(ql))?2:3)+(c.image?0:4)};
  return list.filter(c=>c&&c.id&&c.name).map((c,i)=>({c,i,r:rank(c)})).sort((a,b)=>a.r-b.r||a.i-b.i).slice(0,limit).map(({c})=>{const sid=setIdOf(c);
   return{id:c.id,name:c.name,localId:c.localId||'',set:{id:sid,name:names[sid]||sid},img:c.image?c.image+'/low.webp':null,lang}})}
+function nameRows(q){const ql=q.toLowerCase(),rows=[].concat(root.PNAMES||[],root.TNAMES||[]),ex=[],pre=[];
+ for(const r of rows){const m=r.map(x=>(x||'').toLowerCase());if(m.includes(ql))ex.push(r);else if(pre.length<3&&m.some(x=>x&&x.startsWith(ql)))pre.push(r)}return ex.length?ex.slice(0,2):pre}
 async function suggest(query,lang='de',limit=24){const q=String(query||'').trim();if(q.length<2)return[];lang=normLang(lang);limit=Math.max(1,Math.min(+limit||24,100));
- let r=await suggestLang(q,lang,limit);if(!r.length&&lang!=='en')r=await suggestLang(q,'en',limit);return r}
+ const L=['de','en','ja'],qs={de:new Set(),en:new Set(),ja:new Set()};qs[lang].add(q);
+ for(const r of nameRows(q)){if(r[0])qs.en.add(r[0]);if(r[1])qs.de.add(r[1]);if(r[2])qs.ja.add(r[2])}
+ if(qs[lang].size===1&&!nameRows(q).length&&lang!=='en')qs.en.add(q);
+ const per=await Promise.all(L.map(async lg=>{const o=[];for(const x of qs[lg])o.push(...await suggestLang(x,lg,limit));return o}));
+ const first=per.splice(L.indexOf(lang),1)[0];per.unshift(first);const seen=new Set(),r=[];
+ for(let i=0;r.length<limit&&per.some(a=>i<a.length);i++)for(const a of per){const c=a[i];if(c&&!seen.has(c.lang+c.id)&&r.length<limit){seen.add(c.lang+c.id);r.push(c)}}
+ return r}
 
 root.Prices={lookup,suggest,byId:async(id,lang)=>{lang=normLang(lang);const c=await getCard(id,lang);return c?normalize(c,lang):null},search,toEUR,rate,
  clearCache(){mem.clear();store={c:{}};save()},CACHE_KEY:KEY,LANGS};
