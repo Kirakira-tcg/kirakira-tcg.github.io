@@ -408,23 +408,32 @@ async function handleFile(f){window.scanLang='';window.pendingScan=null;const st
  $('#scanbox').classList.add('busy');
  try{const c=await toCanvas(f);const r=await analyze(c,m=>st.textContent='⏳ '+m);scanResult(r)}
  catch(err){st.textContent='❌ Fehler bei der Erkennung: '+(err&&err.message||err)}finally{$('#scanbox').classList.remove('busy')}}
-$('#scanBtn').addEventListener('click',()=>{stopLive();$('#scanStatus2').textContent='Kamera wird geöffnet…'});
-$('#scanBtn')?.addEventListener('click',e=>{e.preventDefault();if(!live.stream)startLive()});$('#uploadBtn').addEventListener('click',()=>{stopLive();$('#scanStatus2').textContent='Bildauswahl wird geöffnet…'});
+$('#scanBtn')?.addEventListener('click',e=>{e.preventDefault();if(!live.stream)startLive()});$('#uploadBtn')?.addEventListener('click',()=>{stopLive();$('#scanStatus2').textContent='Bildauswahl wird geöffnet…'});
 ['#uploadFile'].forEach(id=>$(id).addEventListener('change',e=>{const f=e.target.files&&e.target.files[0];handleFile(f).finally(()=>{e.target.value=''})}));
 // Live-Scan
 let live={stream:null,timer:null,busy:false,last:null,torch:false,nameOnly:0,nameKey:''};
-async function startLive(){const st=$('#scanStatus2');$('#scanPick').hidden=true;if(!navigator.mediaDevices?.getUserMedia){st.textContent='Kamera wird von diesem Browser nicht unterstützt (HTTPS nötig).';return}
- if(!window.Tesseract){st.textContent='OCR-Bibliothek nicht geladen (Internet?).';return}
- try{live.stream=await navigator.mediaDevices.getUserMedia({video:{facingMode:'environment',width:{ideal:2560},height:{ideal:1440}},audio:false})}catch(e){st.textContent='Kein Kamerazugriff: '+e.message;return}
- const v=$('#liveVideo');v.srcObject=live.stream;await v.play().catch(()=>{});$('#scanbox').classList.add('live');$('#liveText').textContent='';st.textContent='Kamera startet, Texterkennung wird geladen…';
- const tr=live.stream.getVideoTracks()[0];const caps=tr.getCapabilities?.()||{};$('#torchBtn').hidden=!caps.torch;
+function camErr(msg){const st=$('#scanStatus2');st.innerHTML='';const d=document.createElement('div');d.className='camerr';d.textContent='⚠️ '+msg;st.appendChild(d)}
+function camMsg(e){const n=e&&e.name||'';if(n==='NotAllowedError'||n==='SecurityError')return 'Kamera-Zugriff verweigert. Bitte in Chrome auf das Schloss-Symbol neben der Adresse tippen → Berechtigungen → Kamera erlauben, dann neu laden. Alternativ „Bild hochladen“.';
+ if(n==='NotFoundError'||n==='OverconstrainedError')return 'Keine passende Kamera gefunden.';if(n==='NotReadableError'||n==='AbortError')return 'Kamera ist von einer anderen App belegt. Andere Kamera-Apps schließen und erneut versuchen.';return 'Kamera konnte nicht gestartet werden: '+(e&&e.message||e)}
+function startLive(){const st=$('#scanStatus2');const sp=$('#scanPick');if(sp)sp.hidden=true;
+ if(!navigator.mediaDevices||!navigator.mediaDevices.getUserMedia){camErr('Kamera wird von diesem Browser nicht unterstützt (HTTPS nötig).');return Promise.resolve()}
+ if(live.stream||live.starting)return Promise.resolve();live.starting=true;st.textContent='Kamera wird geöffnet…';
+ // getUserMedia direkt im Klick-Handler (kein await davor), Fallback auf einfachere Constraints
+ const gum=c=>navigator.mediaDevices.getUserMedia(c);
+ const p=gum({video:{facingMode:{ideal:'environment'},width:{ideal:1920},height:{ideal:1080}},audio:false})
+  .catch(e=>{if(e&&(e.name==='NotAllowedError'||e.name==='SecurityError'))throw e;return gum({video:{facingMode:'environment'},audio:false})})
+  .catch(e=>{if(e&&(e.name==='NotAllowedError'||e.name==='SecurityError'))throw e;return gum({video:true,audio:false})});
+ return p.then(s=>{live.starting=false;live.stream=s;return startLive2()},e=>{live.starting=false;console.warn('getUserMedia',e);camErr(camMsg(e))})}
+async function startLive2(){const st=$('#scanStatus2');
+ const v=$('#liveVideo');v.muted=true;v.setAttribute('playsinline','');v.setAttribute('autoplay','');v.srcObject=live.stream;$('#scanbox').classList.add('live');try{await v.play()}catch(e){console.warn('play',e)}$('#scanbox').classList.add('live');$('#liveText').textContent='';st.textContent=window.Tesseract?'Kamera läuft, Texterkennung wird geladen…':'Kamera läuft – Texterkennung lädt noch (Internet?)…';
+ const tr=live.stream.getVideoTracks()[0];let caps={};try{caps=tr.getCapabilities?.()||{}}catch(e){}$('#torchBtn').hidden=!caps.torch;
  if((caps.focusMode||[]).includes('continuous'))tr.applyConstraints({advanced:[{focusMode:'continuous'}]}).catch(()=>{});
  try{live.ic=window.ImageCapture?new ImageCapture(tr):null}catch(e){live.ic=null}
  $('.frame span').textContent='Näher ran – Karte füllt den Rahmen · Tippen = scharfstellen';
- window.scanLang='';window.pendingScan=null;live.last=null;live.nameOnly=0;live.nameKey='';live.tries=0;live.best=null;live.nm=null;live.nb=null;live.wait=null;live.prevSig=null;trayShow();getWorker().catch(()=>{});getW('num').catch(()=>{});live.timer=setInterval(liveTick,1500)}
+ window.scanLang='';window.pendingScan=null;live.last=null;live.nameOnly=0;live.nameKey='';live.tries=0;live.best=null;live.nm=null;live.nb=null;live.wait=null;live.prevSig=null;try{trayShow()}catch(e){console.warn(e)}if(window.Tesseract){try{getWorker().catch(()=>{});getW('num').catch(()=>{})}catch(e){}}live.timer=setInterval(liveTick,1500)}
 function stopLive(){clearInterval(live.timer);live.timer=null;if(live.stream){live.stream.getTracks().forEach(t=>t.stop());live.stream=null}
  const v=$('#liveVideo');if(v)v.srcObject=null;$('#scanbox')?.classList.remove('live');live.torch=false;live.ic=null;const fs=$('.frame span');if(fs)fs.textContent='Karte im Rahmen platzieren'}
-async function liveTick(){if(live.busy||!live.stream)return;const v=$('#liveVideo');if(!v.videoWidth)return;
+async function liveTick(){if(live.busy||!live.stream)return;if(!window.Tesseract)return;const v=$('#liveVideo');if(!v.videoWidth)return;
  // Serien-Scan: warten bis die Karte gewechselt hat, und bis sie ruhig im Rahmen liegt (Auslöser überspringt das)
  const sg=frameSig(v),shot=live.shot;live.shot=false;
  if(!shot){const prev=live.prevSig;live.prevSig=sg;
@@ -445,12 +454,12 @@ async function liveTick(){if(live.busy||!live.stream)return;const v=$('#liveVide
  catch(e){$('#scanStatus2').textContent='Fehler: '+e.message}finally{live.busy=false}}
 async function grabStill(v){try{if(live.ic){const b=await live.ic.takePhoto();return await toCanvas(b,1600)}}catch(e){}
  if(!v.videoWidth)return null;const c=document.createElement('canvas');c.width=v.videoWidth;c.height=v.videoHeight;c.getContext('2d').drawImage(v,0,0);return c}
-$('#liveVideo').addEventListener('click',async e=>{const tr=live.stream?.getVideoTracks()[0];if(!tr)return;const caps=tr.getCapabilities?.()||{};const r=e.currentTarget.getBoundingClientRect();
+$('#liveVideo')?.addEventListener('click',async e=>{const tr=live.stream?.getVideoTracks()[0];if(!tr)return;const caps=tr.getCapabilities?.()||{};const r=e.currentTarget.getBoundingClientRect();
  const adv={};if(caps.pointsOfInterest)adv.pointsOfInterest=[{x:(e.clientX-r.left)/r.width,y:(e.clientY-r.top)/r.height}];
  const fm=caps.focusMode||[];if(fm.includes('single-shot'))adv.focusMode='single-shot';else if(fm.includes('continuous'))adv.focusMode='continuous';
  $('#scanStatus2').textContent='Scharfstellen…';try{await tr.applyConstraints({advanced:[adv]});if(adv.focusMode==='single-shot'&&fm.includes('continuous'))setTimeout(()=>tr.applyConstraints({advanced:[{focusMode:'continuous'}]}).catch(()=>{}),1500)}catch(x){}});
 $('.frame')?.addEventListener('click',e=>{$('#liveVideo').dispatchEvent(new MouseEvent('click',{clientX:e.clientX,clientY:e.clientY}))});
-$('#liveBtn').onclick=startLive;$('#liveCancel').onclick=()=>{stopLive();$('#scanStatus2').textContent='Live-Scan abgebrochen.'};
+if($('#liveBtn'))$('#liveBtn').onclick=e=>{e.preventDefault();startLive()};if($('#liveCancel'))$('#liveCancel').onclick=()=>{stopLive();$('#scanStatus2').textContent='Live-Scan abgebrochen.'};
 $('#torchBtn').onclick=async()=>{const tr=live.stream?.getVideoTracks()[0];if(!tr)return;live.torch=!live.torch;try{await tr.applyConstraints({advanced:[{torch:live.torch}]})}catch(e){}};
 document.addEventListener('visibilitychange',()=>{if(document.hidden)stopLive()});
 window.detectLang=detectLang;

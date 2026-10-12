@@ -172,3 +172,5 @@ nav .scanNav i{background:linear-gradient(135deg,var(--ac),#ff8a5c);color:#fff;b
 .trayit em{position:absolute;top:4px;right:4px;background:var(--ac2);color:#000;font-style:normal;font-weight:800;border-radius:8px;padding:0 5px;font-size:.7rem}
 .trayit span{white-space:nowrap;overflow:hidden;text-overflow:ellipsis;max-width:100%;line-height:1.2}
 .flycard{position:fixed;z-index:999;border-radius:10px;pointer-events:none;transform-origin:0 0;box-shadow:0 8px 24px rgba(0,0,0,.5)}
+
+.camerr{background:#5a1a24;border:2px solid #ff5c7a;color:#fff;border-radius:12px;padding:10px 12px;margin:8px auto;max-width:480px;text-align:left;font-weight:700}
