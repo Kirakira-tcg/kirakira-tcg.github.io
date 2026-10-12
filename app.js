@@ -17,8 +17,10 @@ const today=()=>new Date().toISOString().slice(0,10);
 async function api(url,tries=4){for(let i=0;i<tries;i++){try{const r=await fetch(url);if(r.ok)return await r.json()}catch(e){}await new Promise(r=>setTimeout(r,800*(i+1)))}throw new Error('API nicht erreichbar')}
 function cmPrice(c){const p=c.cardmarket&&c.cardmarket.prices;if(!p)return null;return p.trendPrice||p.avg30||p.averageSellPrice||p.lowPrice||null}
 function cmInfo(c){const p=c.cardmarket&&c.cardmarket.prices;if(!p)return null;return{trend:p.trendPrice,avg1:p.avg1,avg7:p.avg7,avg30:p.avg30,low:p.lowPrice,sell:p.averageSellPrice,url:c.cardmarket.url}}
-const DE={glurak:'Charizard',nachtara:'Umbreon',mewtu:'Mewtwo',evoli:'Eevee',bisaflor:'Venusaur',turtok:'Blastoise',gengar:'Gengar',glaziola:'Glaceon',folipurba:'Leafeon',psiana:'Espeon',aquana:'Vaporeon',blitza:'Jolteon',flamara:'Flareon',feelinara:'Sylveon',dragoran:'Dragonite',relaxo:'Snorlax',lugia:'Lugia',piepi:'Clefairy',gewaldro:'Sceptile',lohgock:'Blaziken',sumpex:'Swampert',garados:'Gyarados',simsala:'Alakazam',bisasam:'Bulbasaur',glumanda:'Charmander',schiggy:'Squirtle',rayquaza:'Rayquaza',suicune:'Suicune',lucario:'Lucario',pummeluff:'Jigglypuff',enton:'Psyduck',knogga:'Marowak',arkani:'Arcanine',lapras:'Lapras',ditto:'Ditto',zapdos:'Zapdos',lavados:'Moltres',arktos:'Articuno'};
-function deName(n){return n.replace(/^(\S+)/,w=>DE[w.toLowerCase()]||w)}
+const DE={glurak:'Charizard',nachtara:'Umbreon',mewtu:'Mewtwo',evoli:'Eevee',bisaflor:'Venusaur',turtok:'Blastoise',gengar:'Gengar',glaziola:'Glaceon',folipurba:'Leafeon',psiana:'Espeon',aquana:'Vaporeon',blitza:'Jolteon',flamara:'Flareon',feelinara:'Sylveon',dragoran:'Dragonite',relaxo:'Snorlax',lugia:'Lugia',piepi:'Clefairy',gewaldro:'Sceptile',lohgock:'Blaziken',sumpex:'Swampert',garados:'Gyarados',simsala:'Alakazam',bisasam:'Bulbasaur',glumanda:'Charmander',schiggy:'Squirtle',rayquaza:'Rayquaza',suicune:'Suicune',lucario:'Lucario',pummeluff:'Jigglypuff',enton:'Psyduck',knogga:'Marowak',arkani:'Arcanine',lapras:'Lapras',ditto:'Ditto',zapdos:'Zapdos',lavados:'Moltres',arktos:'Articuno','ho-oh':'Ho-Oh',hooh:'Ho-Oh',pikachu:'Pikachu',raichu:'Raichu',mew:'Mew',celebi:'Celebi',victini:'Victini',reshiram:'Reshiram',zekrom:'Zekrom',kyogre:'Kyogre',groudon:'Groudon',entei:'Entei',raikou:'Raikou',arceus:'Arceus',darkrai:'Darkrai',dialga:'Dialga',palkia:'Palkia',giratina:'Giratina',vulpix:'Vulpix',vulnona:'Ninetales',owei:'Exeggcute',kokowei:'Exeggutor',volbeat:'Volbeat',illumise:'Illumise',tropius:'Tropius',kikugi:'Cherubi',kinoso:'Cherrim',vivillon:'Vivillon',flegmon:'Slowpoke',krokel:'Fuecoco',glutexo:'Charmeleon',pikachu:'Pikachu',quajutsu:'Greninja',mimigma:'Mimikyu',guardevoir:'Gardevoir',knakrack:'Garchomp',despotar:'Tyranitar',karpador:'Magikarp',zacian:'Zacian',terapagos:'Terapagos',marill:'Marill',kangama:'Kangaskhan',pinsir:'Pinsir',sichlor:'Scyther',endivie:'Chikorita',feurigel:'Cyndaquil',karnimani:'Totodile',plinfa:'Piplup',psiana:'Espeon',mauzi:'Meowth',jirachi:'Jirachi',milotic:'Milotic'};
+const ENERGY={pflanzen:'Grass',feuer:'Fire',wasser:'Water',elektro:'Lightning',psycho:'Psychic',kampf:'Fighting',finsternis:'Darkness',unlicht:'Darkness',metall:'Metal',grass:'Grass',fire:'Fire',water:'Water',lightning:'Lightning',psychic:'Psychic',fighting:'Fighting',darkness:'Darkness',metal:'Metal'};
+const SETCODES={'30C':{id:'me55',name:'30th Celebration',total:128}};
+function deName(n){const e=n.match(/basis[- ]?(\w+)[- ]?energie/i);if(e&&ENERGY[e[1].toLowerCase()])return'Basic '+ENERGY[e[1].toLowerCase()]+' Energy';return n.replace(/^(\S+)/,w=>DE[w.toLowerCase()]||w)}
 function clean(s){return s.replace(/["\\]/g,'').trim()}
 
 // Preisänderung je Artikel für Zeitraum (Tage)
@@ -48,6 +50,7 @@ async function search(name,num,set,setId){const q=[];name=deName(clean(name||'')
  if(!q.length)return;const R=$('#results');R.innerHTML='<p class="muted">Suche…</p>';
  try{const d=await api(`${API}/cards?q=${encodeURIComponent(q.join(' '))}&pageSize=60&select=id,name,number,set,images,cardmarket,rarity,types,supertype`);
   const ps=window.pendingScan,jpB=ps&&ps.lang&&ps.lang!=='EN'?`<div class="scanpick"><b>${ps.lang==='JP'?'🇯🇵 Japanische Karte':'Karte ('+ps.lang+')'}: ${esc(ps.name||'')} ${esc(ps.number||'')}</b><p class="muted small">${ps.lang==='JP'?'Japanische Sets sind nicht in der Preisdatenbank.':'Preise gibt es nur für die englische Version.'} Lege sie direkt an, den Preis trägst du selbst ein.</p><button type="button" class="primary big" id="manScan">➕ Manuell hinzufügen</button></div>`:'';
+  if(!d.data.length&&setId&&name)return search(name,num,set);
   if(!d.data.length){R.innerHTML=jpB+'<p class="muted">Nichts gefunden.'+(jpB?'':' <button type="button" id="manScan2">➕ Manuell hinzufügen</button>')+'</p>';bindMan(name,num,set);return}
   d.data.sort((a,b)=>setId?(parseInt(a.number)||0)-(parseInt(b.number)||0):(b.set.releaseDate||'').localeCompare(a.set.releaseDate||''));lastResults=d.data;
   R.innerHTML='';R.classList.toggle('binder-src',!!setId);for(const c of d.data){const p=cmPrice(c);const ci=cmInfo(c);const ch=ci&&ci.avg7&&p?(p-ci.avg7)/ci.avg7*100:null;
@@ -59,7 +62,7 @@ async function search(name,num,set,setId){const q=[];name=deName(clean(name||'')
  }catch(e){R.innerHTML=`<p class="neg">${e.message}. Bitte später erneut versuchen.</p>`}}
 
 // Sets
-let SETS=[];async function loadSets(){try{const d=await api(`${API}/sets?orderBy=-releaseDate&pageSize=250&select=id,name,series,releaseDate,images,total`);SETS=d.data;renderSets()}catch(e){$('#setList').innerHTML='<p class="muted small">Sets nicht ladbar.</p>'}}
+let SETS=[];async function loadSets(){try{const d=await api(`${API}/sets?orderBy=-releaseDate&pageSize=250&select=id,name,series,releaseDate,images,total,printedTotal,ptcgoCode`);SETS=d.data;renderSets()}catch(e){$('#setList').innerHTML='<p class="muted small">Sets nicht ladbar.</p>'}}
 function renderSets(){const f=$('#setFilter').value.toLowerCase();$('#setList').innerHTML='';
  for(const s of SETS.filter(s=>!f||(s.name+s.series).toLowerCase().includes(f)).slice(0,60)){const d=document.createElement('div');d.className='set';
   d.innerHTML=`<img loading="lazy" src="${s.images.logo}" alt=""><b>${esc(s.name)}</b><br><span class="muted">${esc(s.series)} · ${s.total} Karten · ${(s.releaseDate||'').slice(0,4)}</span>`;
@@ -160,7 +163,7 @@ function detectLang(t){if(/[\u3040-\u30ff]/.test(t))return'JP';if(/[\uac00-\ud7a
  const T=t.toLowerCase(),k={DE:/schw[aä]che|r[uü]ckzug|resistenz|f[aä]higkeit|entwickelt/,FR:/faiblesse|retraite|r[ée]sistance|talent/,IT:/debolezza|ritirata|resistenza|abilit/,ES:/debilidad|retirada|resistencia|habilidad/,PT:/fraqueza|recuo|habilidade/,EN:/weakness|retreat|resistance|ability|evolves/};
  for(const[l,r]of Object.entries(k))if(r.test(T))return l;return''}
 function applyScan(r,lang){window.scanLang=lang||'';window.pendingScan={name:r.name,jp:r.jp,number:r.full||r.number,set:r.set,lang};$('#scanStatus').textContent=`Scan erkannt: ${r.name||'?'} ${r.number?'· Nr. '+r.number:''}${lang?' · Sprache '+lang:''}`;
- $('#qName').value=r.name||'';$('#qNum').value=r.number||'';go('v-search');search(r.name,r.number,'')}
+ $('#qName').value=r.name||'';$('#qNum').value=r.energy?'':(r.number||'');go('v-search');search(r.name,r.energy?'':r.number,'',r.setId||'')}
 const JPN={'ミュウツー':'Mewtwo','ミュウ':'Mew','リザードン':'Charizard','リザード':'Charmeleon','ヒトカゲ':'Charmander','ピカチュウ':'Pikachu','ライチュウ':'Raichu','ピチュー':'Pichu','ゲンガー':'Gengar','ゴースト':'Haunter','ゴース':'Gastly','ブラッキー':'Umbreon','イーブイ':'Eevee','エーフィ':'Espeon','シャワーズ':'Vaporeon','サンダース':'Jolteon','ブースター':'Flareon','リーフィア':'Leafeon','グレイシア':'Glaceon','ニンフィア':'Sylveon','フシギバナ':'Venusaur','フシギダネ':'Bulbasaur','カメックス':'Blastoise','ゼニガメ':'Squirtle','カイリュー':'Dragonite','カビゴン':'Snorlax','ルギア':'Lugia','ホウオウ':'Ho-Oh','レックウザ':'Rayquaza','ルカリオ':'Lucario','ギャラドス':'Gyarados','フーディン':'Alakazam','ピッピ':'Clefairy','プリン':'Jigglypuff','ラプラス':'Lapras','メタモン':'Ditto','サンダー':'Zapdos','ファイヤー':'Moltres','フリーザー':'Articuno','スイクン':'Suicune','セレビィ':'Celebi','ジラーチ':'Jirachi','ダークライ':'Darkrai','アルセウス':'Arceus','ゲッコウガ':'Greninja','ミミッキュ':'Mimikyu','サーナイト':'Gardevoir','ガブリアス':'Garchomp','バンギラス':'Tyranitar','ウインディ':'Arcanine','コダック':'Psyduck','ニャース':'Meowth','ポッチャマ':'Piplup','ヒノアラシ':'Cyndaquil','ワニノコ':'Totodile','チコリータ':'Chikorita','ミロカロス':'Milotic','パルキア':'Palkia','ディアルガ':'Dialga','ギラティナ':'Giratina','ザシアン':'Zacian','テラパゴス':'Terapagos','マリル':'Marill','ヤドン':'Slowpoke','ガルーラ':'Kangaskhan','カイロス':'Pinsir','ストライク':'Scyther','エンテイ':'Entei','ライコウ':'Raikou','グラードン':'Groudon','カイオーガ':'Kyogre'};
 const dv=t=>t.normalize('NFD').replace(/[\u3099\u309a]/g,'').normalize('NFC');const JPD={};for(const k in JPN)JPD[dv(k)]=k;const JPK=Object.keys(JPD).sort((a,b)=>b.length-a.length);
 function jpName(t){const n=dv(t||'').replace(/[\s・]/g,'').replace(/[ｰ―‐-]/g,'ー');for(const k of JPK){let i=-1;while((i=n.indexOf(k,i+1))>=0){if(n.substr(i+k.length,2)!=='から')return{jp:JPD[k],en:JPN[JPD[k]]}}}
@@ -172,7 +175,15 @@ const ocrW={};function getW(l){if(!ocrW[l])ocrW[l]=(async()=>{const w=await Tess
 function binC(src,x,y,w,h,scale,th){const W=src.width,H=src.height;const c=document.createElement('canvas');c.width=Math.round(W*w*scale);c.height=Math.round(H*h*scale);
  const g=c.getContext('2d',{willReadFrequently:true});g.imageSmoothingQuality='high';g.drawImage(src,W*x,H*y,W*w,H*h,0,0,c.width,c.height);
  const im=g.getImageData(0,0,c.width,c.height),d=im.data;for(let i=0;i<d.length;i+=4){const v=Math.max(d[i],d[i+1],d[i+2])<th?0:255;d[i]=d[i+1]=d[i+2]=v}g.putImageData(im,0,0);return c}
+// Luminanz-Binarisierung mit adaptiver Schwelle (Perzentil) – für dunkle Schrift auf farbigem Grund
+function binL(src,x,y,w,h,scale,pct){const W=src.width,H=src.height;const c=document.createElement('canvas');c.width=Math.round(W*w*scale);c.height=Math.round(H*h*scale);
+ const g=c.getContext('2d',{willReadFrequently:true});g.imageSmoothingQuality='high';g.drawImage(src,W*x,H*y,W*w,H*h,0,0,c.width,c.height);
+ const im=g.getImageData(0,0,c.width,c.height),d=im.data,hist=new Uint32Array(256);for(let i=0;i<d.length;i+=4){const L=(d[i]*299+d[i+1]*587+d[i+2]*114)/1000|0;d[i+3]=L;hist[L]++}
+ let acc=0,th=100;for(let v=0;v<256;v++){acc+=hist[v];if(acc>d.length/4*pct){th=v+8;break}}for(let i=0;i<d.length;i+=4){const v=d[i+3]<th?0:255;d[i]=d[i+1]=d[i+2]=v;d[i+3]=255}g.putImageData(im,0,0);return c}
 async function readNumberHi(src){const w=await getW('dig');const re=/(\d{1,3})\/(\d{2,3})/;window.hiDbg=[];
+ const sc0=Math.max(3,Math.min(5,1400/(src.width*.4)));
+ for(const pct of [.12,.2]){const t=((await w.recognize(binL(src,.1,.885,.42,.065,sc0,pct))).data.text||'').replace(/\s+/g,' ').trim();window.hiDbg.push('L'+pct+':'+t);
+  const m=t.replace(/ /g,'').match(re)||t.match(/\b(\d{3}) ?(\d{3})\b/);if(m&&m[1].length===m[2].length&&+m[1]>0&&+m[1]<=+m[2]+120)return m[1].replace(/^0+(?=\d)/,'')+'/'+m[2]}
  const sc=Math.max(3,Math.min(4,1600/(src.width*.45)));
  for(const [x,y,ww,h] of [[0,.88,.45,.12],[.05,.91,.4,.08]])for(const th of [80,115,150]){
   const t=((await w.recognize(binC(src,x,y,ww,h,sc,th))).data.text||'').replace(/\s/g,'');window.hiDbg.push(th+':'+t);const m=t.match(re);
@@ -205,7 +216,7 @@ async function readNumber(src){const w=await getW('num');const re=/(\d{1,3})\s*\
   for(const mm of (data.text||'').matchAll(re)){const v=mm[1]+'/'+mm[2];if(mm[1].length===mm[2].length)return mm[1].replace(/^0+(?=\d)/,'')+'/'+mm[2];weak||=v}}
  return weak?{weak}:''}
 // Gesamtanalyse: Text (DE/EN), bei Kana/schwacher Erkennung Japanisch, Nummer aus unterem Streifen
-async function analyze(src,st=()=>{}){const t0=performance.now();src=cardCrop(src);st('Name & Nummer werden gelesen…');
+async function analyze(src,st=()=>{}){const t0=performance.now();src=cardCrop(src);window.energyHue=hueType(src);st('Name & Nummer werden gelesen…');
  // parallel: Name-Streifen oben (JP + DE/EN) und Nummer-Streifen unten – keine Ganzkarten-OCR, solange das reicht
  const top=cropC(src,.15,.04,.65,.12,3,'dark'),topG=cropC(src,0,.02,1,.12,2);
  const pJ=getW('jpn').then(w=>w.recognize(top)).then(r=>r.data.text||'');
@@ -213,17 +224,46 @@ async function analyze(src,st=()=>{}){const t0=performance.now();src=cardCrop(sr
  const pN=readNumber(src);
  const [tTop,rE,num0]=await Promise.all([pJ,pE,pN]);window.topDbg=tTop;
  let number=num0,numWeak=false;if(number&&number.weak){number=number.weak;numWeak=true}
- let jp=jpName(tTop),text=tTop+'\n'+(rE.text||''),kana=/[\u3040-\u30ff]{2,}/.test(tTop.replace(/\s/g,'')),lang=jp?'JP':'';
- let r1=rE,conf=rE.confidence;
- if(!jp){// Fallback: ganze Karte (Sprache über Wörter wie Schwäche/Weakness)
-  st('Ganze Karte wird gelesen…');const [a,b]=await Promise.all([getW('deu+eng').then(w=>w.recognize(cropC(src,0,0,1,1,1))),getW('jpn').then(w=>w.recognize(cropC(src,0,0,1,1,1)))]);
-  r1=a.data;conf=r1.confidence;text+='\n'+r1.text+(b?'\n'+b.data.text:'');jp=jpName(text);lang=detectLang(r1.text||'');if(jp||(b&&/[\u3040-\u30ff]{2,}/.test(b.data.text.replace(/\s/g,'')))){kana=true;lang='JP'}}
- const p=parseOCR(r1.text||'');if(!number){const m=text.match(/(\d{2,3})\s*\/\s*(\d{2,3})/);if(m)number=m[1].replace(/^0+(?=\d)/,'')+'/'+m[2]}
- if((!number||numWeak)&&src.width>=500){st('Kartennummer wird genau gelesen…');const n2=await readNumberHi(src);if(n2){number=n2;numWeak=false}}
+ const tL=rE.text||'';window.latDbg=tL;let latW=(tL.match(/[A-Za-zÄÖÜäöüß]{3,}/g)||[]),latin=latW.length>=1&&(rE.confidence>=45||latW.some(w=>/^(basis|phase|energie|basic|stage|energy)$/i.test(w)));
+ const pT=parseTop(tL),numTxt=(window.numDbg||[]).join('\n');
+ let jp=latin?null:jpName(tTop),text=tTop+'\n'+tL,kana=!latin&&/[\u3040-\u30ff]{2,}/.test(tTop.replace(/\s/g,'')),lang=jp?'JP':'';
+ let r1=rE,conf=rE.confidence,energy=pT.energy;
+ if(latin){lang=langLatin(tL+'\n'+numTxt)}
+ if(!jp&&!(latin&&pT.name&&(number||energy))){// Fallback: ganze Karte (Sprache über Wörter wie Schwäche/Weakness)
+  st('Ganze Karte wird gelesen…');const [a,b]=await Promise.all([getW('deu+eng').then(w=>w.recognize(cropC(src,0,0,1,1,1))),latin?null:getW('jpn').then(w=>w.recognize(cropC(src,0,0,1,1,1)))]);
+  r1=a.data;conf=Math.max(conf,r1.confidence);text+='\n'+r1.text+(b?'\n'+b.data.text:'');
+  const fullLatin=latin||(r1.text.match(/[A-Za-zÄÖÜäöüß]{4,}/g)||[]).length>=6;
+  if(fullLatin){latin=true;lang=langLatin(tL+'\n'+r1.text+'\n'+numTxt);kana=false;jp=null}
+  else{jp=jpName(text);lang=detectLang(r1.text||'');if(jp||(b&&/[\u3040-\u30ff]{2,}/.test(b.data.text.replace(/\s/g,'')))){kana=true;lang='JP'}}
+  if(!energy)energy=parseTop(r1.text).energy}
+ const p=pT.name?pT:parseOCR(r1.text||'');if(!number){const m=text.match(/(\d{2,3})\s*\/\s*(\d{2,3})/);if(m)number=m[1].replace(/^0+(?=\d)/,'')+'/'+m[2]}
+ const sc=findSet(text+'\n'+numTxt,number);
+ if(!number&&!energy){const m=(numTxt+'\n'+text).match(/\b(?:30C|3OC)\s*[^\d\n]{0,3}(\d{3})\b/i);if(m){number=m[1].replace(/^0+(?=\d)/,'');numWeak=true}}
+ if(energy){if(!number){const m=(numTxt+'\n'+text).match(/\b(\d{3})\b/);if(m)number=m[1]}if(lang===''||lang==='JP'&&latin)lang='DE'}
+ if((!number||numWeak)&&!energy&&src.width>=380){st('Kartennummer wird genau gelesen…');const n2=await readNumberHi(src);if(n2){number=n2;numWeak=false}}
  let name=jp?jp.en:'',confident=!!jp&&!numWeak;
- if(!jp&&!kana&&p.name&&conf>=65&&p.name.length>=4){name=p.name;confident=!!number}
- if(!name&&p.name&&!kana)name=p.name;window.scanMs=Math.round(performance.now()-t0);
- return{name,jp:jp&&jp.jp,number:(number||'').split('/')[0],full:number,lang,confident,set:setCode(text+'\n'+(window.numDbg||[]).join('\n')),raw:text,conf:Math.round(conf),ms:window.scanMs}}
+ if(energy){name='Basic '+energy+' Energy';confident=true}
+ else if(!jp&&!kana&&p.name&&p.name.length>=3&&(latin||conf>=65)){name=deName(p.name);confident=!!number&&!numWeak&&(conf>=55||name!==p.name||latin)}
+ if(!name&&p.name&&!kana)name=deName(p.name);window.scanMs=Math.round(performance.now()-t0);
+ return{name,jp:jp&&jp.jp,number:(number||'').split('/')[0],full:number,lang,confident,energy:!!energy,setId:sc&&sc.id||'',set:sc?sc.name:setCode(text+'\n'+numTxt),raw:text,conf:Math.round(conf),ms:window.scanMs}}
+// Sprache bei lateinischer Schrift (nie JP)
+function langLatin(t){const l=detectLang(t.replace(/[\u3040-\u9fff\uac00-\ud7af]/g,''));if(l)return l;if(/\b(BASIS|PHASE|ENERGIE|Energie|Entwickelt|KP)\b/.test(t))return'DE';if(/\b(BASIC|STAGE|ENERGY|Energy|HP)\b/.test(t))return'EN';return'DE'}
+// Name aus dem Namensstreifen oben links (nach BASIS/PHASE), Energie-Karten erkennen
+function parseTop(t){t=t||'';const e=t.match(/basis[^\n]{0,4}?([A-Za-zäöü]{4,})?[^\n]{0,4}?energie/i)||t.match(/basic\s+(\w+)\s+energy/i);
+ if(e||/basis-?\s*energie/i.test(t)||/ENERGIE\b/.test(t)&&!/\bKP\b|\d{2,3}\s*$/m.test(t)){let ty=e&&e[1]&&ENERGY[e[1].toLowerCase()];if(!ty)ty=window.energyHue||'';if(ty)return{name:'',energy:ty};if(/basis.{0,6}energie/i.test(t))return{name:'',energy:window.energyHue||'Psychic',guess:1}}
+ const lines=t.split('\n').map(l=>l.trim()).filter(Boolean);
+ for(const l of lines.slice(0,4)){const w=l.replace(/[^A-Za-zÄÖÜäöüßé\- ]/g,' ').split(/\s+/).map(x=>x.replace(/^-+|-+$/g,'')).filter(x=>x.length>=3&&/[a-zäöü]/.test(x)&&!/^(BASIS|BASIC|STAGE|PHASE|KP|HP|PV|PS|Entwickelt|Evolves|aus|from)$/i.test(x));
+  if(w.length){const k=w.find(x=>DE[x.toLowerCase()])||w[0];return{name:/\bex\b/.test(l)?k+' ex':k,energy:''}}}
+ return{name:'',energy:''}}
+// Set über Set-Code (z.B. 30C) + Gesamtzahl
+function findSet(t,num){const tot=(num||'').split('/')[1];const codes=Object.assign({},SETCODES);for(const s of SETS)if(s.ptcgoCode&&!codes[s.ptcgoCode])codes[s.ptcgoCode]={id:s.id,name:s.name,total:s.printedTotal};
+ for(const m of (t||'').matchAll(/\b([0-9A-Z]{2,4})\b/g)){const c=m[1].replace(/^3O/,'30');const s=codes[c];if(s&&/\d/.test(c)&&/[A-Z]/.test(c)&&(!tot||!s.total||+tot===s.total))return s}
+ if(tot)for(const c in SETCODES)if(SETCODES[c].total===+tot)return SETCODES[c];return null}
+// Energietyp grob über Farbton der Kartenmitte
+function hueType(src){try{const W=src.width,H=src.height,c=document.createElement('canvas');c.width=40;c.height=40;const g=c.getContext('2d',{willReadFrequently:true});g.drawImage(src,W*.2,H*.25,W*.6,H*.45,0,0,40,40);
+ const d=g.getImageData(0,0,40,40).data;let r=0,gg=0,b=0;for(let i=0;i<d.length;i+=4){r+=d[i];gg+=d[i+1];b+=d[i+2]}const n=d.length/4;r/=n;gg/=n;b/=n;const mx=Math.max(r,gg,b),mn=Math.min(r,gg,b);
+ if(mx-mn<20)return mx<90?'Darkness':'Metal';let h;if(mx===r)h=((gg-b)/(mx-mn)+6)%6;else if(mx===gg)h=(b-r)/(mx-mn)+2;else h=(r-gg)/(mx-mn)+4;h*=60;
+ return h<20||h>=345?'Fire':h<45?'Fighting':h<70?'Lightning':h<160?'Grass':h<250?'Water':'Psychic'}catch(e){return''}}
 // Worker vorwärmen, sobald der Scan-Tab geöffnet wird
 function warmOCR(){if(!window.Tesseract||window._warm)return;window._warm=1;['deu+eng','jpn','num','dig'].forEach(l=>getW(l).catch(()=>{delete ocrW[l];window._warm=0}))}
 function scanPick(r){const P=$('#scanPick');P.hidden=false;const noNum=r.name&&!r.number;
@@ -241,8 +281,8 @@ function scanPick(r){const P=$('#scanPick');P.hidden=false;const noNum=r.name&&!
  if(noNum)setTimeout(()=>{const n=$('#spNum');n.focus();n.scrollIntoView({block:'center'})},50)}
 function scanResult(r){window.lastScan=r;const st=$('#scanStatus2');
  st.textContent=`Erkannt: ${r.name||'?'}${r.jp?' ('+r.jp+')':''} · Nr. ${r.full||r.number||'?'}${r.lang?' · '+r.lang:''}`;
- if(r.confident&&r.number&&r.lang!=='JP'){$('#scanPick').hidden=true;applyScan(r,r.lang)}else scanPick(r)}
-async function handleFile(f){const st=$('#scanStatus2');$('#scanPick').hidden=true;
+ if(r.confident&&(r.number||r.energy)&&r.lang!=='JP'){$('#scanPick').hidden=true;applyScan(r,r.lang)}else scanPick(r)}
+async function handleFile(f){window.scanLang='';window.pendingScan=null;const st=$('#scanStatus2');$('#scanPick').hidden=true;
  if(!f){st.textContent='Kein Bild ausgewählt.';return}
  if(!window.Tesseract){st.textContent='❌ Texterkennung nicht geladen – Internet prüfen und neu laden.';return}
  $('#scanbox').classList.add('busy');
@@ -261,7 +301,7 @@ async function startLive(){const st=$('#scanStatus2');$('#scanPick').hidden=true
  if((caps.focusMode||[]).includes('continuous'))tr.applyConstraints({advanced:[{focusMode:'continuous'}]}).catch(()=>{});
  try{live.ic=window.ImageCapture?new ImageCapture(tr):null}catch(e){live.ic=null}
  $('.frame span').textContent='Näher ran – Karte füllt den Rahmen · Tippen = scharfstellen';
- live.last=null;live.nameOnly=0;live.nameKey='';getWorker().catch(()=>{});getW('num').catch(()=>{});live.timer=setInterval(liveTick,1500)}
+ window.scanLang='';window.pendingScan=null;live.last=null;live.nameOnly=0;live.nameKey='';getWorker().catch(()=>{});getW('num').catch(()=>{});live.timer=setInterval(liveTick,1500)}
 function stopLive(){clearInterval(live.timer);live.timer=null;if(live.stream){live.stream.getTracks().forEach(t=>t.stop());live.stream=null}
  const v=$('#liveVideo');if(v)v.srcObject=null;$('#scanbox')?.classList.remove('live');live.torch=false;live.ic=null;const fs=$('.frame span');if(fs)fs.textContent='Karte im Rahmen platzieren'}
 async function liveTick(){if(live.busy||!live.stream)return;const v=$('#liveVideo');if(!v.videoWidth)return;live.busy=true;
@@ -271,14 +311,14 @@ async function liveTick(){if(live.busy||!live.stream)return;const v=$('#liveVide
   sx=Math.max(0,sx);sy=Math.max(0,sy);sw=Math.min(sw,v.videoWidth-sx);sh=Math.min(sh,v.videoHeight-sy);
   const c=$('#liveCanvas');c.width=Math.round(sw);c.height=Math.round(sh);c.getContext('2d').drawImage(v,sx,sy,sw,sh,0,0,c.width,c.height);
   const r=await analyze(c,m=>$('#scanStatus2').textContent=m);if(!live.stream)return;
-  $('#liveText').textContent=`→ ${r.name||'?'}${r.jp?' ('+r.jp+')':''} · ${r.full||'?'}${r.lang?' · '+r.lang:''}${r.confident&&r.number?'':' · nicht sicher'}`;
-  if(r.name&&!r.number&&(r.jp||r.conf>=65)){// Name sicher, Nummer fehlt → scharfes Foto in voller Auflösung
+  $('#liveText').textContent=`→ ${r.name||'?'}${r.jp?' ('+r.jp+')':''} · ${r.full||'?'}${r.lang?' · '+r.lang:''}${r.confident&&(r.number||r.energy)?'':' · nicht sicher'}`;
+  if(r.name&&!r.number&&!r.energy&&(r.jp||r.conf>=65||r.lang&&r.lang!=='JP')){// Name sicher, Nummer fehlt → scharfes Foto in voller Auflösung
    const k=r.name;live.nameOnly=live.nameKey===k?live.nameOnly+1:1;live.nameKey=k;$('#scanStatus2').textContent=`Name erkannt (${live.nameOnly}/3) – scharfes Foto für die Nummer…`;
    const hi=await grabStill(v);if(!live.stream)return;if(hi){const n=await readNumberHi(cardCrop(hi));if(!live.stream)return;if(n){r.full=n;r.number=n.split('/')[0];r.confident=true;navigator.vibrate?.(200);stopLive();scanResult(r);return}}
    if(live.nameOnly>=3){navigator.vibrate?.([80,60,80]);stopLive();$('#scanStatus2').textContent=`Erkannt: ${r.name}${r.jp?' ('+r.jp+')':''}${r.lang?' · '+r.lang:''} – Nummer bitte eintippen`;window.lastScan=r;scanPick(r);return}
    $('#scanStatus2').textContent='Nummer noch nicht lesbar – näher ran, Karte füllt den Rahmen';return}
   live.nameOnly=0;
-  if(r.confident&&r.number){const key=(r.name+'|'+r.number).toLowerCase();
+  if(r.confident&&(r.number||r.energy)){const key=(r.name+'|'+r.number).toLowerCase();
    if(live.last===key){navigator.vibrate?.(200);stopLive();scanResult(r);return}
    live.last=key;$('#scanStatus2').textContent='Fast erkannt – Karte ruhig halten…'}else{live.last=null;$('#scanStatus2').textContent='Noch nicht sicher – Karte näher, gerade und gut beleuchtet halten'}}
  catch(e){$('#scanStatus2').textContent='Fehler: '+e.message}finally{live.busy=false}}
