@@ -149,3 +149,5 @@ nav .scanNav i{background:linear-gradient(135deg,var(--ac),#ff8a5c);color:#fff;b
  repeating-linear-gradient(60deg,rgba(255,255,255,.25) 0 2px,transparent 2px 9px);background-size:120% 120%,140% 140%;background-position:var(--sx,50%) var(--sy,50%),var(--bx,50%) var(--by,50%)}
 .tile .im.tilting .holo,.dcard.tilting .holo{transition:none}
 .detail .dcard{touch-action:none}
+
+.spgrid{display:grid;grid-template-columns:repeat(auto-fill,minmax(78px,1fr));gap:8px;margin-top:10px}.spThumb{padding:4px;border-radius:10px;display:flex;flex-direction:column;align-items:center;gap:2px;font-size:.65rem;min-width:0}.spThumb img{width:100%;aspect-ratio:63/88;object-fit:cover;border-radius:6px}.spThumb span{white-space:nowrap;overflow:hidden;text-overflow:ellipsis;max-width:100%}
