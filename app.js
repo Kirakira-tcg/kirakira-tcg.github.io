@@ -69,9 +69,14 @@ function renderSets(){const f=$('#setFilter').value.toLowerCase();$('#setList').
   d.onclick=()=>{window.pendingScan=null;$('#qName').value='';$('#qNum').value='';search('','','',s.id);window.scrollTo(0,0)};$('#setList').append(d)}}
 $('#setFilter').oninput=renderSets;
 
+// Zweite Preisquelle (prices.js / TCGdex): Fallback bei fehlendem Preis oder nicht-englischer Karte
+const tdxNeed=x=>x.ownPrice==null&&(x.price==null||(x.lang&&x.lang!=='EN'));
+async function tdxFill(x){if(!window.Prices||x.ownPrice!=null)return false;const lang=(x.lang||'DE').toLowerCase(),name=(x.name||'').replace(/\s*\(.*\)\s*$/,'').trim(),num=String(x.number||'').split('/')[0]||null;
+ let r=null;try{r=await Prices.lookup(name,lang,x.setId||null,num);if(!(r&&r.best)&&lang!=='en')r=await Prices.lookup(name,'en',null,num)}catch(e){console.warn(e)}
+ if(!(r&&r.best))return false;x.price=r.best.eur;x.tdx={label:r.label,id:r.id,src:r.best.source,conv:r.best.umgerechnet,url:r.best.url};return true}
 function addDialog(c,mode,sealed){const manual=!c;const f=$('#dlgForm');const p=c?cmPrice(c):null;
  f.innerHTML=`<h3>${mode==='wish'?'Zur Wunschliste':sealed?'Sealed-Produkt hinzufügen':'Zur Sammlung'}</h3>
- ${manual?`<label>Name<input name="name" required placeholder="${sealed?'z.B. 30 Jahre Booster Bundle':''}"></label><label>Set<input name="set"></label>${sealed?'':'<label>Nummer<input name="number"></label>'}<label>Bild-URL (optional)<input name="img"></label>`:`<p><b>${esc(c.name)}</b> – ${esc(c.set.name)} ${c.number}<br>Cardmarket-Trend: ${money(p)}</p>`}
+ ${manual?`<label>Name<input name="name" required placeholder="${sealed?'z.B. 30 Jahre Booster Bundle':''}"></label><label>Set<input name="set"></label>${sealed?'':'<label>Nummer<input name="number"></label>'}<label>Bild-URL (optional)<input name="img"></label>`:`<p><b>${esc(c.name)}</b> – ${esc(c.set.name)} ${c.number}<br>Cardmarket-Trend: ${money(p)}<br><span class="muted small" id="tdxLbl"></span></p>`}
  <label>Sprache<select name="lang">${LANGS.map(l=>`<option${l===(window.scanLang||'DE')?' selected':''}>${l}</option>`).join('')}</select></label>${window.scanLang?'<p class="muted small">Sprache per Scan erkannt: '+window.scanLang+'</p>':''}
  ${mode==='wish'?`<label>Zielpreis (€)<input name="target" type="number" step="0.01" required></label>`:
  `${sealed?'<input type="hidden" name="cond" value="Sealed">':`<label>Zustand<select name="cond"><option>NM</option><option>EX</option><option>GD</option><option>LP</option><option>PL</option><option>PSA 10</option><option>PSA 9</option><option>CGC 10</option><option>BGS 9.5</option><option>PSA/Graded</option></select></label>`}
@@ -83,7 +88,9 @@ function addDialog(c,mode,sealed){const manual=!c;const f=$('#dlgForm');const p=
   if(sealed)base.type='sealed';const own=v.price?parseFloat(v.price):null;
   if(mode==='wish')S.wishlist.push({uid:uid(),...base,lang:v.lang,target:parseFloat(v.target),price:own??p,ownPrice:own});
   else{const it={uid:uid(),...base,lang:v.lang,cond:v.cond,qty:parseInt(v.qty)||1,buy:parseFloat(v.buy)||0,price:own??p,ownPrice:own,added:today()};trackPrice(it);S.collection.push(it);window.FX&&FX.reveal(it)}
-  save();snapshot();render()}}
+  save();snapshot();render();const nw=mode==='wish'?S.wishlist[S.wishlist.length-1]:S.collection[S.collection.length-1];
+  if(nw&&tdxNeed(nw))tdxFill(nw).then(ok=>{if(ok){trackPrice(nw);save();snapshot();render()}})};
+ if(c&&window.Prices){const l=$('#tdxLbl');Prices.lookup(c.name,(window.scanLang||'DE').toLowerCase(),null,c.number).then(r=>{if(l&&r&&r.best)l.textContent='TCGdex: '+r.label}).catch(()=>{})}}
 $('#manualBtn').onclick=()=>addDialog(null,'coll');$('#sealedBtn').onclick=()=>addDialog(null,'coll',true);
 
 // Detail / Preisguide
@@ -97,9 +104,11 @@ function detail({api:c,item,list}){const f=$('#dlgForm');const it=item||{};const
  <h3>Preisguide (Cardmarket)</h3><table class="ptable">${rows.map(r=>`<tr><td>${r[0]}</td><td>${money(r[1])}</td></tr>`).join('')||'<tr><td colspan=2 class="muted">Keine Cardmarket-Daten (manuell/JP)</td></tr>'}</table>
  ${raw?`<h3>Graded (Schätzung)</h3><table class="ptable">${Object.entries(GRADE).map(([g,[k]])=>`<tr><td>${g}</td><td>≈ ${money(raw*k)}</td></tr>`).join('')}</table><p class="muted small">Faktor-Schätzung auf Raw-Preis, keine echten Graded-Verkäufe/Pop-Reports.</p>`:''}
  ${item&&it.buy?`<p>Einstand ${money(it.buy*it.qty)} · <span class="${cls(raw-it.buy)}">${raw-it.buy>=0?'+':''}${money((raw-it.buy)*it.qty)}</span></p>`:''}
- ${it.note?`<p class="muted small">${esc(it.note)}</p>`:''}${ci&&ci.url?`<p><a href="${ci.url}" target="_blank" rel="noopener" style="color:#a78bfa">Auf Cardmarket ansehen ↗</a></p>`:''}</div>
+ ${it.tdx?`<p class="muted small">Preis: ${esc(it.tdx.label)}${it.tdx.url?` · <a href="${esc(it.tdx.url)}" target="_blank" rel="noopener" style="color:#a78bfa">Cardmarket ↗</a>`:''}</p>`:''}<p class="muted small" id="tdxDet"></p>${it.note?`<p class="muted small">${esc(it.note)}</p>`:''}${ci&&ci.url?`<p><a href="${ci.url}" target="_blank" rel="noopener" style="color:#a78bfa">Auf Cardmarket ansehen ↗</a></p>`:''}</div>
  <div class="row">${item?'<button value="edit">Preis ändern</button><button value="del" class="danger">Entfernen</button>':`<button value="add">+ Sammlung</button><button value="wish">☆ Wunsch</button>`}<button value="cancel">Schließen</button></div>`;
- const dlg=$('#dlg');dlg.returnValue='';dlg.showModal();dlg.onclose=()=>{const r=dlg.returnValue;
+ const dlg=$('#dlg');dlg.returnValue='';dlg.showModal();
+ if(window.Prices&&!it.tdx&&(price==null||(item&&it.lang&&it.lang!=='EN'))){const q=item?{...it,ownPrice:null,price:null}:{name:c.name,number:c.number,lang:window.scanLang||'EN'};tdxFill(q).then(ok=>{const l=$('#tdxDet');if(ok&&l)l.textContent='TCGdex: '+q.tdx.label})}
+ dlg.onclose=()=>{const r=dlg.returnValue;
   if(r==='add')setTimeout(()=>addDialog(c,'coll'));if(r==='wish')setTimeout(()=>addDialog(c,'wish'));
   if(r==='edit'){const p=prompt(`Neuer Preis (€) für ${it.name}:`,it.price??'');if(p&&p.trim()){it.price=parseFloat(p.replace(',','.'));it.ownPrice=it.price;trackPrice(it);save();snapshot();render()}}
   if(r==='del'&&confirm('Wirklich entfernen?')){S[list]=S[list].filter(x=>x.uid!==it.uid);save();snapshot();render()}}}
@@ -110,6 +119,7 @@ async function refreshPrices(){const btn=$('#refresh');btn.textContent='…';con
  for(let i=0;i<ids.length;i+=20){const chunk=ids.slice(i,i+20);
   try{const d=await api(`${API}/cards?q=${encodeURIComponent(chunk.map(id=>'id:'+id).join(' OR '))}&select=id,cardmarket,types`);
    for(const c of d.data){const p=cmPrice(c);items.filter(x=>x.apiId===c.id).forEach(x=>{x.cm=cmInfo(c);if(c.types)x.types=c.types;if(p!=null&&x.ownPrice==null)x.price=p})}}catch(e){console.warn(e)}}
+ for(const x of [...S.collection,...S.wishlist])if(x.type!=='sealed'&&tdxNeed(x))await tdxFill(x);
  S.collection.forEach(trackPrice);btn.textContent='⟳';save();snapshot();render()}
 $('#refresh').onclick=refreshPrices;
 
