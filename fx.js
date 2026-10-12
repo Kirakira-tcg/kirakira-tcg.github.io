@@ -4,11 +4,11 @@ window.FX=(()=>{
 const RM=matchMedia('(prefers-reduced-motion: reduce)').matches;
 const TC={grass:'#3ccf6e',fire:'#ff6a3d',water:'#3aa7ff',lightning:'#ffd23f',psychic:'#c65bff',fighting:'#e0803a',darkness:'#5b5f8f',metal:'#9fb3c8',fairy:'#ff7ad9',dragon:'#d9a73a',colorless:'#cfd3e0',none:'#8d7bff'};
 // Folien-Effekt: Finger/Maus oder Handy-Neigung verschiebt Regenbogen, Glitzer & Glanzpunkt (geglättet per rAF)
-function setTilt(el,x,y){const dx=x-.5,dy=y-.5;el.style.setProperty('--rx',(-dy*18).toFixed(2)+'deg');el.style.setProperty('--ry',(dx*22).toFixed(2)+'deg');
+function setTilt(el,x,y){x=Math.max(.1,Math.min(.9,x));y=Math.max(.1,Math.min(.9,y));const dx=x-.5,dy=y-.5;el.style.setProperty('--rx',(-dy*18).toFixed(2)+'deg');el.style.setProperty('--ry',(dx*22).toFixed(2)+'deg');
  el.style.setProperty('--mx',(x*100).toFixed(1)+'%');el.style.setProperty('--my',(y*100).toFixed(1)+'%');
  el.style.setProperty('--bx',(50+dx*120).toFixed(1)+'%');el.style.setProperty('--by',(50+dy*120).toFixed(1)+'%');
  el.style.setProperty('--sx',(50-dx*60).toFixed(1)+'%');el.style.setProperty('--sy',(50-dy*60).toFixed(1)+'%');
- el.style.setProperty('--ho',Math.min(.9,.4+Math.hypot(dx,dy)*1.2).toFixed(2))}
+ el.style.setProperty('--ho',Math.min(.35,.16+Math.hypot(dx,dy)*.35).toFixed(2))}
 function target(e){return e.target.closest&&e.target.closest('.tile .im,.dcard')}
 const st=new Map();let loop=0;// el -> {x,y,tx,ty}
 function aim(el,tx,ty){let o=st.get(el);if(!o){o={x:.5,y:.5};st.set(el,o);el.classList.add('tilting')}o.tx=tx;o.ty=ty;o.rel=0;if(!loop)loop=requestAnimationFrame(tick)}
@@ -23,11 +23,12 @@ if(!RM){
 }
 function reset(el){el.classList.remove('tilting');['--rx','--ry','--ho','--mx','--my','--bx','--by','--sx','--sy'].forEach(p=>el.style.removeProperty(p))}
 // Gyro (iOS braucht Erlaubnis per Tipp) – wirkt auf Detailkarte und sichtbare Kacheln
-let gyroOn=false,g0=null,gq=0;
+let gyroOn=false,g0=null,gq=0,gx=0,gy=0;
 function onScreen(el){const r=el.getBoundingClientRect();return r.bottom>0&&r.top<innerHeight&&r.width>0}
 async function gyro(){try{if(typeof DeviceOrientationEvent!=='undefined'&&DeviceOrientationEvent.requestPermission){const r=await DeviceOrientationEvent.requestPermission();if(r!=='granted')return}
  if(gyroOn)return;gyroOn=true;addEventListener('deviceorientation',e=>{if(e.gamma==null)return;g0??=e.beta;g0+=(e.beta-g0)*.01;// Ruhelage langsam nachführen
-  const x=Math.max(0,Math.min(1,.5+e.gamma/40)),y=Math.max(0,Math.min(1,.5+(e.beta-g0)/40));if(gq)return;gq=requestAnimationFrame(()=>{gq=0;
+  const cl=v=>Math.max(-30,Math.min(30,v));gx+=(cl(e.gamma)-gx)*.15;gy+=(cl(e.beta-g0)-gy)*.15;// Tiefpass + Begrenzung
+  const x=.5+gx/80,y=.5+gy/80;if(gq)return;gq=requestAnimationFrame(()=>{gq=0;
   const els=[...document.querySelectorAll('.dcard')].filter(onScreen);const tiles=[...document.querySelectorAll('.view.active .tile .im')].filter(onScreen).slice(0,12);
   for(const el of [...els,...tiles])if(el!==cur)aim(el,x,y)})})}catch(e){}}
 if(typeof DeviceOrientationEvent!=='undefined'&&!DeviceOrientationEvent.requestPermission&&matchMedia('(pointer:coarse)').matches&&!RM)gyro();
