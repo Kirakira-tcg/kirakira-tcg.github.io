@@ -313,3 +313,11 @@ html{overflow-x:clip}
 .binder-nav .bpg{flex:1;text-align:center;white-space:nowrap}
 .phbox{position:relative;aspect-ratio:63/88}.phthumb{width:100%;border-radius:8px}.phtray{width:64px;height:89px;border-radius:6px}.phtray .cardph b{font-size:.6rem}.phtray .cardph small,.phtray .cardph span{font-size:.55rem}.phthumb .cardph b{font-size:.7rem}
 .jphit .dph{width:110px;margin:0;flex:none}.jphit .dph .cardph b{font-size:.75rem}.jphit .dph .cardph span{font-size:.7rem}
+
+/* v69 */
+.emptyStart[hidden]{display:none!important}
+body{padding-bottom:calc(var(--navh,72px) + env(safe-area-inset-bottom,0px) + 20px)!important}
+.appfoot{padding-bottom:12px!important;margin-top:1.5rem!important}
+.appver{font-size:10px;opacity:.5;text-align:center;margin-top:2px}
+a.plink{position:relative}a.plink::after{content:'';position:absolute;left:-6px;right:-6px;top:50%;height:44px;transform:translateY(-50%)}
+#qNum{min-width:5.4rem!important;width:5.8rem!important}

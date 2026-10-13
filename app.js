@@ -797,7 +797,7 @@ if('serviceWorker' in navigator){const had=!!navigator.serviceWorker.controller;
 // Version sichtbar (aus sw.js gelesen)
 (async()=>{let v='';try{const t=await (await fetch('sw.js',{cache:'no-store'})).text();v=(t.match(/kartenapp-(v\d+)/)||[])[1]||''}catch(e){}
  if(!v&&window.caches){try{v=((await caches.keys()).find(k=>/^kartenapp-v\d+$/.test(k))||'').replace('kartenapp-','')}catch(e){}}
- if(v){const el=document.createElement('div');el.id='appVer';el.textContent='Kartenapp '+v;el.style.cssText='position:fixed;right:6px;bottom:calc(env(safe-area-inset-bottom,0px) + 74px);font-size:10px;opacity:.45;pointer-events:none;z-index:5';document.body.append(el);setTimeout(()=>sessionStorage.removeItem('swrl'),5000)}})();
+ if(v){const el=document.createElement('div');el.id='appVer';el.textContent='Kartenapp '+v;el.className='appver';const ft=document.querySelector('.appfoot');(ft||document.body).append(el);setTimeout(()=>sessionStorage.removeItem('swrl'),5000)}})();
 S.collection.forEach(trackPrice);snapshot();render();refreshPrices();loadSets();
 
 // ===== Scan-Status groß oben + im Kamerarahmen =====
