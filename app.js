@@ -355,7 +355,11 @@ function detectLang(t){if(/[\u3040-\u30ff]/.test(t))return'JP';if(/[\uac00-\ud7a
  const sc={};for(const[l,r]of Object.entries(k))sc[l]=(T.match(r)||[]).length;sc.FR-=(T.match(/\bresistance\b/g)||[]).length;
  let best='',bv=0;for(const l of ['DE','EN','FR','IT','ES','PT'])if(sc[l]>bv){bv=sc[l];best=l}return best}
 function applyScan(r,lang){window.scanLang=lang||'';window.pendingScan={name:r.name,jp:r.jp,number:r.full||r.number,set:r.set,lang};$('#scanStatus').textContent=`Scan erkannt: ${r.name||'?'} ${r.number?'· Nr. '+r.number:''}${lang?' · Sprache '+lang:''}`;
- $('#qName').value=r.name||'';$('#qNum').value=r.energy?'':(r.number||'');go('v-search');search(r.name,r.energy?'':r.number,'','')}
+ $('#qName').value=r.name||'';$('#qNum').value=r.energy?'':(r.number||'');go('v-search');search(r.name,r.energy?'':r.number,'','');scanBoxPrice(r,lang)}
+// Preis der best passenden Kachel in die 'Karte (XX)'-Box übernehmen (gleicher Wert wie die Kachel)
+function scanBoxPrice(r,lang){let n=0;const num=String(r.number||'').replace(/^0+/,''),nm=nrm(r.name),fl={DE:'🇩🇪',EN:'🇬🇧',JP:'🇯🇵'}[lang]||'';clearInterval(window._sbp);window._sbp=setInterval(()=>{if(++n>40)return clearInterval(window._sbp);const R=$('#results');const box=R&&R.querySelector('.scanpick b');if(!box||box.dataset.p)return;
+ const T=[...R.querySelectorAll('.tile')].map(t=>{const pb=t.querySelector('.p b'),txt=t.innerText||'';const pr=pb&&/\d.*€|€.*\d|\$\s*\d/.test(pb.textContent)?pb.textContent.trim():'';let s=0;if(nrm(t.querySelector('.n')?.textContent).includes(nm.slice(0,6)))s+=2;if(num&&new RegExp('(^|\\D)0*'+num+'(\\D|$)').test(t.querySelector('.s')?.textContent||txt))s+=2;let g=t.parentElement;while(g&&g!==R){if(fl&&(g.previousElementSibling?.textContent||'').includes(fl))s+=1;g=g.parentElement}if(fl&&txt.includes(' · '+lang))s+=1;return{pr,s}}).filter(x=>x.pr).sort((a,b)=>b.s-a.s);
+ if(T.length&&T[0].s>=4){box.dataset.p=1;box.insertAdjacentHTML('beforeend',` <span class="sbprice">· ${esc(T[0].pr)}</span>`);clearInterval(window._sbp)}},500)}
 const JPN={'ミュウツー':'Mewtwo','ミュウ':'Mew','リザードン':'Charizard','リザード':'Charmeleon','ヒトカゲ':'Charmander','ピカチュウ':'Pikachu','ライチュウ':'Raichu','ピチュー':'Pichu','ゲンガー':'Gengar','ゴースト':'Haunter','ゴース':'Gastly','ブラッキー':'Umbreon','イーブイ':'Eevee','エーフィ':'Espeon','シャワーズ':'Vaporeon','サンダース':'Jolteon','ブースター':'Flareon','リーフィア':'Leafeon','グレイシア':'Glaceon','ニンフィア':'Sylveon','フシギバナ':'Venusaur','フシギダネ':'Bulbasaur','カメックス':'Blastoise','ゼニガメ':'Squirtle','カイリュー':'Dragonite','カビゴン':'Snorlax','ルギア':'Lugia','ホウオウ':'Ho-Oh','レックウザ':'Rayquaza','ルカリオ':'Lucario','ギャラドス':'Gyarados','フーディン':'Alakazam','ピッピ':'Clefairy','プリン':'Jigglypuff','ラプラス':'Lapras','メタモン':'Ditto','サンダー':'Zapdos','ファイヤー':'Moltres','フリーザー':'Articuno','スイクン':'Suicune','セレビィ':'Celebi','ジラーチ':'Jirachi','ダークライ':'Darkrai','アルセウス':'Arceus','ゲッコウガ':'Greninja','ミミッキュ':'Mimikyu','サーナイト':'Gardevoir','ガブリアス':'Garchomp','バンギラス':'Tyranitar','ウインディ':'Arcanine','コダック':'Psyduck','ニャース':'Meowth','ポッチャマ':'Piplup','ヒノアラシ':'Cyndaquil','ワニノコ':'Totodile','チコリータ':'Chikorita','ミロカロス':'Milotic','パルキア':'Palkia','ディアルガ':'Dialga','ギラティナ':'Giratina','ザシアン':'Zacian','テラパゴス':'Terapagos','マリル':'Marill','ヤドン':'Slowpoke','ガルーラ':'Kangaskhan','カイロス':'Pinsir','ストライク':'Scyther','エンテイ':'Entei','ライコウ':'Raikou','グラードン':'Groudon','カイオーガ':'Kyogre'};
 const dv=t=>t.normalize('NFD').replace(/[\u3099\u309a]/g,'').normalize('NFC');const JPD={};for(const k in JPN)JPD[dv(k)]=k;const JPK=Object.keys(JPD).sort((a,b)=>b.length-a.length);
 let JPALL=null;function jpAll(){if(!JPALL){JPALL=new Map();for(const k in JPN)JPALL.set(dv(k),{jp:k,en:JPN[k]});for(const r of (window.PNAMES||[]))if(r[2]&&!JPALL.has(dv(r[2])))JPALL.set(dv(r[2]),{jp:r[2],en:r[0]})}return JPALL}
@@ -407,7 +411,7 @@ async function readNumberHi(src){const w=await getW('dig');const re=/(\d{1,3})\/
 // Set-Code (z.B. s8a, sv2a) aus OCR-Text
 function setCode(t){const m=(t||'').match(/\b(s[v]?\d{1,2}[a-z]?|SV\d{1,2}[a-z]?|M\d[a-z]?)\b/);return m?m[1].toLowerCase():''}
 function getWorker(){return getW('deu+eng')}
-function cropC(src,x,y,w,h,scale,mode){const W=src.width||src.videoWidth,H=src.height||src.videoHeight;const c=document.createElement('canvas');
+function cropC(src,x,y,w,h,scale,mode){const W=src.width||src.videoWidth,H=src.height||src.videoHeight;scale=Math.min(scale,1500/(W*w));const c=document.createElement('canvas');
  c.width=Math.round(W*w*scale);c.height=Math.round(H*h*scale);const g=c.getContext('2d',{willReadFrequently:true});g.imageSmoothingQuality='high';
  if(!mode)g.filter='grayscale(1) contrast(1.3)';g.drawImage(src,W*x,H*y,W*w,H*h,0,0,c.width,c.height);
  if(mode){// dunkle Schrift isolieren (Holo-Glitzer & farbiger Hintergrund werden weiß)
@@ -440,9 +444,9 @@ function cardCropA(src){const W=src.width,H=src.height,k=200/Math.max(W,H),w=Mat
 async function toCanvas(file,max=1600){window.warmOCR&&warmOCR();let bm;try{bm=await createImageBitmap(file)}catch(e){bm=await new Promise((res,rej)=>{const i=new Image();i.onload=()=>res(i);i.onerror=()=>rej(new Error('Bild nicht lesbar'));i.src=URL.createObjectURL(file)})}
  const W=bm.width,H=bm.height,k=Math.min(1,max/Math.max(W,H));const c=document.createElement('canvas');c.width=Math.round(W*k);c.height=Math.round(H*k);c.getContext('2d').drawImage(bm,0,0,c.width,c.height);return c}
 async function readNumber(src){const w=await getW('num');const re=/(\d{1,3})\s*\/\s*(\d{2,3})/g;window.numDbg=[];let weak='';
- for(const [x,y,ww,h,k,m] of [[.12,.93,.3,.07,8,'dark'],[.08,.92,.36,.08,6,'dark2'],[0,.935,.42,.06,6,'dark'],[0,.935,.42,.06,6,'dark2'],[0,.91,.45,.08,5,'dark'],[0,.86,.5,.14,4,'dark'],[.5,.9,.5,.1,4,'dark'],[0,.75,1,.25,3,'dark'],[0,.5,1,.5,3,'dark2']]){
+ for(const [x,y,ww,h,k,m] of [[.12,.93,.3,.07,8,'dark'],[.08,.92,.36,.08,6,'dark2'],[.7,.935,.3,.065,6,'dark'],[.5,.9,.5,.1,4,'dark'],[0,.935,.42,.06,6,'dark'],[0,.935,.42,.06,6,'dark2'],[0,.91,.45,.08,5,'dark'],[0,.86,.5,.14,4,'dark'],[.5,.9,.5,.1,4,'dark'],[0,.75,1,.25,3,'dark'],[0,.5,1,.5,3,'dark2']]){
   const {data}=await w.recognize(cropC(src,x,y,ww,h,k,m));window.numDbg.push(data.text);
-  for(const mm of (data.text||'').matchAll(re)){const v=mm[1]+'/'+mm[2];if(mm[1].length===mm[2].length)return mm[1].replace(/^0+(?=\d)/,'')+'/'+mm[2];weak||=v}}
+  for(const mm of (data.text||'').matchAll(re)){const v=mm[1]+'/'+mm[2];if(mm[1].length===mm[2].length||(+mm[1]>0&&numOK(v)))return mm[1].replace(/^0+(?=\d)/,'')+'/'+mm[2];weak||=v}}
  return weak?{weak}:''}
 // Gesamtanalyse: Text (DE/EN), bei Kana/schwacher Erkennung Japanisch, Nummer aus unterem Streifen
 // Karten mit gleicher Nummer + Gesamtzahl holen; Name nehmen, wenn sein Grundname im OCR-Text steht
@@ -453,7 +457,7 @@ async function setNameCheck(num,lang,txt,name){const[a0,t0]=num.split('/');const
  const base=x=>nrm(String(x).replace(/[-\s]*(VMAX|VSTAR|V-UNION|V|GX|EX|ex|BREAK)$/,''));
  const hit=C.find(c=>base(c.name)===base(name))||C.find(c=>base(c.name).length>=4&&T.includes(base(c.name)))||(C.length===1&&(!name||!T.includes(base(name)))?C[0]:null);
  if(!hit)return null;let nm=hit.name;if(hit.lg==='en'&&lg!=='en'){try{nm=deName(nm)||nm}catch(e){}}return{...hit,name:nm}}
-async function analyze(src,st=()=>{}){const t0=performance.now();const orig=src;src=cardCrop(src);let jpSet='';window.energyHue=hueType(src);st('Name & Nummer werden gelesen…');
+async function analyze(src,st0=()=>{}){const t0=performance.now();window.stDbg=[];const st=m=>{window.stDbg.push(Math.round(performance.now()-t0)+':'+m);st0(m)};const orig=src;src=cardCrop(src);let jpSet='';window.energyHue=hueType(src);st('Name & Nummer werden gelesen…');
  // parallel: Name-Streifen oben (JP + DE/EN) und Nummer-Streifen unten – keine Ganzkarten-OCR, solange das reicht
  const top=cropC(src,.15,.04,.65,.12,3,'dark'),topG=cropC(src,0,.02,1,.12,2);
  const pJ=getW('jpn').then(w=>w.recognize(top)).then(r=>r.data.text||'');

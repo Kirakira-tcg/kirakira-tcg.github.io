@@ -231,3 +231,4 @@ html{background:var(--bg)}body{min-height:100vh;min-height:100dvh;background-att
 /* v52: Tipps im Scan-Tab */
 .scantips{max-width:420px;margin:18px auto 0;padding:14px 16px;border-radius:18px;background:rgba(255,255,255,.05);border:1px solid rgba(167,139,250,.3);text-align:left}.scantips ul{margin:8px 0 0;padding-left:0;list-style:none}.scantips li{margin:6px 0;font-size:.9rem;color:var(--tx)}
 .scanbox.live .scantips,#scanPick:not([hidden]):not(:empty)~.scantips,.scanbox.hasres .scantips{display:none}
+.sbprice{color:var(--ac2,#ffd84d);font-weight:900;white-space:nowrap}
