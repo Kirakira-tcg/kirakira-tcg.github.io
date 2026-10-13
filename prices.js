@@ -57,16 +57,23 @@ let jpP=null,jpLogos={};
 function jpLoad(){if(jpP)return jpP;const u=(typeof document!=='undefined'&&document.baseURI)?new URL('jpcards.json',document.baseURI).href:'jpcards.json';
  jpP=fetch(u).then(r=>r.ok?r.json():null).then(d=>{if(!d||!Array.isArray(d.c))return[];if(d.covers)for(const[k,v]of Object.entries(d.covers))jpLogos[k]=/assets\.tcgdex\.net/.test(v)&&!/\.\w{3,4}$/.test(v)?v+'/low.webp':v;return d.c.map(([set,localId,total,name,img])=>({id:'jp:'+set+'-'+(localId||img.replace(/^.*\/|\.\w+$/g,'')),set,localId,total,name,image:d.base+img,setName:(d.sets||{})[set]||set}))}).catch(()=>{jpP=null;return[]});return jpP}
 const jpNorm=c=>({id:c.id,name:c.name,lang:'ja',set:{id:c.set,name:c.setName},localId:c.localId,total:c.total,image:c.image,prices:[],best:null,label:'kein Preis – siehe Cardmarket',source:'pokemon-card.com'});
-const nz=x=>String(x??'').replace(/^0+/,'');
-async function jpLookup(name,setId,number){const L=await jpLoad();if(!L.length)return null;let c=null;
+const nz=x=>String(x??'').split('/')[0].trim().replace(/^0+(?=\d)/,'');
+const numN=n=>{if(n==null)return null;const v=String(n).split('/')[0].trim();return v||null};
+const snrm=x=>String(x||'').toLowerCase().replace(/[\s・_\-:'’.&]/g,'');
+// Set-Code oder Set-Name (z.B. „30th CELEBRATION“) -> jpcards-Set-Code
+async function jpSetCode(s){if(!s)return null;const L=await jpLoad(),q=snrm(s);const hit=L.find(x=>snrm(x.set)===q)||L.find(x=>snrm(x.setName)===q);return hit?hit.set:null}
+// Name in beliebiger Sprache -> mögliche JP-Namen (PNAMES: [en,de,ja])
+function jaNames(n){n=String(n||'').replace(/\s*\(([^)]*)\)\s*$/,(m,g)=>{jaNames._p=g;return''}).trim();const extra=jaNames._p;jaNames._p=null;const out=new Set([n]);if(extra)out.add(extra.trim());
+ for(const x of [...out]){const k=snrm(x);for(const r of [].concat(root.PNAMES||[],root.TNAMES||[]))if(r.some(y=>y&&snrm(y)===k)&&r[2])out.add(r[2])}return[...out].filter(Boolean)}
+async function jpLookup(name,setId,number){const L=await jpLoad();if(!L.length)return null;let c=null;number=numN(number);setId=(await jpSetCode(setId))||setId;
  if(setId&&number!=null)c=L.find(x=>x.set.toLowerCase()===String(setId).toLowerCase()&&nz(x.localId)===nz(number));
- if(!c&&name){const n=name.trim();const byN=L.filter(x=>x.name===n||x.name.replace(/\s/g,'')===n.replace(/\s/g,''));c=(number!=null&&byN.find(x=>nz(x.localId)===nz(number)))||(setId&&byN.find(x=>x.set.toLowerCase()===String(setId).toLowerCase()))||(number==null&&!setId?byN[0]:null)}
+ if(!c&&name){const ns=jaNames(name).map(snrm);const byN=L.filter(x=>ns.includes(snrm(x.name)));c=(number!=null&&byN.find(x=>nz(x.localId)===nz(number)))||(setId&&byN.find(x=>x.set.toLowerCase()===String(setId).toLowerCase()))||(number==null&&!setId?byN[0]:null)}
  return c?jpm(jpNorm(c)):null}
 async function jpSuggest(q,limit){const L=await jpLoad();const ql=q.replace(/\s/g,'');if(!ql)return[];
  return L.filter(x=>x.name.replace(/\s/g,'').includes(ql)).slice(0,limit).map(x=>({id:x.id,name:x.name,localId:x.localId||'',set:{id:x.set,name:x.setName},img:x.image,lang:'ja'}))}
 
 // lookup(name, lang='de', setId?, number?) -> Preisobjekt oder null
-async function lookup(name,lang,setId,number){lang=normLang(lang);let r=null;try{r=await lookupT(name,lang,setId,number)}catch(e){if(lang!=='ja')throw e}
+async function lookup(name,lang,setId,number){lang=normLang(lang);number=numN(number);let r=null;try{r=await lookupT(name,lang,setId,number)}catch(e){if(lang!=='ja')throw e}
  if(!r&&lang==='ja')r=await jpLookup(name,setId,number);return r}
 async function lookupT(name,lang,setId,number){
  if(setId&&number!=null){for(const id of [`${setId}-${number}`,`${setId}-${pad3(number)}`,`${setId}-${String(number).replace(/^0+/,'')}`]){const c=await getCard(id,lang);if(c)return normalize(c,lang)}}
@@ -107,6 +114,7 @@ async function jpSetCards(id){if(String(id).startsWith('jp:'))id=id.slice(3);con
  const k='jpset:'+id;let d=cget(k,SET_TTL);if(d===undefined){d=await getJSON(`${BASE}/ja/sets/${encodeURIComponent(id)}`);d=d?{name:d.name,cards:(d.cards||[]).map(c=>({id:c.id,localId:c.localId,name:c.name,image:c.image||null}))}:null;cset(k,d)}
  if(!d)return[];return d.cards.map(c=>({id:c.id,localId:c.localId,name:c.name,img:c.image?c.image+'/low.webp':null,set:{id,name:d.name},lang:'ja'}))}
 
-root.Prices={jpSets,jpSetCards,lookup,suggest,byId:async(id,lang)=>{lang=normLang(lang);if(String(id).startsWith('jp:')){const L=await jpLoad();const c=L.find(x=>x.id===id);return c?jpm(jpNorm(c)):null}const c=await getCard(id,lang);return c?normalize(c,lang):null},search,toEUR,rate,
+async function jpImgFallback(url){try{const d=await jppLoad(),L=await jpLoad(),c=L.find(x=>x.image===url);const e=c&&d.p[c.set+'-'+nz(c.localId)];return e&&e.i||null}catch(e){return null}}
+root.Prices={jpImgFallback,jpSets,jpSetCards,lookup,suggest,byId:async(id,lang)=>{lang=normLang(lang);if(String(id).startsWith('jp:')){const L=await jpLoad();const c=L.find(x=>x.id===id);return c?jpm(jpNorm(c)):null}const c=await getCard(id,lang);return c?normalize(c,lang):null},search,toEUR,rate,
  clearCache(){mem.clear();store={c:{}};save()},CACHE_KEY:KEY,LANGS};
 })(typeof window!=='undefined'?window:globalThis);
