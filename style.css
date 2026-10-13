@@ -265,3 +265,4 @@ html.ui-hc{--bg:#000;--card:#0d0d0d;--card2:#1a1a1a;--tx:#fff;--mu:#e2e2e2;--bd:
 /* v61 */
 html.ui-big{font-size:120%}html.ui-big body{font-size:18px}html.ui-big .small{font-size:1.05rem}html.ui-big .tile .n{font-size:1.1rem}html.ui-big .tile .s{font-size:1rem}html.ui-big .tile .p b{font-size:1.2rem}html.ui-big nav button{font-size:1rem}
 #qNum{min-width:4.2rem;width:4.6rem}.imgnote{font-size:.72rem;color:var(--mu);margin:2px 0 0}
+.nextscan{display:block;width:100%;min-height:60px;font-size:1.2rem;font-weight:800;border-radius:14px;margin:0 0 .7rem}
