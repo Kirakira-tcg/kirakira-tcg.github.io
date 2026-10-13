@@ -403,7 +403,21 @@ function cropC(src,x,y,w,h,scale,mode){const W=src.width||src.videoWidth,H=src.h
   for(let i=0;i<d.length;i+=4){const v=d[i+3]<th?0:255;d[i]=d[i+1]=d[i+2]=v;d[i+3]=255}g.putImageData(im,0,0)}
  return c}
 // Kartenumriss finden (helle/farbige Karte vor dunklem Hintergrund)
-function cardCrop(src){const W=src.width,H=src.height,k=200/Math.max(W,H),w=Math.round(W*k),h=Math.round(H*k);const t=document.createElement('canvas');t.width=w;t.height=h;
+// Kartenumriss über lange gerade Kanten (für bunte Hintergründe/Screenshots), Fallback zu cardCrop
+function cardCropEdge(src){const W=src.width,H=src.height,k=320/Math.max(W,H),w=Math.round(W*k),h=Math.round(H*k);const t=document.createElement('canvas');t.width=w;t.height=h;
+ const g=t.getContext('2d',{willReadFrequently:true});g.drawImage(src,0,0,w,h);const d=g.getImageData(0,0,w,h).data,I=new Float32Array(w*h);for(let i=0;i<w*h;i++)I[i]=(d[i*4]*.3+d[i*4+1]*.59+d[i*4+2]*.11);
+ const GH=new Float32Array(w*h),GV=new Float32Array(w*h);for(let y=1;y<h-1;y++)for(let x=1;x<w-1;x++){const i=y*w+x;GH[i]=Math.abs(I[i+w]-I[i-w])>28?1:0;GV[i]=Math.abs(I[i+1]-I[i-1])>28?1:0}
+ // Zeilen-/Spalten-Präfixsummen für Segment-Kantenstärke
+ const RP=new Float32Array((w+1)*h),CP=new Float32Array((h+1)*w);for(let y=0;y<h;y++)for(let x=0;x<w;x++)RP[y*(w+1)+x+1]=RP[y*(w+1)+x]+Math.max(GH[y*w+x],y>0?GH[(y-1)*w+x]:0,y<h-1?GH[(y+1)*w+x]:0);
+ for(let x=0;x<w;x++)for(let y=0;y<h;y++)CP[x*(h+1)+y+1]=CP[x*(h+1)+y]+Math.max(GV[y*w+x],x>0?GV[y*w+x-1]:0,x<w-1?GV[y*w+x+1]:0);
+ const rs=(y,x0,x1)=>(RP[y*(w+1)+x1]-RP[y*(w+1)+x0])/(x1-x0),cs=(x,y0,y1)=>(CP[x*(h+1)+y1]-CP[x*(h+1)+y0])/(y1-y0);
+ const peaks=(n,f)=>{const v=[];for(let i=2;i<n-2;i++)v.push([f(i),i]);v.sort((a,b)=>b[0]-a[0]);const o=[];for(const[s,i]of v){if(o.length>=14)break;if(o.every(j=>Math.abs(j-i)>4))o.push(i)}return o};
+ const ry=peaks(h,y=>rs(y,Math.round(w*.15),Math.round(w*.85))),cx=peaks(w,x=>cs(x,Math.round(h*.15),Math.round(h*.85)));let best=null;
+ for(const y0 of ry)for(const y1 of ry){if(y1-y0<h*.25)continue;for(const x0 of cx)for(const x1 of cx){if(x1-x0<w*.25)continue;const ar=(x1-x0)/(y1-y0);if(ar<.66||ar>.77)continue;
+  const s=rs(y0,x0,x1)+rs(y1,x0,x1)+cs(x0,y0,y1)+cs(x1,y0,y1);if(Math.min(rs(y0,x0,x1),rs(y1,x0,x1),cs(x0,y0,y1),cs(x1,y0,y1))<.45)continue;const sc=s+((x1-x0)*(y1-y0))/(w*h);if(!best||sc>best.sc)best={sc,x0,y0,x1,y1}}}
+ if(!best)return null;const X=best.x0/k,Y=best.y0/k,CW=(best.x1-best.x0)/k,CH=(best.y1-best.y0)/k;const o=document.createElement('canvas');o.width=Math.round(CW);o.height=Math.round(CH);o.getContext('2d').drawImage(src,X,Y,CW,CH,0,0,o.width,o.height);window.cropDbg=['edge',X,Y,CW,CH].map(v=>typeof v==='number'?Math.round(v):v);return o}
+function cardCrop(src){const c0=cardCropA(src);if(c0!==src)return c0;if(Math.abs(src.width/src.height-.716)<.025)return src;try{const e=cardCropEdge(src);if(e)return e}catch(e){console.warn(e)}return src}
+function cardCropA(src){const W=src.width,H=src.height,k=200/Math.max(W,H),w=Math.round(W*k),h=Math.round(H*k);const t=document.createElement('canvas');t.width=w;t.height=h;
  const g=t.getContext('2d',{willReadFrequently:true});g.drawImage(src,0,0,w,h);const d=g.getImageData(0,0,w,h).data;const R=new Float32Array(h),C=new Float32Array(w);
  for(let y=0;y<h;y++)for(let x=0;x<w;x++){const i=(y*w+x)*4,mx=Math.max(d[i],d[i+1],d[i+2]),mn=Math.min(d[i],d[i+1],d[i+2]);if(mx>140&&mx-mn>50){R[y]++;C[x]++}}
  const span=(A,n,f)=>{let a=0,b=n-1;while(a<n&&A[a]<f)a++;while(b>a&&A[b]<f)b--;return[a,b]};const [y0,y1]=span(R,h,w*.35),[x0,x1]=span(C,w,h*.35);
@@ -418,12 +432,12 @@ async function readNumber(src){const w=await getW('num');const re=/(\d{1,3})\s*\
  return weak?{weak}:''}
 // Gesamtanalyse: Text (DE/EN), bei Kana/schwacher Erkennung Japanisch, Nummer aus unterem Streifen
 // Karten mit gleicher Nummer + Gesamtzahl holen; Name nehmen, wenn sein Grundname im OCR-Text steht
-async function setNameCheck(num,lang,txt,name){const[a0,t0]=num.split('/');const tot=+t0,n=String(+a0);const sets=(SETS||[]).filter(s=>s.printedTotal===tot).slice(0,8);if(!sets.length)return null;
+async function setNameCheck(num,lang,txt,name){const[a0,t0]=num.split('/');const tot=+t0,n=String(+a0);let sets=(SETS||[]).filter(s=>+s.printedTotal===tot).slice(0,8);if(!sets.length){try{window._tdxSets=window._tdxSets||fetch('https://api.tcgdex.net/v2/en/sets',{signal:AbortSignal.timeout(8000)}).then(r=>r.json()).catch(()=>{window._tdxSets=null;return[]});const j=await window._tdxSets;sets=(j||[]).filter(x=>x.cardCount&&+x.cardCount.official===tot).slice(0,8).map(x=>({id:x.id,name:x.name,printedTotal:tot}))}catch(e){}}for(const c in SETCODES){const x=SETCODES[c];if(x.total===tot&&x.tdx&&!sets.some(s=>s.id===x.tdx))sets.push({id:x.tdx,name:x.name,printedTotal:tot})}if(!sets.length)return null;
  const T=nrm(txt),lg=(lang||'DE').toLowerCase().replace('jp','ja');const C=[];
  await Promise.all(sets.map(async s=>{for(const L of [lg,'en']){try{const c=await wto(Prices.lookup('',L,s.id,n),6000,'t');if(c&&c.name){C.push({name:c.name,setId:s.id,setName:s.name,lg:L});break}}catch(e){}}}));
  window.setChkDbg=C.map(c=>c.setId+':'+c.name);if(!C.length)return null;
  const base=x=>nrm(String(x).replace(/[-\s]*(VMAX|VSTAR|V-UNION|V|GX|EX|ex|BREAK)$/,''));
- const hit=C.find(c=>base(c.name)===base(name))||C.find(c=>base(c.name).length>=4&&T.includes(base(c.name)))||(C.length===1&&!name?C[0]:null);
+ const hit=C.find(c=>base(c.name)===base(name))||C.find(c=>base(c.name).length>=4&&T.includes(base(c.name)))||(C.length===1&&(!name||!T.includes(base(name)))?C[0]:null);
  if(!hit)return null;let nm=hit.name;if(hit.lg==='en'&&lg!=='en'){try{nm=deName(nm)||nm}catch(e){}}return{...hit,name:nm}}
 async function analyze(src,st=()=>{}){const t0=performance.now();const orig=src;src=cardCrop(src);let jpSet='';window.energyHue=hueType(src);st('Name & Nummer werden gelesen…');
  // parallel: Name-Streifen oben (JP + DE/EN) und Nummer-Streifen unten – keine Ganzkarten-OCR, solange das reicht
@@ -556,14 +570,14 @@ async function jpHit(r){if(!window.Prices||r.lang!=='JP')return null;const num=S
 function scanResult(r){window.lastScan=r;const st=$('#scanStatus2');
  st.textContent=`Erkannt: ${r.name||'?'}${r.jp?' ('+r.jp+')':''} · Nr. ${r.full||r.number||'?'}${r.lang?' · '+r.lang:''}`;
  if(r.confident&&(r.number||r.energy)&&r.lang!=='JP'){$('#scanPick').hidden=true;applyScan(r,r.lang)}else if(r.lang==='JP'&&r.name){const t=st.textContent;st.textContent='⏳ Suche japanische Karte…';jpHit(r).then(h=>{r.hit=h;st.textContent=t;scanPick(r)})}else scanPick(r)}
-async function handleFile(f){window.scanLang='';window.pendingScan=null;const st=$('#scanStatus2');$('#scanPick').hidden=true;
+async function handleFile(f){window.scanLang='';window.pendingScan=null;window.lastScan=null;const st=$('#scanStatus2');$('#scanPick').hidden=true;$('#scanPick').innerHTML='';st.textContent='';const lt=$('#liveText');if(lt)lt.textContent='';const ss=$('#scanStatus');if(ss)ss.textContent='';
  if(!f){st.textContent='Kein Bild ausgewählt.';return}
  if(!window.Tesseract){st.textContent='❌ Texterkennung nicht geladen – Internet prüfen und neu laden.';return}
  $('#scanbox').classList.add('busy');
  try{const c=await toCanvas(f);const r=await analyze(c,m=>st.textContent='⏳ '+m);scanResult(r)}
  catch(err){st.textContent='❌ Fehler bei der Erkennung: '+(err&&err.message||err)}finally{$('#scanbox').classList.remove('busy')}}
-$('#scanBtn').addEventListener('click',()=>{stopLive();$('#scanStatus2').textContent='Kamera wird geöffnet…'});
-$('#livePhoto').addEventListener('click',e=>{e.preventDefault();if(!live.stream)return;liveShoot()});$('#uploadBtn').addEventListener('click',()=>{stopLive();$('#scanStatus2').textContent='Bildauswahl wird geöffnet…'});
+$('#scanBtn').addEventListener('click',e=>{e.preventDefault();stopLive();$('#scanStatus2').textContent='';const i=$('#scanFile');i.value='';i.click()});
+$('#livePhoto').addEventListener('click',e=>{e.preventDefault();if(!live.stream)return;liveShoot()});$('#uploadBtn').addEventListener('click',e=>{e.preventDefault();stopLive();$('#scanStatus2').textContent='';const i=$('#uploadFile');i.value='';i.click()});
 ['#scanFile','#uploadFile'].forEach(id=>$(id).addEventListener('change',e=>{const f=e.target.files&&e.target.files[0];handleFile(f).finally(()=>{e.target.value=''})}));
 // Live-Scan
 let live={stream:null,timer:null,busy:false,last:null,torch:false,nameOnly:0,nameKey:''};

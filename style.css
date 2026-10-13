@@ -209,7 +209,7 @@ html,body{max-width:100%;overflow-x:clip}
 #scanPick img:not(.spThumb img),#scanbox>img,#scanbox .scanres img{max-width:160px;width:100%;height:auto;aspect-ratio:63/88;object-fit:contain}
 .jphit img{max-width:160px}
 .spThumb img{width:100%;height:auto;aspect-ratio:63/88;object-fit:contain}
-input.vh[type=file]{position:absolute!important;width:1px!important;height:1px!important;opacity:0!important;pointer-events:none!important;overflow:hidden!important}
+
 
 /* Preisvergleich Cardmarket | eBay | JP-Markt */
 .pcmp{display:grid;grid-template-columns:repeat(auto-fit,minmax(110px,1fr));gap:.5rem;margin:.6rem 0}
@@ -219,3 +219,6 @@ a.plink{display:inline-block;color:#c4b5fd;text-decoration:none;font-size:.82rem
 a.plink:hover{background:rgba(167,139,250,.28);color:#fff}
 
 .tile.owned{outline:2px solid #34d399;outline-offset:-2px}
+
+/* v48: Sucher ohne Kamera komplett weg */
+#v-scan .scanbox:not(.live) .camwrap,#v-scan .scanbox:not(.live) .frame{display:none!important}
