@@ -377,9 +377,9 @@ function detectLang(t){if(/[\u3040-\u30ff]/.test(t))return'JP';if(/[\uac00-\ud7a
 function applyScan(r,lang){window.scanLang=lang||'';window.pendingScan={name:r.name,jp:r.jp,number:r.full||r.number,set:r.set,lang};$('#scanStatus').textContent=`Scan erkannt: ${r.name||'?'} ${r.number?'· Nr. '+r.number:''}${lang?' · Sprache '+lang:''}`;
  $('#qName').value=r.name||'';$('#qNum').value=r.energy?'':(r.number||'');go('v-search');search(r.name,r.energy?'':r.number,'','');scanBoxPrice(r,lang)}
 // Preis der best passenden Kachel in die 'Karte (XX)'-Box übernehmen (gleicher Wert wie die Kachel)
-function scanBoxPrice(r,lang){let n=0;const num=String(r.number||'').replace(/^0+/,''),nm=nrm(r.name),fl={DE:'🇩🇪',EN:'🇬🇧',JP:'🇯🇵'}[lang]||'';clearInterval(window._sbp);window._sbp=setInterval(()=>{if(++n>40)return clearInterval(window._sbp);const R=$('#results');const box=R&&R.querySelector('.scanpick b');if(!box||box.dataset.p)return;
- const T=[...R.querySelectorAll('.tile')].map(t=>{const pb=t.querySelector('.p b'),txt=t.innerText||'';const pr=pb&&/\d.*€|€.*\d|\$\s*\d/.test(pb.textContent)?pb.textContent.trim():'';let s=0;if(nrm(t.querySelector('.n')?.textContent).includes(nm.slice(0,6)))s+=2;if(num&&new RegExp('(^|\\D)0*'+num+'(\\D|$)').test(t.querySelector('.s')?.textContent||txt))s+=2;let g=t.parentElement;while(g&&g!==R){if(fl&&(g.previousElementSibling?.textContent||'').includes(fl))s+=1;g=g.parentElement}if(fl&&txt.includes(' · '+lang))s+=1;return{pr,s}}).filter(x=>x.pr).sort((a,b)=>b.s-a.s);
- if(T.length&&T[0].s>=4){box.dataset.p=1;box.insertAdjacentHTML('beforeend',` <span class="sbprice">· ${esc(T[0].pr)}</span>`);clearInterval(window._sbp)}},500)}
+function scanBoxPrice(r,lang){let n=0;const num=String(r.number||'').replace(/^0+/,''),nm=nrm(r.name),fl={DE:'🇩🇪',EN:'🇬🇧',JP:'🇯🇵'}[lang]||'';clearInterval(window._sbp);window._sbp=setInterval(()=>{if(++n>120)return clearInterval(window._sbp);const R=$('#results');const box=R&&R.querySelector('.scanpick b');if(!box)return;
+ const T=[...R.querySelectorAll('.tile')].map(t=>{const pb=t.querySelector('.p b'),txt=t.innerText||'';const pr=pb&&/\d.*€|€.*\d|\$\s*\d/.test(pb.textContent)?pb.textContent.trim():'';let s=0;{const tn=nrm(t.querySelector('.n')?.textContent);let alt='';try{alt=nrm(deName(r.name))}catch(e){}if(tn.includes(nm.slice(0,6))||(alt&&tn.includes(alt.slice(0,6))))s+=2}if(num&&new RegExp('(^|\\D)0*'+num+'(\\D|$)').test(t.querySelector('.s')?.textContent||txt))s+=2;let g=t.parentElement;while(g&&g!==R){if(fl&&(g.previousElementSibling?.textContent||'').includes(fl))s+=1;g=g.parentElement}if(fl&&txt.includes(' · '+lang))s+=1;return{pr,s}}).filter(x=>x.pr).sort((a,b)=>b.s-a.s);
+ if(T.length&&T[0].s>=4){let sp=box.querySelector('.sbprice');if(!sp){sp=document.createElement('span');sp.className='sbprice';box.append(' ',sp)}const v='· '+T[0].pr;if(sp.textContent!==v)sp.textContent=v}},500)}
 const JPN={'ミュウツー':'Mewtwo','ミュウ':'Mew','リザードン':'Charizard','リザード':'Charmeleon','ヒトカゲ':'Charmander','ピカチュウ':'Pikachu','ライチュウ':'Raichu','ピチュー':'Pichu','ゲンガー':'Gengar','ゴースト':'Haunter','ゴース':'Gastly','ブラッキー':'Umbreon','イーブイ':'Eevee','エーフィ':'Espeon','シャワーズ':'Vaporeon','サンダース':'Jolteon','ブースター':'Flareon','リーフィア':'Leafeon','グレイシア':'Glaceon','ニンフィア':'Sylveon','フシギバナ':'Venusaur','フシギダネ':'Bulbasaur','カメックス':'Blastoise','ゼニガメ':'Squirtle','カイリュー':'Dragonite','カビゴン':'Snorlax','ルギア':'Lugia','ホウオウ':'Ho-Oh','レックウザ':'Rayquaza','ルカリオ':'Lucario','ギャラドス':'Gyarados','フーディン':'Alakazam','ピッピ':'Clefairy','プリン':'Jigglypuff','ラプラス':'Lapras','メタモン':'Ditto','サンダー':'Zapdos','ファイヤー':'Moltres','フリーザー':'Articuno','スイクン':'Suicune','セレビィ':'Celebi','ジラーチ':'Jirachi','ダークライ':'Darkrai','アルセウス':'Arceus','ゲッコウガ':'Greninja','ミミッキュ':'Mimikyu','サーナイト':'Gardevoir','ガブリアス':'Garchomp','バンギラス':'Tyranitar','ウインディ':'Arcanine','コダック':'Psyduck','ニャース':'Meowth','ポッチャマ':'Piplup','ヒノアラシ':'Cyndaquil','ワニノコ':'Totodile','チコリータ':'Chikorita','ミロカロス':'Milotic','パルキア':'Palkia','ディアルガ':'Dialga','ギラティナ':'Giratina','ザシアン':'Zacian','テラパゴス':'Terapagos','マリル':'Marill','ヤドン':'Slowpoke','ガルーラ':'Kangaskhan','カイロス':'Pinsir','ストライク':'Scyther','エンテイ':'Entei','ライコウ':'Raikou','グラードン':'Groudon','カイオーガ':'Kyogre'};
 const dv=t=>t.normalize('NFD').replace(/[\u3099\u309a]/g,'').normalize('NFC');const JPD={};for(const k in JPN)JPD[dv(k)]=k;const JPK=Object.keys(JPD).sort((a,b)=>b.length-a.length);
 let JPALL=null;function jpAll(){if(!JPALL){JPALL=new Map();for(const k in JPN)JPALL.set(dv(k),{jp:k,en:JPN[k]});for(const r of (window.PNAMES||[]))if(r[2]&&!JPALL.has(dv(r[2])))JPALL.set(dv(r[2]),{jp:r[2],en:r[0]})}return JPALL}
@@ -416,7 +416,7 @@ async function readNumberHi2(src,total){const w=await getW('dig');window.hi2Dbg=
  return ''}
 const JPSETS={'M6a':103};
 async function readNumberBands(src){const w=await getW('num');const re=/(\d{1,3})\s*\/\s*(\d{2,3})/;window.bandDbg=[];
- for(let y=.92;y>=.5;y-=.04)for(const m of ['dark2','dark']){const t=((await w.recognize(cropC(src,0,y,.55,.08,Math.min(4,2400/(src.width*.55)),m))).data.text||'');window.bandDbg.push(y.toFixed(2)+m+':'+t.replace(/\s+/g,' '));
+ for(const y of [.80,.72,.84,.76,.88,.92,.68,.64,.60,.56,.52])for(const m of ['dark2','dark']){const t=((await w.recognize(cropC(src,0,y,.55,.08,Math.min(4,2400/(src.width*.55)),m))).data.text||'');window.bandDbg.push(y.toFixed(2)+m+':'+t.replace(/\s+/g,' '));
   const mm=t.match(re);if(mm&&mm[1].length===mm[2].length&&+mm[1]>0&&+mm[1]<=+mm[2]*1.6){const sc=(t.match(/\b([MS][Vv]?\d{1,2}[a-zA-Z]?)\b/)||[])[1]||'';return{num:mm[1].replace(/^0+(?=\d)/,'')+'/'+mm[2],set:sc,text:t}}}
  return null}
 async function readNumberHi(src){const w=await getW('dig');const re=/(\d{1,3})\/(\d{2,3})/;window.hiDbg=[];
@@ -454,7 +454,42 @@ function cardCropEdge(src){const W=src.width,H=src.height,k=320/Math.max(W,H),w=
  for(const y0 of ry)for(const y1 of ry){if(y1-y0<h*.25)continue;for(const x0 of cx)for(const x1 of cx){if(x1-x0<w*.25)continue;const ar=(x1-x0)/(y1-y0);if(ar<.66||ar>.77)continue;
   const s=rs(y0,x0,x1)+rs(y1,x0,x1)+cs(x0,y0,y1)+cs(x1,y0,y1);if(Math.min(rs(y0,x0,x1),rs(y1,x0,x1),cs(x0,y0,y1),cs(x1,y0,y1))<.45)continue;const sc=s+((x1-x0)*(y1-y0))/(w*h);if(!best||sc>best.sc)best={sc,x0,y0,x1,y1}}}
  if(!best)return null;const X=best.x0/k,Y=best.y0/k,CW=(best.x1-best.x0)/k,CH=(best.y1-best.y0)/k;const o=document.createElement('canvas');o.width=Math.round(CW);o.height=Math.round(CH);o.getContext('2d').drawImage(src,X,Y,CW,CH,0,0,o.width,o.height);window.cropDbg=['edge',X,Y,CW,CH].map(v=>typeof v==='number'?Math.round(v):v);return o}
-function cardCrop(src){const c0=cardCropA(src);if(c0!==src)return c0;if(Math.abs(src.width/src.height-.716)<.025)return src;try{const e=cardCropEdge(src);if(e)return e}catch(e){console.warn(e)}return src}
+// Karte als Viereck finden (Hough-Linien → 2 Paare ~senkrecht, Seitenverhältnis 63:88) und perspektivisch entzerren
+function cardCropQuad(src){const W=src.width,H=src.height,k=Math.min(1,380/Math.max(W,H)),w=Math.round(W*k),h=Math.round(H*k);const t=document.createElement('canvas');t.width=w;t.height=h;
+ const g=t.getContext('2d',{willReadFrequently:true});g.drawImage(src,0,0,w,h);const d=g.getImageData(0,0,w,h).data,I=new Float32Array(w*h);for(let i=0;i<w*h;i++)I[i]=d[i*4]*.3+d[i*4+1]*.59+d[i*4+2]*.11;
+ const M=new Float32Array(w*h),A=new Float32Array(w*h);const hist=new Uint32Array(256);
+ for(let y=1;y<h-1;y++)for(let x=1;x<w-1;x++){const i=y*w+x;const gx=(I[i-w+1]+2*I[i+1]+I[i+w+1])-(I[i-w-1]+2*I[i-1]+I[i+w-1]),gy=(I[i+w-1]+2*I[i+w]+I[i+w+1])-(I[i-w-1]+2*I[i-w]+I[i-w+1]);const m=Math.hypot(gx,gy);M[i]=m;A[i]=Math.atan2(gy,gx);hist[Math.min(255,m/4|0)]++}
+ let acc=0,th=0;const tot=(w-2)*(h-2);for(let v=255;v>=0;v--){acc+=hist[v];if(acc>tot*.09){th=v*4;break}}th=Math.max(th,40);
+ const E=new Uint8Array(w*h);for(let i=0;i<w*h;i++)if(M[i]>=th)E[i]=1;
+ // Hough mit Gradientenrichtung (±6°)
+ const NT=180,diag=Math.ceil(Math.hypot(w,h)),NR=2*diag+1,HV=new Float32Array(NT*NR),CS=[],SN=[];for(let a=0;a<NT;a++){CS.push(Math.cos(a*Math.PI/NT));SN.push(Math.sin(a*Math.PI/NT))}
+ for(let y=1;y<h-1;y++)for(let x=1;x<w-1;x++){const i=y*w+x;if(!E[i])continue;let a0=Math.round(((A[i]+Math.PI)%Math.PI)/Math.PI*NT)%NT;for(let da=-6;da<=6;da++){const a=(a0+da+NT)%NT;const r=Math.round(x*CS[a]+y*SN[a])+diag;HV[a*NR+r]+=1}}
+ const pk=[];for(let a=0;a<NT;a++)for(let r=1;r<NR-1;r++){const v=HV[a*NR+r];if(v<Math.min(w,h)*.18)continue;pk.push([v,a,r-diag])}pk.sort((p,q)=>q[0]-p[0]);
+ const L=[];for(const p of pk){if(L.length>=40)break;if(L.every(q=>{const da=Math.min(Math.abs(q[1]-p[1]),NT-Math.abs(q[1]-p[1]));return da>4||Math.abs(q[2]-p[2])>8}))L.push(p)}
+ const ix=(l1,l2)=>{const a1=CS[l1[1]],b1=SN[l1[1]],a2=CS[l2[1]],b2=SN[l2[1]],D=a1*b2-a2*b1;if(Math.abs(D)<1e-6)return null;return[(l1[2]*b2-l2[2]*b1)/D,(a1*l2[2]-a2*l1[2])/D]};
+ const near=(x,y)=>{x=Math.round(x);y=Math.round(y);for(let dy=-1;dy<=1;dy++)for(let dx=-1;dx<=1;dx++){const xx=x+dx,yy=y+dy;if(xx>=0&&yy>=0&&xx<w&&yy<h&&E[yy*w+xx])return 1}return 0};
+ const sup=(p,q)=>{let s=0;const n=50;for(let j=1;j<n;j++){const u=j/n;s+=near(p[0]+(q[0]-p[0])*u,p[1]+(q[1]-p[1])*u)}return s/(n-1)};
+ const P=[];for(let i=0;i<L.length;i++)for(let j=i+1;j<L.length;j++){const da=Math.min(Math.abs(L[i][1]-L[j][1]),NT-Math.abs(L[i][1]-L[j][1]));if(da>10)continue;if(Math.abs(L[i][2]-L[j][2])<Math.min(w,h)*.2&&da<3)continue;P.push([L[i],L[j]])}
+ let best=null;for(let i=0;i<P.length;i++)for(let j=i+1;j<P.length;j++){const[a1,a2]=P[i],[b1,b2]=P[j];const dd=Math.abs(((a1[1]-b1[1])%NT+NT)%NT-90);if(dd>14)continue;
+  const c=[ix(a1,b1),ix(b1,a2),ix(a2,b2),ix(b2,a1)];if(c.some(p=>!p||p[0]<-w*.03||p[1]<-h*.03||p[0]>w*1.03||p[1]>h*1.03))continue;
+  const sl=[0,1,2,3].map(q=>Math.hypot(c[(q+1)%4][0]-c[q][0],c[(q+1)%4][1]-c[q][1]));const s1=(sl[0]+sl[2])/2,s2=(sl[1]+sl[3])/2,ar=Math.min(s1,s2)/Math.max(s1,s2);if(ar<.62||ar>.82)continue;
+  const xs=c.map(p=>p[0]),ys=c.map(p=>p[1]);if(Math.max(...xs)-Math.min(...xs)>(Math.max(...ys)-Math.min(...ys))*.95)continue;const area=s1*s2/(w*h);if(area<.08||area>.97)continue;const su=[0,1,2,3].map(q=>sup(c[q],c[(q+1)%4]));if(Math.min(...su)<.3)continue;
+  const sc=su.reduce((x,y)=>x+y,0)/4+.5*area-3*Math.abs(ar-.716);if(!best||sc>best.sc)best={sc,c,ar,area}}
+ if(!best)return null;
+ // Ecken ordnen: oben-links, oben-rechts, unten-rechts, unten-links (Hochformat)
+ let c=best.c.map(p=>[p[0]/k,p[1]/k]);const cx=c.reduce((s,p)=>s+p[0],0)/4,cy=c.reduce((s,p)=>s+p[1],0)/4;c.sort((p,q)=>Math.atan2(p[1]-cy,p[0]-cx)-Math.atan2(q[1]-cy,q[0]-cx));// ab links-oben im Uhrzeigersinn (y nach unten)
+ let st=0,mn=1e9;c.forEach((p,i)=>{if(p[0]+p[1]<mn){mn=p[0]+p[1];st=i}});c=[0,1,2,3].map(i=>c[(st+i)%4]);
+ const top=Math.hypot(c[1][0]-c[0][0],c[1][1]-c[0][1]),left=Math.hypot(c[3][0]-c[0][0],c[3][1]-c[0][1]);if(top>left)c=[c[3],c[0],c[1],c[2]];// Querformat → drehen
+ const OW=Math.round(Math.min(1100,Math.max(500,Math.hypot(c[1][0]-c[0][0],c[1][1]-c[0][1])))),OH=Math.round(OW*88/63);
+ // Homographie Ziel→Quelle
+ const dst=[[0,0],[OW,0],[OW,OH],[0,OH]],Mx=[],bv=[];for(let i=0;i<4;i++){const[x,y]=dst[i],[u,v]=c[i];Mx.push([x,y,1,0,0,0,-u*x,-u*y]);bv.push(u);Mx.push([0,0,0,x,y,1,-v*x,-v*y]);bv.push(v)}
+ const n=8;for(let i=0;i<n;i++){let p=i;for(let r=i+1;r<n;r++)if(Math.abs(Mx[r][i])>Math.abs(Mx[p][i]))p=r;[Mx[i],Mx[p]]=[Mx[p],Mx[i]];[bv[i],bv[p]]=[bv[p],bv[i]];for(let r=0;r<n;r++){if(r===i)continue;const f=Mx[r][i]/Mx[i][i];for(let q=i;q<n;q++)Mx[r][q]-=f*Mx[i][q];bv[r]-=f*bv[i]}}
+ const hh=bv.map((v,i)=>v/Mx[i][i]);const sc2=document.createElement('canvas');sc2.width=W;sc2.height=H;const sg=sc2.getContext('2d',{willReadFrequently:true});sg.drawImage(src,0,0);const sd=sg.getImageData(0,0,W,H).data;
+ const o=document.createElement('canvas');o.width=OW;o.height=OH;const og=o.getContext('2d');const od=og.createImageData(OW,OH),D=od.data;
+ for(let y=0;y<OH;y++)for(let x=0;x<OW;x++){const z=hh[6]*x+hh[7]*y+1,u=(hh[0]*x+hh[1]*y+hh[2])/z,v=(hh[3]*x+hh[4]*y+hh[5])/z;const ui=u|0,vi=v|0;const j=(y*OW+x)*4;if(ui<0||vi<0||ui>=W-1||vi>=H-1){D[j+3]=255;continue}
+  const fu=u-ui,fv=v-vi,i00=(vi*W+ui)*4,i10=i00+4,i01=i00+W*4,i11=i01+4;for(let ch=0;ch<3;ch++)D[j+ch]=(sd[i00+ch]*(1-fu)+sd[i10+ch]*fu)*(1-fv)+(sd[i01+ch]*(1-fu)+sd[i11+ch]*fu)*fv;D[j+3]=255}
+ og.putImageData(od,0,0);window.cropDbg=['quad',best.sc.toFixed(2),best.ar.toFixed(2),...c.flat().map(Math.round)];return o}
+function cardCrop(src){const c0=cardCropA(src);if(c0!==src)return c0;if(Math.abs(src.width/src.height-.716)<.025)return src;try{const qd=cardCropQuad(src);if(qd)return qd}catch(e){console.warn('quad',e)}try{const e=cardCropEdge(src);if(e)return e}catch(e){console.warn(e)}return src}
 function cardCropA(src){const W=src.width,H=src.height,k=200/Math.max(W,H),w=Math.round(W*k),h=Math.round(H*k);const t=document.createElement('canvas');t.width=w;t.height=h;
  const g=t.getContext('2d',{willReadFrequently:true});g.drawImage(src,0,0,w,h);const d=g.getImageData(0,0,w,h).data;const R=new Float32Array(h),C=new Float32Array(w);
  for(let y=0;y<h;y++)for(let x=0;x<w;x++){const i=(y*w+x)*4,mx=Math.max(d[i],d[i+1],d[i+2]),mn=Math.min(d[i],d[i+1],d[i+2]);if(mx>140&&mx-mn>50){R[y]++;C[x]++}}
@@ -475,7 +510,7 @@ async function setNameCheck(num,lang,txt,name){const[a0,t0]=num.split('/');const
  await Promise.all(sets.map(async s=>{for(const L of [lg,'en']){try{const c=await wto(Prices.lookup('',L,s.id,n),6000,'t');if(c&&c.name){C.push({name:c.name,setId:s.id,setName:s.name,lg:L});break}}catch(e){}}}));
  window.setChkDbg=C.map(c=>c.setId+':'+c.name);if(!C.length)return null;
  const base=x=>nrm(String(x).replace(/[-\s]*(VMAX|VSTAR|V-UNION|V|GX|EX|ex|BREAK)$/,''));
- const hit=C.find(c=>base(c.name)===base(name))||C.find(c=>base(c.name).length>=4&&T.includes(base(c.name)))||(C.length===1&&(!name||!T.includes(base(name)))?C[0]:null);
+ const hit=C.find(c=>base(c.name)===base(name))||C.find(c=>base(c.name).length>=4&&T.includes(base(c.name)))||(C.length===1&&(!name||!T.includes(base(name)))?C[0]:null)||(()=>{let bst=null,bd=9;for(const c of C){const b=base(c.name),L=b.length;if(L<4)continue;for(let i=0;i+L<=T.length;i++){const d=lev(T.substr(i,L),b);if(d<bd){bd=d;bst=c}}}return bst&&bd<=Math.max(1,Math.floor(base(bst.name).length*.3))?bst:null})();
  if(!hit)return null;let nm=hit.name;if(hit.lg==='en'&&lg!=='en'){try{nm=deName(nm)||nm}catch(e){}}return{...hit,name:nm}}
 async function analyze(src,st0=()=>{}){const t0=performance.now();window.stDbg=[];const st=m=>{window.stDbg.push(Math.round(performance.now()-t0)+':'+m);st0(m)};const orig=src;src=cardCrop(src);let jpSet='';window.energyHue=hueType(src);st('Name & Nummer werden gelesen…');
  // parallel: Name-Streifen oben (JP + DE/EN) und Nummer-Streifen unten – keine Ganzkarten-OCR, solange das reicht
@@ -501,17 +536,19 @@ async function analyze(src,st0=()=>{}){const t0=performance.now();window.stDbg=[
  let sc=findSet(text+'\n'+numTxt,number);
  if(!number&&!energy){const m=(numTxt+'\n'+text).match(/\b(?:30C|3OC)\s*[^\d\n]{0,3}(\d{3})\b/i);if(m){number=m[1].replace(/^0+(?=\d)/,'');numWeak=true}}
  if(energy){if(!number){const m=(numTxt+'\n'+text).match(/\b(\d{3})\b/);if(m)number=m[1]}if(lang===''||lang==='JP'&&latin)lang='DE'}
+ if((!number||numWeak)&&!energy&&(jp||kana)){st('Kartennummer wird gesucht…');let bn=null;try{bn=(orig!==src&&await readNumberBands(orig))||await readNumberBands(src)}catch(e){}if(bn){number=bn.num;numWeak=false;if(bn.set)jpSet=bn.set}}
  if((!number||numWeak)&&!energy&&src.width>=380){st('Kartennummer wird genau gelesen…');const n2=await readNumberHi(src);if(n2){number=n2;numWeak=false}}
  if(number&&number.includes('/')&&!energy&&!jp&&!numOK(number)){st('Kartennummer wird genau gelesen…');const n2=src.width>=380?await readNumberHi(src):'';if(n2&&numOK(n2)){number=n2;numWeak=false}else{number='';numWeak=false}}
  if((!number||numWeak)&&!energy&&!jp){st('Kartennummer: zweiter Versuch (vergrößert)…');let s3=null;try{s3=findSet(text+'\n'+(window.numDbg||[]).join('\n'),'')}catch(e){}if(!s3&&/30th|celebration/i.test(text))s3=SETCODES['30C'];let n3='';try{n3=await readNumberHi2(src,s3&&s3.total||0)}catch(e){console.warn(e)}if(n3&&numOK(n3)){number=n3;numWeak=false}}
  if(!number&&!energy){st('Kartennummer wird gesucht…');let bn=null;try{bn=await readNumberBands(src);if(!bn&&orig!==src)bn=await readNumberBands(orig)}catch(e){console.warn(e)}if(bn&&(jp||kana||numOK(bn.num))){number=bn.num;numWeak=false;if(bn.set)jpSet=bn.set}}
- if((jp||kana)&&number&&number.includes('/')){const tt=+number.split('/')[1];const m=(text+'\n'+numTxt).match(/\b(M\d{1,2}[a-z]?)\b/i);let cs=jpSet||(m&&m[1])||'';cs=cs.replace(/^m/,'M').replace(/A$/,'a');if(JPSETS[cs]!==tt){const f=Object.entries(JPSETS).find(([k,v])=>v===tt);if(f&&(!cs||/^M/i.test(cs)))cs=f[0]}jpSet=cs}
+ if((jp||kana)&&number&&number.includes('/')){let tt=+number.split('/')[1];const m=(text+'\n'+numTxt).match(/\b(M\d{1,2}[a-z]?)\b/i);let cs=jpSet||(m&&m[1])||'';cs=cs.replace(/^m/,'M').replace(/A$/,'a');if(!Object.values(JPSETS).includes(tt)){const nb=Object.values(JPSETS).find(v=>lev(String(v),String(tt))===1);if(nb){number=number.split('/')[0]+'/'+nb;tt=nb}}if(JPSETS[cs]!==+number.split('/')[1]){const f=Object.entries(JPSETS).find(([k,v])=>v===tt);if(f&&(!cs||/^M/i.test(cs)))cs=f[0]}jpSet=cs}
  if(!sc&&number)sc=findSet(text+'\n'+numTxt,number);if(sc&&sc.total&&number&&number.includes('/')){const[a0,t0]=number.split('/');if(+t0!==sc.total&&d1(t0,sc.total))number=a0+'/'+sc.total}
  let name=jp?(jp.de||jp.en):'',confident=!!jp&&!numWeak,weak=false;
  if(energy){name='Basic '+energy+' Energy';confident=true}
  else if(!jp&&!kana&&p.name&&p.name.length>=3&&(latin||conf>=65)){name=deName(p.name);confident=!!number&&!numWeak&&(conf>=55||name!==p.name||latin);if(nrm(name).length<=5&&!(conf>=75&&nrm(p.name)===nrm(name))&&!/energ/i.test(name)&&conf<45){confident=false;weak=true}}
  if(!name&&p.name&&!kana)name=deName(p.name);
  // Name gegen Set mit passender Gesamtzahl prüfen (z.B. 44/185 → Farbenschock: Pikachu VMAX)
+ if(jp&&number&&window.Prices&&number.includes('/')&&!Object.values(JPSETS).includes(+number.split('/')[1])&&numOK(number)){try{let l2=detectLang(text)||'DE';if(l2==='JP')l2='DE';const sn=await setNameCheck(number,l2,text+'\n'+numTxt,'');if(sn){jp=null;kana=false;lang=l2;name=sn.name}}catch(e){}}
  if(!energy&&!jp&&lang!=='JP'&&number&&number.includes('/')&&window.Prices){try{st('Name wird mit Set abgeglichen…');const sn=await setNameCheck(number,lang,text+'\n'+numTxt,name);if(sn){name=sn.name;if(!sc)sc={id:sn.setId,name:sn.setName,tdx:sn.setId,total:+number.split('/')[1]};confident=true;numWeak=false;weak=false}}catch(e){console.warn('setNameCheck',e)}}
  if(name&&!/\b(VMAX|VSTAR|V|GX|EX|ex)$/.test(name)){const tt=text.replace(/\n/g,' ');if(/\bv[mn]?[a-z]?ax\b/i.test(tt)&&/vmax|vinax|vmnax|v-max/i.test(tt))name+=' VMAX';else if(/\bvstar\b/i.test(tt))name+=' VSTAR'}
  window.scanMs=Math.round(performance.now()-t0);
