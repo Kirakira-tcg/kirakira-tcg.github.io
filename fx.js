@@ -54,9 +54,11 @@ function binder(R,set){const tiles=[...R.children];if(!tiles.length)return;const
  wrap.innerHTML=`<div class="binder-head"><b>${esc(set?set.name:'Set')}</b><span class="muted small">${tiles.length} Karten · Sammelordner</span></div><div class="binder-page"></div><div class="binder-nav"><button type="button" class="bprev">‹</button><span class="bpg"></span><button type="button" class="bnext">›</button></div>`;
  const P=wrap.querySelector('.binder-page');
  const show=(n,dir)=>{pg=Math.max(0,Math.min(pages-1,n));P.classList.remove('flipL','flipR');void P.offsetWidth;if(dir)P.classList.add(dir>0?'flipL':'flipR');
-  P.innerHTML='';tiles.slice(pg*per,pg*per+per).forEach(t=>P.append(t));wrap.querySelector('.bpg').textContent=`Seite ${pg+1} / ${pages}`};
+  P.innerHTML='';tiles.slice(pg*per,pg*per+per).forEach(t=>{const im=t.querySelector('.im');if(im){im.classList.remove('tilting');im.style.removeProperty('--rx');im.style.removeProperty('--ry')}P.append(t)});wrap.querySelector('.bpg').textContent=`Seite ${pg+1} / ${pages}`};
  wrap.querySelector('.bprev').onclick=()=>show(pg-1,-1);wrap.querySelector('.bnext').onclick=()=>show(pg+1,1);
  let sx=null;P.addEventListener('touchstart',e=>sx=e.touches[0].clientX,{passive:true});P.addEventListener('touchend',e=>{if(sx==null)return;const dx=e.changedTouches[0].clientX-sx;if(Math.abs(dx)>50)show(pg+(dx<0?1:-1),dx<0?1:-1);sx=null});
+ P.addEventListener('animationend',()=>{P.classList.remove('flipL','flipR');P.style.transform=''});
+ const fix=()=>{P.classList.remove('flipL','flipR');P.style.transform='';wrap.style.width='';void wrap.offsetWidth};addEventListener('resize',fix);addEventListener('orientationchange',()=>setTimeout(fix,250));
  R.innerHTML='';R.append(wrap);show(0)}
 // Mikro-Interaktion: Tipp-Ripple
 document.addEventListener('pointerdown',e=>{const b=e.target.closest('button,.chip,.set');if(!b||RM)return;b.classList.remove('tap');void b.offsetWidth;b.classList.add('tap')},{passive:true});

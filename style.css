@@ -178,3 +178,13 @@ nav .scanNav i{background:linear-gradient(135deg,var(--ac),#ff8a5c);color:#fff;b
 .camflash{position:absolute;inset:0;background:#fff;z-index:7;pointer-events:none;animation:cflash .45s ease-out forwards}@keyframes cflash{from{opacity:.9}to{opacity:0}}#livePhoto:disabled{opacity:.6}
 #scanBanner span{overflow:hidden;text-overflow:ellipsis}#scanBanner .spin{width:13px;height:13px;flex-basis:13px;border-width:2px}
 #liveStat{display:none!important}.scanbox.live #scanStatus2,.scanbox.live #liveText,.scanbox.live .frame span,.scanbox.live>p.muted{display:none!important}
+
+/* v33: Sammelordner stabil (gleich große Kacheln, kein Überlauf beim Blättern/Drehen) */
+.binder-src{max-width:100%;overflow-x:hidden}
+.binder{box-sizing:border-box;width:100%;max-width:100%;overflow:hidden}
+.binder-page{grid-template-columns:repeat(3,minmax(0,1fr));width:100%;box-sizing:border-box;backface-visibility:hidden}
+.binder-page .tile{min-width:0;max-width:100%;box-sizing:border-box;display:flex;flex-direction:column}
+.binder-page .tile .im{width:100%;aspect-ratio:63/88;height:auto;background-size:contain;background-position:center;flex:0 0 auto}
+.binder-page .tile .im img{width:100%;height:100%;object-fit:contain;display:block}
+.binder-page .tile .n,.binder-page .tile .p{min-width:0;overflow:hidden}
+html,body{max-width:100%;overflow-x:clip}
