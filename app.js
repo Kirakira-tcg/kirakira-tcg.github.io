@@ -533,7 +533,7 @@ async function analyze(src,st0=()=>{}){const t0=performance.now();window.stDbg=[
   else{jp=jpName(text);lang=detectLang(r1.text||'');if(jp||(b&&/[\u3040-\u30ff]{2,}/.test(b.data.text.replace(/\s/g,'')))){kana=true;lang='JP'}}
   if(!energy)energy=parseTop(r1.text).energy}
  const p=pT.name?pT:parseOCR(r1.text||'');if(!number){const m=text.match(/(\d{2,3})\s*\/\s*(\d{2,3})/);if(m)number=m[1].replace(/^0+(?=\d)/,'')+'/'+m[2]}
- let sc=findSet(text+'\n'+numTxt,number);
+ let sc=findSet(text+'\n'+numTxt,number);window.scanPart={name:(jp&&jp.name)||p.name||'',number:number||''};
  if(!number&&!energy){const m=(numTxt+'\n'+text).match(/\b(?:30C|3OC)\s*[^\d\n]{0,3}(\d{3})\b/i);if(m){number=m[1].replace(/^0+(?=\d)/,'');numWeak=true}}
  if(energy){if(!number){const m=(numTxt+'\n'+text).match(/\b(\d{3})\b/);if(m)number=m[1]}if(lang===''||lang==='JP'&&latin)lang='DE'}
  if((!number||numWeak)&&!energy&&(jp||kana)){st('Kartennummer wird gesucht…');let bn=null;try{bn=(orig!==src&&await readNumberBands(orig))||await readNumberBands(src)}catch(e){}if(bn){number=bn.num;numWeak=false;if(bn.set)jpSet=bn.set}}
@@ -549,6 +549,7 @@ async function analyze(src,st0=()=>{}){const t0=performance.now();window.stDbg=[
  if(!name&&p.name&&!kana)name=deName(p.name);
  // Name gegen Set mit passender Gesamtzahl prüfen (z.B. 44/185 → Farbenschock: Pikachu VMAX)
  if(jp&&number&&window.Prices&&number.includes('/')&&!Object.values(JPSETS).includes(+number.split('/')[1])&&numOK(number)){try{let l2=detectLang(text)||'DE';if(l2==='JP')l2='DE';const sn=await setNameCheck(number,l2,text+'\n'+numTxt,'');if(sn){jp=null;kana=false;lang=l2;name=sn.name}}catch(e){}}
+ window.scanPart={name:name||(window.scanPart||{}).name||'',number:number||''};
  if(!energy&&!jp&&lang!=='JP'&&number&&number.includes('/')&&window.Prices){try{st('Name wird mit Set abgeglichen…');const sn=await setNameCheck(number,lang,text+'\n'+numTxt,name);if(sn){name=sn.name;if(!sc)sc={id:sn.setId,name:sn.setName,tdx:sn.setId,total:+number.split('/')[1]};confident=true;numWeak=false;weak=false}}catch(e){console.warn('setNameCheck',e)}}
  if(name&&!/\b(VMAX|VSTAR|V|GX|EX|ex)$/.test(name)){const tt=text.replace(/\n/g,' ');if(/\bv[mn]?[a-z]?ax\b/i.test(tt)&&/vmax|vinax|vmnax|v-max/i.test(tt))name+=' VMAX';else if(/\bvstar\b/i.test(tt))name+=' VSTAR'}
  window.scanMs=Math.round(performance.now()-t0);
@@ -642,15 +643,15 @@ const imgU=(u,sz='low')=>!u?'':/\.(jpe?g|png|webp|gif)(\?.*)?$/i.test(u)?u:u+'/'
 async function jpHit(r){if(!window.Prices||r.lang!=='JP')return null;const num=String(r.number||'').replace(/^0+/,'')||null;
  for(const n of [r.jp,r.name,r.en].filter(Boolean)){try{const c=await Prices.lookup(n,'ja',r.set||null,num);if(c&&c.id&&(!num||String(c.localId||'').replace(/^0+/,'')===num))return c}catch(e){}}
  try{const L=await Prices.suggest(r.jp||r.name,'ja',60)||[];const c=L.find(c=>String(c.id).startsWith('jp:')&&(!r.set||sidOf(c.id).toLowerCase()===String(r.set).toLowerCase())&&(!num||String(c.localId||'').replace(/^0+/,'')===num));if(c)return{id:c.id,name:c.name,localId:c.localId,set:c.set,image:c.img}}catch(e){}return null}
-function scanResult(r){window.lastScan=r;$('#scanbox')?.classList.add('hasres');const st=$('#scanStatus2');
+function scanResult(r){if(window.scanAbandon)return;msOff();window.lastScan=r;if(batchOn()&&r.confident&&r.name&&r.number&&r.lang!=='JP'&&!r.energy){$('#scanPick').hidden=true;$('#scanbox')?.classList.add('hasres');trayAdd(r,r.lang);return}$('#scanbox')?.classList.add('hasres');const st=$('#scanStatus2');
  st.textContent=`Erkannt: ${r.name||'?'}${r.jp?' ('+r.jp+')':''} · Nr. ${r.full||r.number||'?'}${r.lang?' · '+r.lang:''}`;
  if(r.confident&&(r.number||r.energy)&&r.lang!=='JP'){$('#scanPick').hidden=true;applyScan(r,r.lang)}else if(r.lang==='JP'&&r.name){const t=st.textContent;st.textContent='⏳ Suche japanische Karte…';jpHit(r).then(h=>{r.hit=h;st.textContent=t;scanPick(r)})}else scanPick(r)}
 async function handleFile(f){$('#scanbox')?.classList.remove('hasres');window.scanLang='';window.pendingScan=null;window.lastScan=null;const st=$('#scanStatus2');$('#scanPick').hidden=true;$('#scanPick').innerHTML='';st.textContent='';const lt=$('#liveText');if(lt)lt.textContent='';const ss=$('#scanStatus');if(ss)ss.textContent='';
  if(!f){st.textContent='Kein Bild ausgewählt.';return}
  if(!window.Tesseract){st.textContent='❌ Texterkennung nicht geladen – Internet prüfen und neu laden.';return}
- $('#scanbox').classList.add('busy');
+ $('#scanbox').classList.add('busy');msArm();
  try{const c=await toCanvas(f);const r=await analyze(c,m=>st.textContent='⏳ '+m);scanResult(r)}
- catch(err){st.textContent='❌ Fehler bei der Erkennung: '+(err&&err.message||err)}finally{$('#scanbox').classList.remove('busy')}}
+ catch(err){if(!window.scanAbandon)st.textContent='❌ Fehler bei der Erkennung: '+(err&&err.message||err)}finally{msOff();$('#scanbox').classList.remove('busy')}}
 $('#scanBtn').addEventListener('click',e=>{e.preventDefault();stopLive();$('#scanStatus2').textContent='';const i=$('#scanFile');i.value='';i.click()});
 $('#livePhoto').addEventListener('click',e=>{e.preventDefault();if(!live.stream)return;liveShoot()});$('#uploadBtn').addEventListener('click',e=>{e.preventDefault();stopLive();$('#scanStatus2').textContent='';const i=$('#uploadFile');i.value='';i.click()});
 ['#scanFile','#uploadFile'].forEach(id=>$(id).addEventListener('change',e=>{const f=e.target.files&&e.target.files[0];handleFile(f).finally(()=>{e.target.value=''})}));
@@ -691,9 +692,9 @@ async function liveShoot(){const btn=$('#livePhoto');if(!live.stream||live.shoot
   if(!hi)throw new Error('Kein Kamerabild – bitte kurz warten und erneut drücken');
   const blob=await new Promise(res=>{try{hi.toBlob(res,'image/jpeg',0.95)}catch(e){res(null)}});const c=blob?await toCanvas(blob):hi;
   if(!needOCR()){lStat('⏳ Texterkennung lädt…');for(let i=0;i<60&&!window.Tesseract;i++)await new Promise(r=>setTimeout(r,500));if(!window.Tesseract)throw new Error('Texterkennung lädt nicht (Internet?)')}
-  lStat('🔍 Foto aufgenommen – lese Karte…');
-  const r=await wto(analyze(c,m=>$('#scanStatus2').textContent='⏳ '+m),60000,'Erkennung dauert zu lange');if(my!==live.shotId)return;
-  stopLive();window.lastScan=r;
+  lStat('🔍 Foto aufgenommen – lese Karte…');msArm();
+  const r=await wto(analyze(c,m=>{if(!window.scanAbandon)$('#scanStatus2').textContent='⏳ '+m}),60000,'Erkennung dauert zu lange');msOff();if(my!==live.shotId||window.scanAbandon)return;
+  if(batchOn()&&r.confident&&r.name&&r.number&&r.lang!=='JP'){scanResult(r);live.shooting=false;lStat($('#scanStatus2').textContent);return}stopLive();window.lastScan=r;
   if(r.confident&&r.name&&(r.number||r.energy)){navigator.vibrate?.(200);scanResult(r)}
   else{navigator.vibrate?.([80,60,80]);scanResult(r)}}
  catch(e){console.warn('shoot',e);lStat('❌ '+(e&&e.message||e)+' – näher ran / mehr Licht, dann erneut 📸 Foto');if(btn)btn.classList.add('pulse');if(/Texterkennung/.test(e&&e.message||'')){delete ocrW['deu+eng'];delete ocrW.num}}
@@ -779,3 +780,33 @@ document.querySelectorAll('#emptyStart [data-go]').forEach(b=>b.onclick=()=>{con
 (()=>{const K2='kartenapp_ui';let u={};try{u=JSON.parse(localStorage.getItem(K2)||'{}')}catch(e){}
  const ap=()=>{document.documentElement.classList.toggle('ui-big',!!u.big);document.documentElement.classList.toggle('ui-hc',!!u.hc)};ap();
  [['#uiBig','big'],['#uiHc','hc']].forEach(([id,k])=>{const el=$(id);if(!el)return;el.checked=!!u[k];el.onchange=()=>{u[k]=el.checked;try{localStorage.setItem(K2,JSON.stringify(u))}catch(e){}ap()}})})();
+// === Scan-Liste (Batch), Live-Hinweis, Manuell-suchen-Button ===
+const TRAY=window.scanTray=[];
+const batchOn=()=>!!$('#batchMode')?.checked;
+function trayItem(r,lang,c){const n=String(r.full||r.number||'');return{uid:uid(),r,lang:lang||'DE',id:c&&c.id||'',name:c&&c.name||r.name||'?',set:c&&c.set&&c.set.name||r.set||'',setId:c&&c.set&&c.set.id||'',number:c&&c.localId||n.split('/')[0],img:c&&c.image||'',best:c&&c.best||null,label:c&&c.label||''}}
+async function trayLook(r,lang){const lg=(lang||'DE').toLowerCase(),num=String(r.number||'').replace(/^0+/,'')||null;for(const L of [lg,'en']){try{const c=await wto(Prices.lookup(r.name,L,r.setId||null,num),9000,'t');if(c&&c.id)return c}catch(e){}}return null}
+async function trayAdd(r,lang){const st=$('#scanStatus2');st.textContent='⏳ '+(r.name||'Karte')+' wird zur Scan-Liste hinzugefügt…';const c=window.Prices?await trayLook(r,lang):null;const it=trayItem(r,lang,c);TRAY.push(it);trayRender();navigator.vibrate?.(120);
+ st.textContent=`✓ ${it.name} ${it.number?'· Nr. '+it.number:''} in der Scan-Liste (${TRAY.length}) – nächste Karte scannen`}
+function trayRender(){const T=$('#scanTray');if(!T)return;T.hidden=!TRAY.length;if(!TRAY.length){T.innerHTML='';return}
+ const sum=TRAY.reduce((s,x)=>s+(x.best?+x.best.eur||0:0),0);
+ T.innerHTML=`<div class="trayhead"><b>🗂️ Scan-Liste (${TRAY.length})</b><span>${money(sum)}</span></div>`+TRAY.map(x=>`<div class="trayrow" data-u="${x.uid}">${x.img?`<img src="${esc(imgU(x.img,'low'))}" alt="">`:'<i class="trayph">🃏</i>'}<div class="trayinfo"><b>${esc(x.name)}</b><span class="muted small">${esc(x.set||'Set ?')} · ${esc(x.number||'?')} · ${esc(x.lang)}</span><span class="trayp">${x.best?esc(money(+x.best.eur)):'kein Preis'}</span></div><div class="traybtns"><button type="button" class="tAlt">🔄 Andere Version wählen</button><button type="button" class="tDel" aria-label="Entfernen">✕ Entfernen</button></div><div class="trayalt" hidden></div></div>`).join('')+`<button type="button" class="primary trayall" id="trayAll">➕ Alle ${TRAY.length} hinzufügen</button>`;
+ T.querySelectorAll('.trayrow').forEach(row=>{const x=TRAY.find(t=>t.uid===row.dataset.u);row.querySelector('.tDel').onclick=()=>{TRAY.splice(TRAY.indexOf(x),1);trayRender()};row.querySelector('.tAlt').onclick=()=>trayAlt(x,row.querySelector('.trayalt'))});
+ $('#trayAll').onclick=trayCommit}
+async function trayAlt(x,box){if(!box.hidden){box.hidden=true;return}box.hidden=false;box.innerHTML='<p class="muted small">Lädt Versionen…</p>';let L=[];const lg=x.lang.toLowerCase();
+ try{L=(await Prices.suggest(x.r.name||x.name,lg==='jp'?'ja':lg,40))||[]}catch(e){}const num=String(x.number||'').replace(/^0+/,'');L.sort((a,b)=>(String(b.localId).replace(/^0+/,'')===num)-(String(a.localId).replace(/^0+/,'')===num));
+ if(!L.length){box.innerHTML='<p class="muted small">Keine anderen Versionen gefunden</p>';return}box.innerHTML='';
+ for(const c of L.slice(0,24)){const b=document.createElement('button');b.type='button';b.className='spThumb';b.innerHTML=`<img loading="lazy" src="${esc(imgU((c.img||'').replace(/\/(low|high)\.webp$/,'')))}" alt=""><span>${esc(c.set&&c.set.name||sidOf(c.id))} · ${esc(c.localId)}</span>`;
+  b.onclick=async()=>{box.innerHTML='<p class="muted small">Preis wird geladen…</p>';let d=null;try{d=await Prices.byId(c.id,lg==='jp'?'ja':lg)}catch(e){}const n=trayItem(x.r,x.lang,d||{id:c.id,name:c.name,set:c.set,localId:c.localId,image:c.img});n.uid=x.uid;TRAY[TRAY.indexOf(x)]=n;trayRender()};box.append(b)}}
+function trayCommit(){const n=TRAY.length;for(const x of TRAY){const b=x.best;const it={uid:uid(),manual:true,tdxId:x.id||undefined,setId:x.setId||undefined,name:x.name,set:x.set,number:x.number,img:x.img,types:[],lang:x.lang,cond:'NM',qty:1,buy:null,price:b?+b.eur:null,ownPrice:null,added:today()};
+  if(x.id)it.tdx=b?{label:x.label,id:x.id,src:b.source,conv:b.umgerechnet,url:b.url}:{label:'kein Preis',id:x.id};if(it.price==null)it.noPrice=true;trackPrice(it);S.collection.push(it)}
+ TRAY.length=0;save();snapshot();render();trayRender();$('#scanStatus2').textContent=`✅ ${n} Karte${n===1?'':'n'} zur Sammlung hinzugefügt`}
+// Manuell suchen nach >3 s
+let _msT=0;function msArm(){msOff();window.scanAbandon=false;window.scanPart=null;_msT=setTimeout(()=>{const b=$('#scanManual');if(b)b.hidden=false},3000)}
+function msOff(){clearTimeout(_msT);const b=$('#scanManual');if(b)b.hidden=true}
+$('#scanManual')?.addEventListener('click',()=>{const p=window.scanPart||{};window.scanAbandon=true;msOff();stopLive();$('#scanbox')?.classList.remove('busy');$('#scanStatus2').textContent='';$('#qName').value=p.name||'';$('#qNum').value=p.number||'';go('v-search');setTimeout(()=>$('#qName').focus(),50);if(p.name)search(p.name,p.number||'','')});
+// Live-Hinweis im Kamerabild
+setInterval(()=>{const h=$('#liveHint'),v=$('#liveVideo');if(!h)return;if(!live.stream||!v.videoWidth||live.shooting){h.textContent='';h.className='livehint';return}
+ const W=240,H=Math.round(240*v.videoHeight/v.videoWidth),c=document.createElement('canvas');c.width=W;c.height=H;const g=c.getContext('2d',{willReadFrequently:true});g.drawImage(v,0,0,W,H);
+ const d=g.getImageData(0,0,W,H).data;let s=0;for(let i=0;i<d.length;i+=16)s+=d[i]+d[i+1]+d[i+2];const br=s/(d.length/16)/3;
+ let k='near',t='🔍 Näher ran';if(br<55){k='dark';t='💡 Mehr Licht'}else{try{window.cropDbg=null;const o=cardCrop(c);const ok=o!==c;let a=0;const cd=String(window.cropDbg||'').split(',');if(cd[0]==='quad'){const xs=[3,5,7,9].map(i=>+cd[i]),ys=[4,6,8,10].map(i=>+cd[i]);a=(Math.max(...xs)-Math.min(...xs))*(Math.max(...ys)-Math.min(...ys))/(W*H)}else if(o!==c)a=o.width*o.height/(W*H);if(ok&&a>.22){k='ok';t='✓ Karte erkannt – 📸 Foto drücken'}}catch(e){}}
+ h.textContent=t;h.className='livehint '+k},800);
