@@ -203,3 +203,4 @@ html,body{max-width:100%;overflow-x:clip}
 .jpbadge[data-s=CS],.jpbadge[data-s=CSA]{background:linear-gradient(135deg,#dc2626,#1f2937)}
 .jpbadge[data-s=SV]{background:linear-gradient(135deg,#8b5cf6,#4c1d95)}
 .jpbadge[data-s=M],.jpbadge[data-s=ENE]{background:linear-gradient(135deg,#0ea5e9,#0c4a6e)}
+.set img.jpcover[src*="serebii.net/card/logo/"]{width:100%;max-width:140px;object-fit:contain;box-shadow:none;border-radius:0}

@@ -70,6 +70,14 @@ rest=[i for i in ids if i not in cov]
 with ThreadPoolExecutor(4) as ex:
     for sid,u in ex.map(pcset,rest):
         if u:cov[sid]=u
+# 3. Serebii-Set-Logos (manuelle Zuordnung, Hotlink erlaubt) fuer aeltere Sets ohne Kartenbilder
+SER={"XY1a":"collectionx","XY1b":"collectiony","XY5a":"gaiavolcano","XY5b":"tidalstorm","XY8a":"blueshock","XY8b":"redflash",
+ "XY9":"rageofthetornheavens","XY10":"awakeningpsychicchampion","XY11a":"feverburstfighter","XY11b":"crueltraitor",
+ "SM1+":"sunmoonstrengtheningpack","sm2+":"beyondanewchallenge","SM3+":"shininglegend","SM4+":"gxbattleboost","SM5+":"ultraforces",
+ "L1a":"heartgoldcollection","L1b":"soulsilvercollection","L2":"revivinglegends","L3":"bigsummitclash","VS1":"vs"}
+for sid,slug in SER.items():
+    u=f"https://www.serebii.net/card/logo/{slug}.png"
+    if sid not in cov and head(u):cov[sid]=u
 d.pop('logos',None);d.pop('logoBase',None);d['covers']=cov
 json.dump(d,open(J,'w',encoding='utf8'),ensure_ascii=False,separators=(",",":"))
 print(len(cov),'covers;',len(d['sets'])+len(ids)-len([i for i in ids if i in cov])-len([s for s in d['sets'] if s in cov]),'without')
