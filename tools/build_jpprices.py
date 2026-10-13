@@ -14,5 +14,10 @@ for iid,name,rar,box,bname,mid in items:
   num=re.search(r'-(\d+)$',iid);sid=sets.get(norm(bname))
   if not num or not sid:miss.add(bname);continue
   out[f"{sid}-{int(num.group(1))}"]={'n':name,'y':int(mid)}
+if len(out)<100:raise SystemExit(f'Nur {len(out)} Preise – Seite geändert? jpprices.json bleibt unverändert.')
+try:
+  old=json.load(open('jpprices.json'))
+  if old.get('p')==out:print('unverändert');raise SystemExit(0)
+except (FileNotFoundError,ValueError):pass
 json.dump({'src':'pokeca-souba (JP-Markt)','url':'https://pokeca-souba.vercel.app/screener','date':datetime.date.today().isoformat(),'p':out},open('jpprices.json','w'),ensure_ascii=False,separators=(',',':'))
 print(len(out),'Preise; ohne Set-Zuordnung:',len(miss),sorted(miss)[:20])
