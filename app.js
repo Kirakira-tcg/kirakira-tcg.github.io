@@ -578,7 +578,10 @@ async function analyze(src,st0=()=>{}){const t0=performance.now();window.stDbg=[
  let jp=latin?null:jpName(tTop),text=tTop+'\n'+tL,kana=!latin&&/[\u3040-\u30ff]{2,}/.test(tTop.replace(/\s/g,'')),lang=jp?'JP':'';
  let r1=rE,conf=rE.confidence,energy=pT.energy;
  if(latin){lang=langLatin(tL+'\n'+numTxt)}
- if(!jp&&!(latin&&pT.name&&(number||energy))){// Fallback: ganze Karte (Sprache über Wörter wie Schwäche/Weakness)
+ // Schnellpfad: Set-Code (z.B. 30C) unten gelesen → Name aus Titelzeile gegen Set-Liste, Nummer aus der Liste (spart Vollbild-OCR + Nummernpässe)
+ let fast=false;window.fastDbg=[src.width,!!energy,tTop.slice(0,20),(numTxt.match(/30C/)||[''])[0],numTxt.length];const m30=(numTxt+'\n'+tL).match(/(30C|3OC|30c)/);if(!energy&&(m30||!/[\u3040-\u30ff]{3,}/.test(tTop.replace(/\s/g,'')))){try{const m=m30;const sx=m&&SETCODES['30C'];const tot=number&&number.includes('/')?+number.split('/')[1]:0;const sy=sx||(tot?Object.values(SETCODES).find(x=>x.total===tot&&x.tdx):null);
+  if(sy&&sy.tdx){window.stDbg&&st('Name wird mit Set-Liste abgeglichen…');let tT='';try{const w=await getW('deu+eng');tT=(await w.recognize(cropC(src,.1,.02,.6,.07,2))).data.text||''}catch(e){}window.titleDbg=tT;window.fastDbg.push('T:'+tT);const f=await setListFix(sy.tdx,lang||'DE',tTop+'\n'+tL+'\n'+tT,number?String(number).split('/')[0]:'',pT.name||'');if(f){number=String(+f.localId||f.localId)+'/'+sy.total;numWeak=false;fast={name:f.name,sy};window.fastDbg.push('HIT');latin=true;jp=null;kana=false;if(!lang||lang==='JP')lang=langLatin(tL+'\n'+numTxt)}}}catch(e){console.warn('fast',e);window.fastDbg.push('ERR '+e.message)}}
+ if(!fast&&!jp&&!(latin&&pT.name&&(number||energy))){// Fallback: ganze Karte (Sprache über Wörter wie Schwäche/Weakness)
   st('Ganze Karte wird gelesen…');const [a,b]=await Promise.all([getW('deu+eng').then(w=>w.recognize(cropC(src,0,0,1,1,1))),latin?null:getW('jpn').then(w=>w.recognize(cropC(src,0,0,1,1,1)))]);
   r1=a.data;conf=Math.max(conf,r1.confidence);text+='\n'+r1.text+(b?'\n'+b.data.text:'');
   const fullLatin=latin||(r1.text.match(/[A-Za-zÄÖÜäöüß]{4,}/g)||[]).length>=6;
@@ -586,7 +589,7 @@ async function analyze(src,st0=()=>{}){const t0=performance.now();window.stDbg=[
   else{jp=jpName(text);lang=detectLang(r1.text||'');if(jp||(b&&/[\u3040-\u30ff]{2,}/.test(b.data.text.replace(/\s/g,'')))){kana=true;lang='JP'}}
   if(!energy)energy=parseTop(r1.text).energy}
  const p=pT.name?pT:parseOCR(r1.text||'');if(!number){const m=text.match(/(\d{2,3})\s*\/\s*(\d{2,3})/);if(m)number=m[1].replace(/^0+(?=\d)/,'')+'/'+m[2]}
- let sc=findSet(text+'\n'+numTxt,number);window.scanPart={name:(jp&&jp.name)||p.name||'',number:number||''};scanPrefetch(window.scanPart,lang);
+ let sc=fast?fast.sy:findSet(text+'\n'+numTxt,number);window.scanPart={name:(jp&&jp.name)||p.name||'',number:number||''};scanPrefetch(window.scanPart,lang);
  if(!number&&!energy){const m=(numTxt+'\n'+text).match(/\b(?:30C|3OC)\s*[^\d\n]{0,3}(\d{3})\b/i);if(m){number=m[1].replace(/^0+(?=\d)/,'');numWeak=true}}
  if(energy){if(!number){const m=(numTxt+'\n'+text).match(/\b(\d{3})\b/);if(m)number=m[1]}if(lang===''||lang==='JP'&&latin)lang='DE'}
  if((!number||numWeak)&&!energy&&(jp||kana)){st('Kartennummer wird gesucht…');let bn=null;try{bn=(orig!==src&&await readNumberBands(orig))||await readNumberBands(src)}catch(e){}if(bn){number=bn.num;numWeak=false;if(bn.set)jpSet=bn.set}}
@@ -603,7 +606,7 @@ async function analyze(src,st0=()=>{}){const t0=performance.now();window.stDbg=[
  // Name gegen Set mit passender Gesamtzahl prüfen (z.B. 44/185 → Farbenschock: Pikachu VMAX)
  if(jp&&number&&window.Prices&&number.includes('/')&&!Object.values(JPSETS).includes(+number.split('/')[1])&&numOK(number)){try{let l2=detectLang(text)||'DE';if(l2==='JP')l2='DE';const sn=await setNameCheck(number,l2,text+'\n'+numTxt,'');if(sn){jp=null;kana=false;lang=l2;name=sn.name}}catch(e){}}
  window.scanPart={name:name||(window.scanPart||{}).name||'',number:number||''};scanPrefetch(window.scanPart,lang);
- let listFix=false;if(!energy&&!jp&&lang!=='JP'&&number&&number.includes('/')){const tot=+number.split('/')[1];const sx=(sc&&sc.tdx&&+sc.total===tot)?sc:Object.values(SETCODES).find(x=>x.total===tot&&x.tdx);if(sx){try{st('Name wird mit Set-Liste abgeglichen…');const f=await setListFix(sx.tdx,lang,tTop+'\n'+text+'\n'+numTxt,number.split('/')[0],name);if(f){name=f.name;number=String(+f.localId||f.localId)+'/'+tot;sc=sc&&sc.tdx===sx.tdx?sc:sx;confident=true;numWeak=false;weak=false;listFix=true}}catch(e){console.warn('setListFix',e)}}}
+ let listFix=!!fast;if(fast){name=fast.name;confident=true;weak=false}if(!energy&&!jp&&lang!=='JP'&&number&&number.includes('/')){const tot=+number.split('/')[1];const sx=(sc&&sc.tdx&&+sc.total===tot)?sc:Object.values(SETCODES).find(x=>x.total===tot&&x.tdx);if(sx){try{st('Name wird mit Set-Liste abgeglichen…');const f=await setListFix(sx.tdx,lang,tTop+'\n'+text+'\n'+numTxt,number.split('/')[0],name);if(f){name=f.name;number=String(+f.localId||f.localId)+'/'+tot;sc=sc&&sc.tdx===sx.tdx?sc:sx;confident=true;numWeak=false;weak=false;listFix=true}}catch(e){console.warn('setListFix',e)}}}
  if(!listFix&&!energy&&!jp&&lang!=='JP'&&number&&number.includes('/')&&window.Prices){try{st('Name wird mit Set abgeglichen…');const sn=await setNameCheck(number,lang,text+'\n'+numTxt,name);if(sn){name=sn.name;if(!sc)sc={id:sn.setId,name:sn.setName,tdx:sn.setId,total:+number.split('/')[1]};confident=true;numWeak=false;weak=false}}catch(e){console.warn('setNameCheck',e)}}
  if(name&&!/\b(VMAX|VSTAR|V|GX|EX|ex)$/.test(name)){const tt=text.replace(/\n/g,' ');if(/\bv[mn]?[a-z]?ax\b/i.test(tt)&&/vmax|vinax|vmnax|v-max/i.test(tt))name+=' VMAX';else if(/\bvstar\b/i.test(tt))name+=' VSTAR'}
  window.scanMs=Math.round(performance.now()-t0);
@@ -875,7 +878,7 @@ const _pf=new Set();function scanPrefetch(p,lang){try{if(!p||!p.name||String(p.n
  for(const L of langs){const n2=L==='de'&&de?de:nm;g(A+L+'/cards?name='+E(n2));if(num)g(A+L+'/cards?name='+E(n2)+'&localId='+E(num))}
  if(window.Prices&&num)for(const L of langs.slice(0,2)){try{Prices.lookup(L==='de'&&de?de:nm,L,null,num).catch(()=>{})}catch(e){}}}catch(e){}}
 // Set-Listen beim Öffnen des Scan-Tabs vorwärmen
-function scanWarmSets(){if(window._swS)return;window._swS=1;const A='https://api.tcgdex.net/v2/';['en','de','ja'].forEach(L=>{fetch(A+L+'/sets').catch(()=>{});fetch(A+L+'/sets?sort:field=releaseDate&sort:order=DESC').catch(()=>{})})}
+function scanWarmSets(){if(window._swS)return;window._swS=1;const A='https://api.tcgdex.net/v2/';Object.values(SETCODES).forEach(x=>x.tdx&&['de','en'].forEach(L=>fetch(A+L+'/sets/'+x.tdx).catch(()=>{})));['en','de','ja'].forEach(L=>{fetch(A+L+'/sets').catch(()=>{});fetch(A+L+'/sets?sort:field=releaseDate&sort:order=DESC').catch(()=>{})})}
 document.addEventListener('click',e=>{if(e.target.closest&&e.target.closest('[data-v="v-scan"],[data-go="v-scan"],#liveBtn,#uploadBtn,#scanBtn'))scanWarmSets()},true);
 // 'Nächste Karte scannen' im Ergebnis-Kasten auf dem Such-Tab
 window.scanMode='upload';[['#liveBtn','cam'],['#scanBtn','photo'],['#uploadBtn','upload']].forEach(([id,m])=>$(id)?.addEventListener('click',()=>{window.scanMode=m},true));
@@ -899,3 +902,6 @@ async function setListFix(tdx,lang,txt,num,name){const lg=(lang||'DE').toLowerCa
  const T=nrm(txt),n0=String(num||'').replace(/^0+/,''),base=x=>nrm(String(x).replace(/[-\s]*(VMAX|VSTAR|V-UNION|V|GX|EX|ex|BREAK)$/,''));let best=null,bs=1e9;
  for(const c of cards){const b=base(c.name),L=b.length;if(L<4)continue;let d=9;if(T.includes(b))d=0;else for(let i=0;i+L<=T.length;i++){const x=lev(T.substr(i,L),b);if(x<d){d=x;if(!d)break}}const lim=L<6?0:Math.max(1,Math.floor(L*.3));if(d>lim)continue;const li=String(c.localId).replace(/^0+/,'');const s=d/L-(li===n0?.5:0)-(n0&&lev(li,n0)<=1?.2:0)-(name&&base(name)===b?.3:0)-L*.005;if(s<bs){bs=s;best=c}}
  window.setListDbg+=' → '+(best?best.name+' '+best.localId:'-');return best?{name:best.name,localId:best.localId}:null}
+
+// OCR + Set-Listen im Leerlauf nach dem Laden vorwärmen (erster Scan nicht langsamer)
+(function idleWarm(n=0){const go2=()=>{if(window.Tesseract){try{warmOCR()}catch(e){}try{scanWarmSets()}catch(e){}}else if(n<40)setTimeout(()=>idleWarm(n+1),500)};if(document.readyState!=='complete')return addEventListener('load',()=>setTimeout(()=>idleWarm(n),300),{once:true});(window.requestIdleCallback||(f=>setTimeout(f,800)))(go2,{timeout:2500})})();
