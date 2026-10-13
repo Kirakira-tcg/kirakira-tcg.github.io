@@ -368,11 +368,15 @@ function detail({api:c,item,list}){if(c&&!c._tdx&&!c._syd&&window.Prices){c._syd
   if(r==='del'&&confirm('Wirklich entfernen?')){S[list]=S[list].filter(x=>x.uid!==it.uid);save();snapshot();render()}}}
 
 // Preise aktualisieren
+// pokemontcg.io kennt nur eigene IDs (klein, z.B. base1-4, sv3pt5-6); TCGdex-only (me*, 30th*, JP mit Großbuchstaben, jp:) nicht abfragen. Fehler (auch CORS/Netz) 6 h merken.
+const PTNEGK='ka_ptneg',PTNEGT=6*3600e3;const ptNeg=()=>{try{return JSON.parse(localStorage.getItem(PTNEGK)||'{}')}catch(e){return{}}};
+const ptNegSet=ids=>{try{const n=ptNeg(),t=Date.now();ids.forEach(i=>n[i]=t);for(const k in n)if(t-n[k]>PTNEGT)delete n[k];localStorage.setItem(PTNEGK,JSON.stringify(n))}catch(e){}};
+const ptcgOk=id=>{id=String(id||'');const m=id.match(/^([a-z0-9]+)-([a-z0-9]+)$/i);if(!m||/[A-Z]/.test(m[1]))return false;return !/^(me\d|30th)/.test(m[1])};
 async function refreshPrices(){const btn=$('#refresh');btn.textContent='…';const items=[...S.collection,...S.wishlist].filter(x=>x.apiId);
- const ids=[...new Set(items.map(x=>x.apiId))];
+ const NG=ptNeg(),ids=[...new Set(items.map(x=>x.apiId))].filter(id=>ptcgOk(id)&&!(NG[id]&&Date.now()-NG[id]<PTNEGT));
  for(let i=0;i<ids.length;i+=20){const chunk=ids.slice(i,i+20);
-  try{const d=await api(`${API}/cards?q=${encodeURIComponent(chunk.map(id=>'id:'+id).join(' OR '))}&select=id,cardmarket,types`);
-   for(const c of d.data){const p=cmPrice(c);items.filter(x=>x.apiId===c.id).forEach(x=>{x.cm=cmInfo(c);if(c.types)x.types=c.types;if(p!=null&&x.ownPrice==null){x.price=p;delete x.estimate}})}}catch(e){console.warn(e)}}
+  try{const d=await api(`${API}/cards?q=${encodeURIComponent(chunk.map(id=>'id:'+id).join(' OR '))}&select=id,cardmarket,types`,2);const got=new Set((d.data||[]).map(c=>c.id));ptNegSet(chunk.filter(id=>!got.has(id)));
+   for(const c of d.data||[]){const p=cmPrice(c);items.filter(x=>x.apiId===c.id).forEach(x=>{x.cm=cmInfo(c);if(c.types)x.types=c.types;if(p!=null&&x.ownPrice==null){x.price=p;delete x.estimate}})}}catch(e){ptNegSet(chunk);console.warn('pokemontcg.io',e.message)}}
  await Promise.all(items.map(async x=>{const c={id:x.apiId};if(await cmSync(c)){x.cm=cmInfo(c);const p=cmPrice(c);if(p!=null&&x.ownPrice==null){x.price=p;delete x.estimate}}}));
  for(const x of [...S.collection,...S.wishlist])if(x.type!=='sealed'&&tdxNeed(x))await tdxFill(x);
  S.collection.forEach(trackPrice);btn.textContent='⟳';window._pLoad=false;save();snapshot();render()}
