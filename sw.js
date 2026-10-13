@@ -1,4 +1,4 @@
-const C='kartenapp-v47',A=['./','index.html','style.css','app.js','fx.js','prices.js','jpcards.json','names.js','trainers.js','manifest.json','icon-192.png','icon-512.png'];
+const C='kartenapp-v48',A=['./','index.html','style.css','app.js','fx.js','prices.js','jpcards.json','names.js','trainers.js','manifest.json','icon-192.png','icon-512.png'];
 self.addEventListener('install',e=>{e.waitUntil(caches.open(C).then(c=>c.addAll(A.map(u=>new Request(u,{cache:'reload'})))).catch(()=>{}));self.skipWaiting()});
 self.addEventListener('activate',e=>e.waitUntil(caches.keys().then(ks=>Promise.all(ks.filter(k=>/^kartenapp-v\d+$/.test(k)&&k!==C).map(k=>caches.delete(k)))).then(()=>self.clients.claim())));
 self.addEventListener('fetch',e=>{const u=new URL(e.request.url);

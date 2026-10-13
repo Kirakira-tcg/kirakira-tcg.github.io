@@ -33,8 +33,8 @@ async function search(name,lang){lang=normLang(lang);const k=`s:${lang}:${name.t
 
 // Rohdaten -> einheitliches Preisobjekt
 async function normalize(card,lang){const p=card?.pricing||{};const out={id:card.id,name:card.name,lang,set:card.set,localId:card.localId,image:card.image?card.image+'/high.webp':null,prices:[],best:null};
- const cm=p.cardmarket;if(cm){const pick=cm.trend||cm.avg30||cm.avg||cm.low||cm['trend-holo']||cm['avg30-holo']||null;const cur=(cm.unit||'EUR').toUpperCase();const conv=await toEUR(pick,cur);
-  out.prices.push({source:'Cardmarket (TCGdex)',currency:cur,value:pick,eur:conv?.eur??null,umgerechnet:!!conv?.umgerechnet,fxFallback:!!conv?.fallback,
+ const cm=p.cardmarket;if(cm){let pick=cm.trend||cm.avg30||cm.avg||cm.low||cm['trend-holo']||cm['avg30-holo']||null,fixed=null;if(cm.trend&&cm.avg7&&cm.avg30&&cm.trend<.25*cm.avg7&&cm.trend<.25*cm.avg30){pick=cm.avg7;fixed='Ø 7 Tage'}else if(cm.trend&&!cm.avg7&&cm.avg30&&cm.trend<.25*cm.avg30){pick=cm.avg30;fixed='Ø 30 Tage'}const cur=(cm.unit||'EUR').toUpperCase();const conv=await toEUR(pick,cur);
+  out.prices.push({source:fixed?`Cardmarket (TCGdex, ${fixed} – Trend unplausibel)`:'Cardmarket (TCGdex)',currency:cur,value:pick,eur:conv?.eur??null,umgerechnet:!!conv?.umgerechnet,fxFallback:!!conv?.fallback,
    trend:cm.trend,avg:cm.avg,low:cm.low,avg1:cm.avg1,avg7:cm.avg7,avg30:cm.avg30,holo:{trend:cm['trend-holo'],avg:cm['avg-holo'],low:cm['low-holo'],avg30:cm['avg30-holo']},
    idProduct:cm.idProduct,url:cm.idProduct?`https://www.cardmarket.com/de/Pokemon/Products?idProduct=${cm.idProduct}`:null,updated:cm.updated});}
  const tp=p.tcgplayer;if(tp){const cur=(tp.unit||'USD').toUpperCase();for(const [v,o] of Object.entries(tp)){if(!o||typeof o!=='object')continue;const val=o.marketPrice??o.midPrice??o.lowPrice??null;const conv=await toEUR(val,cur);
