@@ -21,8 +21,18 @@ const normLang=l=>{l=(l||'de').toLowerCase();if(l==='jp')l='ja';return LANGS.inc
 const TDX_SET={me55:'30th',me55c:'30th-c',base6:'lc',hsp:'hgssp',bp:'bog',fut20:'fut2020',pgo:'swsh10.5',cel25c:'cel25cc',swsh45sv:'swsh4.5sv',swsh12pt5gg:'swsh12.5gg',zsv10pt5:'sv10.5b',rsv10pt5:'sv10.5w',sm35:'sm3.5',sm75:'sm7.5',swsh35:'swsh3.5',swsh45:'swsh4.5',tk1a:'tk-ex-latia',tk1b:'tk-ex-latio',tk2a:'tk-ex-p',tk2b:'tk-ex-m',mcd11:'2011bw',mcd12:'2012bw',mcd14:'2014xy',mcd15:'2015xy',mcd16:'2016xy',mcd17:'2017sm',mcd18:'2018sm',mcd19:'2019sm',mcd21:'2021swsh',mcd22:'2022swsh'};
 const tdxSet=s=>{s=String(s||'');if(TDX_SET[s])return TDX_SET[s];let m;if((m=s.match(/^(sv|me)(\d)(pt5)?$/)))return m[1]+'0'+m[2]+(m[3]?'.5':'');if((m=s.match(/^(sv|me)(\d\d)pt5$/)))return m[1]+m[2]+'.5';if((m=s.match(/^(swsh|sm|xy|bw)(\d+)pt5$/)))return m[1]+m[2]+'.5';return s};
 // TCGdex schreibt Nummern bei SV/ME/30th dreistellig (sv01-086, 30th-005, 30th-c-001), sonst ungepolstert (swsh1-1)
-const tdxPad=s=>/^(sv|me|30th)/.test(s);
-const tdxId=id=>{const m=String(id||'').match(/^(.*)-([^-]+)$/);if(!m)return id;let s=m[1],n=m[2];const t=tdxSet(s);if(tdxPad(t)&&/^\d+$/.test(n))n=n.padStart(3,'0');return t+'-'+n};
+const tdxPad=s=>/^(sv|me|30th|swsh(9|10|11|12)(\.5)?$)/.test(s);
+// v111: Classic-Collection-Sets nummerieren bei pokemontcg.io nach Originalkarte (cel25c-4_A, me55c-11g), bei TCGdex fortlaufend (cel25cc-CC002, 30th-c-001)
+// -> feste Zuordnung pro Karte (per Name gegen beide APIs geprüft). [TCGdex-Nr., Originalnummer für eBay]
+const CLS={cel25c:{pre:'cel25cc-CC',m:{'2_A':[1,'2/102'],'4_A':[2,'4/102'],'15_A1':[3,'15/102'],'73_A':[4,'73/102'],'8_A':[5,'8/82'],'15_A2':[6,'15/82'],'15_A3':[7,'15/132'],'24_A':[8,'24'],'20_A':[9,'20/111'],'66_A':[10,'66/64'],'9_A':[11,'9/95'],'86_A':[12,'86/109'],'88_A':[13,'88/92'],'93_A':[14,'93/101'],'17_A':[15,'17/17'],'15_A4':[16,'15/106'],'109_A':[17,'109/111'],'145_A':[18,'145/147'],'107_A':[19,'107/123'],'113_A':[20,'113/114'],'114_A':[21,'114/114'],'54_A':[22,'54/99'],'97_A':[23,'97/146'],'76_A':[24,'76/108'],'60_A':[25,'60/145']}},
+ me55c:{pre:'30th-c-',m:{'4':[1],'5':[2],'11':[3],'11g':[4],'18':[5],'19':[6],'25':[7],'33':[8],'41':[9],'43':[10],'47':[11],'50':[12],'57':[13],'58':[14],'69':[15],'85':[16],'89':[17],'94':[18],'99':[19],'100':[20],'101':[21],'106p':[22],'106m':[23],'106':[24],'108':[25],'114':[26],'123':[27],'138':[28],'149':[29],'203':[30]}}};
+const clsId=(s,n)=>{const c=CLS[s],e=c&&c.m[n];return e?c.pre+String(e[0]).padStart(3,'0'):null};
+// Vor v111 wurde me55c-4 zu 30th-c-004 (Genesect) – gespeicherte IDs per Kartenname reparieren
+const C30=['Charizard','Delcatty','Metagross','Genesect','Misty','Dark Tyranitar','Sneasel','Pikachu & Zekrom','Greninja','Uxie','Crobat','Raikou','Buzzwole','Pikachu','Erika','Rayquaza','Solgaleo','Gengar','Darkrai','Darkrai','N','Palkia','M Gardevoir','Shining Celebi','Scizor','Mew VMAX','Arceus','Zacian','Lugia','Magikarp'];
+const cnm=x=>String(x||'').toLowerCase().replace(/[^a-z&]/g,'');
+const clsFix=(id,name)=>{const m=String(id||'').match(/^30th-c-0*(\d+)$/);if(!m||!name)return id;const q=cnm(name),ok=i=>q.startsWith(cnm(C30[i]))&&!(C30[i]==='Pikachu'&&q.includes('zekrom'));if(ok(+m[1]-1))return id;const i=C30.findIndex((x,k)=>ok(k));return i<0?id:'30th-c-'+String(i+1).padStart(3,'0')};
+const clsNum=id=>{const m=String(id||'').match(/^(cel25c|me55c)-(.+)$/);const e=m&&CLS[m[1]].m[m[2]];return e&&e[1]||null};
+const tdxId=id=>{const m=String(id||'').match(/^(.*)-([^-]+)$/);if(!m)return id;let s=m[1],n=m[2];if(CLS[s])return clsId(s,n)||(s==='cel25c'?'cel25cc-?':'30th-c-?')+n;const t=tdxSet(s);if(tdxPad(t)&&/^\d+$/.test(n))n=n.padStart(3,'0');return t+'-'+n};
 const pad3=n=>String(n).replace(/^0+/,'').padStart(3,'0');
 
 async function rate(cur){cur=(cur||'EUR').toUpperCase();if(cur==='EUR')return{rate:1,fallback:false};
@@ -90,6 +100,7 @@ async function lookup(name,lang,setId,number){lang=normLang(lang);number=numN(nu
  if(!r&&lang==='ja')r=await jpLookup(name,setId,number);return r}
 async function lookupT(name,lang,setId,number){
  if(setId)setId=tdxSet(setId);
+ const cls=setId==='cel25cc'||setId==='30th-c';if(cls)number=null;
  if(setId&&number!=null){const ids=[...new Set([`${setId}-${number}`,`${setId}-${pad3(number)}`,`${setId}-${String(number).replace(/^0+/,'')}`])];const r=await Promise.all(ids.map(id=>getCard(id,lang).catch(()=>null)));const c=r.find(Boolean);if(c)return normalize(c,lang)}
  if(!name)return null;let list=await search(name,lang);
  if(setId)list=list.filter(c=>c.id.toLowerCase().startsWith(setId.toLowerCase()+'-'));
@@ -129,6 +140,6 @@ async function jpSetCards(id){if(String(id).startsWith('jp:'))id=id.slice(3);con
  if(!d)return[];return d.cards.map(c=>({id:c.id,localId:c.localId,name:c.name,img:c.image?c.image+'/low.webp':null,set:{id,name:d.name},lang:'ja'}))}
 
 async function jpImgFallback(url){return null;try{const d=await jppLoad(),L=await jpLoad(),c=L.find(x=>x.image===url);const e=c&&d.p[c.set+'-'+nz(c.localId)];return e&&e.i||null}catch(e){return null}}
-root.Prices={tdxSet,tdxId,jpImgFallback,jpSets,jpSetCards,lookup,suggest,byId:async(id,lang)=>{lang=normLang(lang);if(String(id).startsWith('jp:')){const L=await jpLoad();const c=L.find(x=>x.id===id);return c?jpm(jpNorm(c)):null}const c=await getCard(id,lang);return c?normalize(c,lang):null},search,toEUR,rate,
+root.Prices={tdxSet,tdxId,clsNum,clsFix,jpImgFallback,jpSets,jpSetCards,lookup,suggest,byId:async(id,lang)=>{lang=normLang(lang);if(String(id).startsWith('jp:')){const L=await jpLoad();const c=L.find(x=>x.id===id);return c?jpm(jpNorm(c)):null}const c=await getCard(id,lang);return c?normalize(c,lang):null},search,toEUR,rate,
  clearCache(){mem.clear();store={c:{}};save()},CACHE_KEY:KEY,LANGS};
 })(typeof window!=='undefined'?window:globalThis);
