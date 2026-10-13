@@ -158,8 +158,12 @@ function tdxNames(name,lang){const n=name.toLowerCase(),out=new Set([name]),i=la
  for(const r of [...(window.PNAMES||[]),...(window.TNAMES||[])])if(r.some(x=>x&&x.toLowerCase()===n)){if(r[i])out.add(r[i]);if(r[0])out.add(r[0])}return[...out]}
 async function tdxFind(name,num,lang){lang=(lang||'de').toLowerCase();if(lang==='jp')lang='ja';const nn=num?String(num).replace(/^0+(?=\d)/,''):'';const seen=new Set();let all=[];
  const jobs=[];for(const lg of lang==='en'?['en']:[lang,'en'])for(const q of tdxNames(name,lg))jobs.push(Prices.suggest(q,lg,100).catch(()=>[]));
+ // Name+Nummer direkt bei TCGdex filtern (suggest ist auf 100 Treffer begrenzt, bei „Pikachu“ fehlen sonst die Nr.-Treffer)
+ if(nn&&!/[^\x00-\x7f]/.test(name)||nn&&lang!=='ja')for(const lg of lang==='en'?['en']:[lang,'en'])if(lg!=='ja')for(const q of tdxNames(name,lg))jobs.push((async()=>{try{const r=await fetch(`https://api.tcgdex.net/v2/${lg}/cards?name=${encodeURIComponent(q)}&localId=${encodeURIComponent(nn)}`,{signal:AbortSignal.timeout(6000)});if(!r.ok)return[];const L=(await r.json()).slice(0,12);
+   return (await Promise.all(L.map(async x=>{try{const d=await (await fetch(`https://api.tcgdex.net/v2/${lg}/cards/${encodeURIComponent(x.id)}`,{signal:AbortSignal.timeout(6000)})).json();return{id:d.id,name:d.name,localId:d.localId,set:{id:d.set&&d.set.id,name:d.set&&d.set.name},img:d.image?d.image+'/high.webp':'',lang:lg}}catch(e){return{id:x.id,name:x.name,localId:x.localId,set:{id:x.id.split('-')[0],name:x.id.split('-')[0]},img:x.image?x.image+'/high.webp':'',lang:lg}}}))).filter(Boolean)}catch(e){return[]}})());
  for(const L of await Promise.all(jobs))for(const c of L||[])if(!seen.has(c.lang+c.id)){seen.add(c.lang+c.id);all.push(c)}
  const hit=nn?all.filter(c=>String(c.localId||'').replace(/^0+(?=\d)/,'')===nn):[];
+ {const ns=new Set(tdxNames(name,'de').concat(tdxNames(name,'en'),[name]).map(x=>String(x).toLowerCase()));const rk=c=>{const n=String(c.name||'').toLowerCase();return ns.has(n)?0:[...ns].some(x=>n.startsWith(x))?1:2};hit.sort((x,y)=>rk(x)-rk(y))}
  const pref=a=>a.filter(c=>c.lang===lang).length?a.filter(c=>c.lang===lang):a;
  return{list:hit.length?hit:all.slice(0,300),exact:!!hit.length,lang}}
 async function tdxResults(R,name,num,lang,append){const box=document.createElement('div');box.className='tdxRes';box.innerHTML='<p class="muted small">TCGdex wird durchsucht…</p>';
