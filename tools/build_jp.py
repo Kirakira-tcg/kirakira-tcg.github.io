@@ -1,7 +1,8 @@
 #!/usr/bin/env python3
 """Builds jpcards.json: Japanese cards from pokemon-card.com for sets TCGdex (/v2/ja/sets/{id}) lacks.
 Format: {"v":1,"base":IMGBASE,"sets":{id:name},"c":[[set,localId,total,name,imgPath],...]}
-Usage: python3 tools/build_jp.py [pages=80] > jpcards.json
+Usage: python3 tools/build_jp.py [pages=80] > jpcards.json && python3 tools/build_covers.py
+(build_covers.py runs tools/img_policy.py: pokemon-card.com images are never hotlinked, only used as ID key)
 Set code comes from each card's detail page (catches reprints filed under older image folders)."""
 import json,re,sys,html,urllib.request,urllib.parse,urllib.error
 from concurrent.futures import ThreadPoolExecutor

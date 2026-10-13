@@ -14,6 +14,8 @@ for iid,name,rar,box,bname,img,mid in items:
   num=re.search(r'-(\d+)$',iid);sid=sets.get(norm(bname))
   if not num or not sid:miss.add(bname);continue
   out[f"{sid}-{int(num.group(1))}"]={'n':name,'y':int(mid),'i':img}
+import os,sys;sys.path.insert(0,os.path.dirname(os.path.abspath(__file__)));import img_policy
+img_policy.fix_prices(out)  # riskante Bild-Hosts -> TCGdex oder kein Bild
 if len(out)<100:raise SystemExit(f'Nur {len(out)} Preise – Seite geändert? jpprices.json bleibt unverändert.')
 try:
   old=json.load(open('jpprices.json'))

@@ -43,7 +43,7 @@ d=json.load(open(J,encoding='utf8'));cov={}
 for s in d['sets']:
     cs=[{'n':r[1],'name':r[3],'img':d['base']+r[4]} for r in d['c'] if r[0]==s]
     tot=max((int(r[2]) for r in d['c'] if r[0]==s and str(r[2]).isdigit()),default=0)
-    u=pick(cs,tot)
+    u=pick([c for c in cs if c['img'].startswith('http')],tot)
     if u and head(u):cov[s]=u
 def tset(sid):
     x=g('https://api.tcgdex.net/v2/ja/sets/'+urllib.parse.quote(sid))
@@ -55,29 +55,11 @@ ids=[s['id'] for s in (g('https://api.tcgdex.net/v2/ja/sets') or []) if s['id'] 
 with ThreadPoolExecutor(4) as ex:
     for sid,u in ex.map(tset,ids):
         if u:cov[sid]=u
-# 2. Quelle: pokemon-card.com (pg=Set-Code) fuer Sets ohne TCGdex-Bilder
-PC="https://www.pokemon-card.com"
-def pcset(sid):
-    q=lambda p:g(PC+"/card-search/resultAPI.php?"+urllib.parse.urlencode({"regulation_sidebar_form":"all","pg":sid,"page":p}))
-    a=q(1)
-    if not a or not a.get("cardList"):return sid,None
-    L=a["cardList"]+((q(a["maxPage"]) or {}).get("cardList") or [] if a.get("maxPage",1)>1 else [])
-    cs=[{'n':i,'name':c["cardNameViewText"],'img':PC+c["cardThumbFile"]} for i,c in enumerate(L)]
-    ps=[c for c in cs if isP(c['name'])] or cs
-    b=min(ps,key=lambda c:(fam(c['name']),-c['n']))
-    return sid,(b['img'] if head(b['img']) else None)
-rest=[i for i in ids if i not in cov]
-with ThreadPoolExecutor(4) as ex:
-    for sid,u in ex.map(pcset,rest):
-        if u:cov[sid]=u
-# 3. Serebii-Set-Logos (manuelle Zuordnung, Hotlink erlaubt) fuer aeltere Sets ohne Kartenbilder
-SER={"XY1a":"collectionx","XY1b":"collectiony","XY5a":"gaiavolcano","XY5b":"tidalstorm","XY8a":"blueshock","XY8b":"redflash",
- "XY9":"rageofthetornheavens","XY10":"awakeningpsychicchampion","XY11a":"feverburstfighter","XY11b":"crueltraitor",
- "SM1+":"sunmoonstrengtheningpack","sm2+":"beyondanewchallenge","SM3+":"shininglegend","SM4+":"gxbattleboost","SM5+":"ultraforces",
- "L1a":"heartgoldcollection","L1b":"soulsilvercollection","L2":"revivinglegends","L3":"bigsummitclash","VS1":"vs"}
-for sid,slug in SER.items():
-    u=f"https://www.serebii.net/card/logo/{slug}.png"
-    if sid not in cov and head(u):cov[sid]=u
+# Keine Cover von pokemon-card.com / serebii.net (Hotlink-Risiko) – siehe tools/img_policy.py
 d.pop('logos',None);d.pop('logoBase',None);d['covers']=cov
+import sys;sys.path.insert(0,os.path.dirname(os.path.abspath(__file__)));import img_policy
+try:P=json.load(open(os.path.join(D,'jpprices.json'),encoding='utf8'))['p']
+except Exception:P={}
+img_policy.fix_cards(d,P)
 json.dump(d,open(J,'w',encoding='utf8'),ensure_ascii=False,separators=(",",":"))
 print(len(cov),'covers;',len(d['sets'])+len(ids)-len([i for i in ids if i in cov])-len([s for s in d['sets'] if s in cov]),'without')
