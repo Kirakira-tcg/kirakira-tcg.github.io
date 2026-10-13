@@ -396,6 +396,26 @@ function tdxCands(u){const out=[u];const m=String(u).match(/^(https:\/\/assets\.
 const tdxIsEn=(u,orig)=>(/assets\.tcgdex\.net\/en\//.test(u)||/images\.pokemontcg\.io\//.test(u))&&!/assets\.tcgdex\.net\/en\//.test(orig);
 const IMGOK=new Map();function imgProbe(u){if(IMGOK.has(u))return IMGOK.get(u);const p=new Promise(r=>{const i=new Image();i.onload=()=>r(true);i.onerror=()=>r(false);i.src=imgFull(u)});IMGOK.set(u,p);return p}
 const imgFull=u=>/\/(low|high)\.webp$|\.(png|jpg)$/.test(u)?u:u+'/low.webp';async function imgTry(u){for(const c of tdxCands(u))if(await imgProbe(c))return c===u?u:imgFull(c);return ''}
+// getSetCards(setId, lang) -> Promise<[{id,localId,name,image}]> (für Set-Binder). Nie reject: bei Fehler [].
+(function(){const MEM=new Map(),NEGK='ka_setneg',LSK='ka_setc:',TTL=7*24*3600e3,NTTL=6*3600e3;
+ const nl=l=>{l=String(l||'de').toLowerCase();if(l==='jp')l='ja';return ['de','en','ja'].includes(l)?l:'en'};
+ const langOk=(s,l)=>{const up=/[A-Z]/.test(s);return l==='ja'?(up||/^(neo[1-4]|web1|sm2\+)$/.test(s)):(!up||/^(P-A|A\d|B\d)/.test(s))};
+ const neg=()=>{try{return JSON.parse(localStorage.getItem(NEGK)||'{}')}catch(e){return{}}};
+ const negSet=k=>{try{const n=neg();n[k]=Date.now();for(const x in n)if(Date.now()-n[x]>NTTL)delete n[x];localStorage.setItem(NEGK,JSON.stringify(n))}catch(e){}};
+ const isNeg=k=>{const t=neg()[k];return t&&Date.now()-t<NTTL};
+ async function tdxSet(l,s){const k=l+':'+s;if(isNeg(k))return null;try{const r=await fetch(`https://api.tcgdex.net/v2/${l}/sets/${encodeURIComponent(s)}`,{signal:AbortSignal.timeout(10000)});if(r.status===404){negSet(k);return null}if(!r.ok)return null;const j=await r.json();if(!j||!j.cards||!j.cards.length){negSet(k);return null}return j}catch(e){return null}}
+ const nz=x=>String(x||'').replace(/^0+(?=\d)/,'').toLowerCase();
+ const numKey=x=>{const m=String(x).match(/\d+/);return m?+m[0]:1e9};
+ async function load(setId,lang){const s=String(setId||'').trim();if(!s||!langOk(s,lang))return [];
+  const j=await tdxSet(lang,s);if(!j)return [];let en=null,enTried=false;
+  const out=[];for(const c of j.cards){let img=c.image?imgFull(c.image):null;
+   if(!img&&lang!=='en'&&lang!=='ja'){if(!enTried){enTried=true;en=await tdxSet('en',s)}const e=en&&en.cards.find(x=>nz(x.localId)===nz(c.localId));if(e&&e.image)img=imgFull(e.image)}
+   if(!img&&lang!=='ja'&&/^[a-z0-9]+$/i.test(s)){const u=`https://images.pokemontcg.io/${s}/${nz(c.localId)}.png`;if(await imgProbe(u))img=u}
+   img=safeImg(img)||null;out.push({id:c.id,localId:String(c.localId??''),name:c.name||'',image:img})}
+  out.sort((a,b)=>numKey(a.localId)-numKey(b.localId)||a.localId.localeCompare(b.localId,undefined,{numeric:true}));return out}
+ window.getSetCards=function(setId,lang){lang=nl(lang);const k=lang+':'+setId;if(MEM.has(k))return MEM.get(k);
+  try{const c=JSON.parse(localStorage.getItem(LSK+k)||'null');if(c&&Date.now()-c.t<TTL&&c.v.length){const p=Promise.resolve(c.v);MEM.set(k,p);return p}}catch(e){}
+  const p=load(setId,lang).catch(()=>[]).then(v=>{if(v.length){try{localStorage.setItem(LSK+k,JSON.stringify({t:Date.now(),v}))}catch(e){}}else MEM.delete(k);return v});MEM.set(k,p);return p}})();
 const imgForget=u=>tdxCands(u).forEach(c=>IMGOK.delete(c));
 // <img>-Fehler (Detail, Thumbs): nächste TCGdex-Variante versuchen, bevor der Platzhalter kommt
 function tdxNext(im){const cs=im.getAttribute('src')||'';if(im.dataset.tdxo&&im.dataset.tdxs&&cs!==im.dataset.tdxs){delete im.dataset.tdxo;im.dataset.tdxi=0;delete im.dataset.tdxr}const o=im.dataset.tdxo||cs;if(!/assets\.tcgdex\.net\//.test(o))return false;im.dataset.tdxo=o;const L=tdxCands(o),i=+(im.dataset.tdxi||0)+1;if(i>=L.length){if(!im.dataset.tdxr){im.dataset.tdxr=1;setTimeout(()=>{if(im.isConnected){im.dataset.tdxi=0;im.style.visibility='';im.dataset.tdxs=o;im.src=o}},20000);if(!im.hasAttribute('onerror'))im.style.visibility='hidden';return true}if(!im.hasAttribute('onerror')){const d=document.createElement('div');d.className='dph phbox';d.innerHTML=phCard(im.dataset.phn||'',im.dataset.phnum||'');im.replaceWith(d);return true}return false}im.dataset.tdxi=i;im.dataset.tdxs=L[i];im.src=L[i];if(tdxIsEn(L[i],o)&&!(im.parentElement&&im.parentElement.querySelector('.imgnote')))im.insertAdjacentHTML('afterend','<div class="imgnote">Bild: englische Version</div>');return true}
