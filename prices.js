@@ -73,7 +73,10 @@ async function jpSuggest(q,limit){const L=await jpLoad();const ql=q.replace(/\s/
  return L.filter(x=>x.name.replace(/\s/g,'').includes(ql)).slice(0,limit).map(x=>({id:x.id,name:x.name,localId:x.localId||'',set:{id:x.set,name:x.setName},img:x.image,lang:'ja'}))}
 
 // lookup(name, lang='de', setId?, number?) -> Preisobjekt oder null
-async function lookup(name,lang,setId,number){lang=normLang(lang);number=numN(number);let r=null;try{r=await lookupT(name,lang,setId,number)}catch(e){if(lang!=='ja')throw e}
+async function lookup(name,lang,setId,number){lang=normLang(lang);number=numN(number);let r=null;
+ if(lang==='ja'){const jc=await jpSetCode(setId);if(jc||String(setId||'').startsWith('jp:')){const j=await jpLookup(name,jc||setId,number);if(j)return j}}
+ try{r=await lookupT(name,lang,setId,number)}catch(e){if(lang!=='ja')throw e}
+ if(r&&lang==='ja'){const ns=jaNames(name).map(snrm),ok=(!name||ns.some(n=>snrm(r.name).startsWith(n)))&&(number==null||nz(r.localId)===nz(number));if(!ok)r=null}
  if(!r&&lang==='ja')r=await jpLookup(name,setId,number);return r}
 async function lookupT(name,lang,setId,number){
  if(setId&&number!=null){for(const id of [`${setId}-${number}`,`${setId}-${pad3(number)}`,`${setId}-${String(number).replace(/^0+/,'')}`]){const c=await getCard(id,lang);if(c)return normalize(c,lang)}}
