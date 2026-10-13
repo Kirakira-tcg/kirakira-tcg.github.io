@@ -394,3 +394,11 @@ body:has(#addToast:not([hidden])) .scantray .trayall{bottom:calc(var(--navh,72px
 .dupbox{width:100%;max-width:480px;background:#1e1b3a;color:inherit;border-radius:16px 16px 0 0;padding:1rem 1rem calc(1rem + env(safe-area-inset-bottom));display:flex;flex-direction:column;gap:.5rem;box-shadow:0 -6px 24px rgba(0,0,0,.4)}
 .dupbox p{margin:.1rem 0 .4rem}.dupbox button{min-height:44px;width:100%;font-size:1rem}
 @media(min-width:700px){.dupsheet{align-items:center}.dupbox{border-radius:16px}}
+/* v116: alter Preis (>30 Tage) */
+.tile.oldp .p b{color:#8b8aa0;opacity:.75}
+.tile.oldp .tsrc{color:#9a98ad;font-style:italic}
+.oldnote{font-size:.72rem;color:#9a98ad;font-weight:500;line-height:1.25;margin-top:.15rem}
+.oldp-t{color:#a3a1b8}
+.tile .tsrc{white-space:nowrap;overflow:hidden;text-overflow:ellipsis;max-width:100%}
+.hero .oldnote{color:rgba(255,255,255,.88)}
+.tile.oldp .tsrc{white-space:normal;overflow:visible}
