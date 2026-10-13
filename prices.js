@@ -44,8 +44,24 @@ async function normalize(card,lang){const p=card?.pricing||{};const out={id:card
  else out.label='kein Preis bei TCGdex';
  return out}
 
+
+// Japanische Sets, die TCGdex fehlen: statische jpcards.json (tools/build_jp.py)
+let jpP=null;
+function jpLoad(){if(jpP)return jpP;const u=(typeof document!=='undefined'&&document.baseURI)?new URL('jpcards.json',document.baseURI).href:'jpcards.json';
+ jpP=fetch(u).then(r=>r.ok?r.json():null).then(d=>{if(!d||!Array.isArray(d.c))return[];return d.c.map(([set,localId,total,name,img])=>({id:'jp:'+set+'-'+(localId||img.replace(/^.*\/|\.\w+$/g,'')),set,localId,total,name,image:d.base+img,setName:(d.sets||{})[set]||set}))}).catch(()=>{jpP=null;return[]});return jpP}
+const jpNorm=c=>({id:c.id,name:c.name,lang:'ja',set:{id:c.set,name:c.setName},localId:c.localId,total:c.total,image:c.image,prices:[],best:null,label:'kein Preis – siehe Cardmarket',source:'pokemon-card.com'});
+const nz=x=>String(x??'').replace(/^0+/,'');
+async function jpLookup(name,setId,number){const L=await jpLoad();if(!L.length)return null;let c=null;
+ if(setId&&number!=null)c=L.find(x=>x.set.toLowerCase()===String(setId).toLowerCase()&&nz(x.localId)===nz(number));
+ if(!c&&name){const n=name.trim();const byN=L.filter(x=>x.name===n||x.name.replace(/\s/g,'')===n.replace(/\s/g,''));c=(number!=null&&byN.find(x=>nz(x.localId)===nz(number)))||(setId&&byN.find(x=>x.set.toLowerCase()===String(setId).toLowerCase()))||(number==null&&!setId?byN[0]:null)}
+ return c?jpNorm(c):null}
+async function jpSuggest(q,limit){const L=await jpLoad();const ql=q.replace(/\s/g,'');if(!ql)return[];
+ return L.filter(x=>x.name.replace(/\s/g,'').includes(ql)).slice(0,limit).map(x=>({id:x.id,name:x.name,localId:x.localId||'',set:{id:x.set,name:x.setName},img:x.image,lang:'ja'}))}
+
 // lookup(name, lang='de', setId?, number?) -> Preisobjekt oder null
-async function lookup(name,lang,setId,number){lang=normLang(lang);
+async function lookup(name,lang,setId,number){lang=normLang(lang);let r=null;try{r=await lookupT(name,lang,setId,number)}catch(e){if(lang!=='ja')throw e}
+ if(!r&&lang==='ja')r=await jpLookup(name,setId,number);return r}
+async function lookupT(name,lang,setId,number){
  if(setId&&number!=null){for(const id of [`${setId}-${number}`,`${setId}-${pad3(number)}`,`${setId}-${String(number).replace(/^0+/,'')}`]){const c=await getCard(id,lang);if(c)return normalize(c,lang)}}
  if(!name)return null;let list=await search(name,lang);
  if(setId)list=list.filter(c=>c.id.toLowerCase().startsWith(setId.toLowerCase()+'-'));
@@ -70,11 +86,11 @@ async function suggest(query,lang='de',limit=24){const q=String(query||'').trim(
  const L=['de','en','ja'],qs={de:new Set(),en:new Set(),ja:new Set()};qs[lang].add(q);
  for(const r of nameRows(q)){if(r[0])qs.en.add(r[0]);if(r[1])qs.de.add(r[1]);if(r[2])qs.ja.add(r[2])}
  if(qs[lang].size===1&&!nameRows(q).length&&lang!=='en')qs.en.add(q);
- const per=await Promise.all(L.map(async lg=>{const o=[];for(const x of qs[lg])o.push(...await suggestLang(x,lg,limit));return o}));
+ const per=await Promise.all(L.map(async lg=>{const o=[];for(const x of qs[lg]){if(lg==='ja')o.push(...await jpSuggest(x,Math.ceil(limit/2)));o.push(...await suggestLang(x,lg,limit))}return o}));
  const first=per.splice(L.indexOf(lang),1)[0];per.unshift(first);const seen=new Set(),r=[];
  for(let i=0;r.length<limit&&per.some(a=>i<a.length);i++)for(const a of per){const c=a[i];if(c&&!seen.has(c.lang+c.id)&&r.length<limit){seen.add(c.lang+c.id);r.push(c)}}
  return r}
 
-root.Prices={lookup,suggest,byId:async(id,lang)=>{lang=normLang(lang);const c=await getCard(id,lang);return c?normalize(c,lang):null},search,toEUR,rate,
+root.Prices={lookup,suggest,byId:async(id,lang)=>{lang=normLang(lang);if(String(id).startsWith('jp:')){const L=await jpLoad();const c=L.find(x=>x.id===id);return c?jpNorm(c):null}const c=await getCard(id,lang);return c?normalize(c,lang):null},search,toEUR,rate,
  clearCache(){mem.clear();store={c:{}};save()},CACHE_KEY:KEY,LANGS};
 })(typeof window!=='undefined'?window:globalThis);
