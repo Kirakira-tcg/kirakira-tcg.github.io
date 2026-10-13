@@ -42,7 +42,14 @@ async function normalize(card,lang){const p=card?.pricing||{};const out={id:card
  out.best=out.prices.find(x=>x.eur!=null)||null;
  if(out.best)out.label=`${out.best.eur.toFixed(2).replace('.',',')} € · ${out.best.source}${out.best.umgerechnet?` · umgerechnet aus ${out.best.currency}${out.best.fxFallback?' (Schätzkurs)':''}`:''}`;
  else out.label='kein Preis bei TCGdex';
- return out}
+ return lang==='ja'?jpm(out):out}
+// JP-Marktpreis (pokeca-souba, Yen) aus statischer jpprices.json (tools/build_jpprices.py) – getrennt von Cardmarket/eBay
+let jppP=null;function jppLoad(){if(jppP)return jppP;const u=(typeof document!=='undefined'&&document.baseURI)?new URL('jpprices.json',document.baseURI).href:'jpprices.json';
+ jppP=fetch(u).then(r=>r.ok?r.json():null).then(d=>d&&d.p?d:{p:{}}).catch(()=>{jppP=null;return{p:{}}});return jppP}
+async function jpm(out){if(!out||out.best)return out;try{const d=await jppLoad(),sid=out.set&&out.set.id||String(out.id).replace(/^jp:/,'').replace(/-[^-]*$/,''),e=d.p[sid+'-'+nz(out.localId)];
+ if(!e||!e.y)return out;const c=await toEUR(e.y,'JPY');if(!c)return out;
+ out.jpMarket={source:'pokeca-souba (JP-Markt)',currency:'JPY',value:e.y,eur:c.eur,umgerechnet:true,fxFallback:!!c.fallback,updated:d.date,url:d.url};out.best=out.jpMarket;
+ out.label=`${c.eur.toFixed(2).replace('.',',')} € · pokeca-souba (JP-Markt) · ¥${e.y.toLocaleString('de-DE')}${c.fallback?' (Schätzkurs)':''}`}catch(e){}return out}
 
 
 // Japanische Sets, die TCGdex fehlen: statische jpcards.json (tools/build_jp.py)
@@ -54,7 +61,7 @@ const nz=x=>String(x??'').replace(/^0+/,'');
 async function jpLookup(name,setId,number){const L=await jpLoad();if(!L.length)return null;let c=null;
  if(setId&&number!=null)c=L.find(x=>x.set.toLowerCase()===String(setId).toLowerCase()&&nz(x.localId)===nz(number));
  if(!c&&name){const n=name.trim();const byN=L.filter(x=>x.name===n||x.name.replace(/\s/g,'')===n.replace(/\s/g,''));c=(number!=null&&byN.find(x=>nz(x.localId)===nz(number)))||(setId&&byN.find(x=>x.set.toLowerCase()===String(setId).toLowerCase()))||(number==null&&!setId?byN[0]:null)}
- return c?jpNorm(c):null}
+ return c?jpm(jpNorm(c)):null}
 async function jpSuggest(q,limit){const L=await jpLoad();const ql=q.replace(/\s/g,'');if(!ql)return[];
  return L.filter(x=>x.name.replace(/\s/g,'').includes(ql)).slice(0,limit).map(x=>({id:x.id,name:x.name,localId:x.localId||'',set:{id:x.set,name:x.setName},img:x.image,lang:'ja'}))}
 
@@ -100,6 +107,6 @@ async function jpSetCards(id){if(String(id).startsWith('jp:'))id=id.slice(3);con
  const k='jpset:'+id;let d=cget(k,SET_TTL);if(d===undefined){d=await getJSON(`${BASE}/ja/sets/${encodeURIComponent(id)}`);d=d?{name:d.name,cards:(d.cards||[]).map(c=>({id:c.id,localId:c.localId,name:c.name,image:c.image||null}))}:null;cset(k,d)}
  if(!d)return[];return d.cards.map(c=>({id:c.id,localId:c.localId,name:c.name,img:c.image?c.image+'/low.webp':null,set:{id,name:d.name},lang:'ja'}))}
 
-root.Prices={jpSets,jpSetCards,lookup,suggest,byId:async(id,lang)=>{lang=normLang(lang);if(String(id).startsWith('jp:')){const L=await jpLoad();const c=L.find(x=>x.id===id);return c?jpNorm(c):null}const c=await getCard(id,lang);return c?normalize(c,lang):null},search,toEUR,rate,
+root.Prices={jpSets,jpSetCards,lookup,suggest,byId:async(id,lang)=>{lang=normLang(lang);if(String(id).startsWith('jp:')){const L=await jpLoad();const c=L.find(x=>x.id===id);return c?jpm(jpNorm(c)):null}const c=await getCard(id,lang);return c?normalize(c,lang):null},search,toEUR,rate,
  clearCache(){mem.clear();store={c:{}};save()},CACHE_KEY:KEY,LANGS};
 })(typeof window!=='undefined'?window:globalThis);
