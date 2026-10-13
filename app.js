@@ -411,8 +411,13 @@ const imgFull=u=>/\/(low|high)\.webp$|\.(png|jpg)$/.test(u)?u:u+'/low.webp';asyn
   const out=[];for(const c of j.cards){let img=c.image?imgFull(c.image):null;
    if(!img&&lang!=='en'&&lang!=='ja'){if(!enTried){enTried=true;en=await tdxSet('en',s)}const e=en&&en.cards.find(x=>nz(x.localId)===nz(c.localId));if(e&&e.image)img=imgFull(e.image)}
    if(!img&&lang!=='ja'&&/^[a-z0-9]+$/i.test(s)){const u=`https://images.pokemontcg.io/${s}/${nz(c.localId)}.png`;if(await imgProbe(u))img=u}
-   img=safeImg(img)||null;out.push({id:c.id,localId:String(c.localId??''),name:c.name||'',image:img})}
+   img=safeImg(img)||null;const fb=img?[...new Set(tdxCands(img.replace(/\/(low|high)\.webp$/,'')).map(imgFull))].filter(u=>u!==img&&safeImg(u)):[];out.push({id:c.id,localId:String(c.localId??''),name:c.name||'',image:img,fallbacks:fb})}
   out.sort((a,b)=>numKey(a.localId)-numKey(b.localId)||a.localId.localeCompare(b.localId,undefined,{numeric:true}));return out}
+ window.attachImgFallback=function(im,card){if(!im||!card)return im;const key=(card.id||'')+'|'+(card.image||'');if(im._kaFb&&im._kaFb.key===key)return im;if(im._kaFb)im.removeEventListener('error',im._kaFb.h);
+  const L=[card.image,...(card.fallbacks||[])].filter(u=>u&&safeImg(u));const st={key,i:Math.max(0,L.indexOf(im.getAttribute('src'))),retried:false};
+  const ph=()=>{if(!im.isConnected&&!im.parentNode)return;const d=document.createElement('div');d.className='phthumb phbox';d.innerHTML=phCard(card.name,card.localId);im.replaceWith(d)};
+  st.h=()=>{st.i++;if(st.i<L.length){im.src=L[st.i];return}if(!st.retried&&L.length){st.retried=true;im.style.visibility='hidden';setTimeout(()=>{if(!im.isConnected)return;IMGOK.clear&&L.forEach(u=>IMGOK.delete(u));st.i=0;im.style.visibility='';im.src=L[0]},20000);return}ph()};
+  im._kaFb=st;im.addEventListener('error',st.h);if(!L.length)ph();else if(!im.getAttribute('src'))im.src=L[0];else if(im.complete&&im.naturalWidth===0&&im.getAttribute('src'))st.h();return im};
  window.getSetCards=function(setId,lang){lang=nl(lang);const k=lang+':'+setId;if(MEM.has(k))return MEM.get(k);
   try{const c=JSON.parse(localStorage.getItem(LSK+k)||'null');if(c&&Date.now()-c.t<TTL&&c.v.length){const p=Promise.resolve(c.v);MEM.set(k,p);return p}}catch(e){}
   const p=load(setId,lang).catch(()=>[]).then(v=>{if(v.length){try{localStorage.setItem(LSK+k,JSON.stringify({t:Date.now(),v}))}catch(e){}}else MEM.delete(k);return v});MEM.set(k,p);return p}})();
