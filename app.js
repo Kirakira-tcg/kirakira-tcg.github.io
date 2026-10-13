@@ -417,6 +417,20 @@ const imgFull=u=>/\/(low|high)\.webp$|\.(png|jpg)$/.test(u)?u:u+'/low.webp';asyn
    if(!img&&lang!=='ja'&&/^[a-z0-9]+$/i.test(s)){const u=`https://images.pokemontcg.io/${s}/${nz(c.localId)}.png`;if(await imgProbe(u))img=u}
    img=safeImg(img)||null;const fb=img?[...new Set(tdxCands(img.replace(/\/(low|high)\.webp$/,'')).map(imgFull))].filter(u=>u!==img&&safeImg(u)):[];out.push({id:c.id,localId:String(c.localId??''),name:c.name||'',image:img,fallbacks:fb})}
   out.sort((a,b)=>numKey(a.localId)-numKey(b.localId)||a.localId.localeCompare(b.localId,undefined,{numeric:true}));return out}
+ // searchSets(query, lang?) -> Promise<[{id,name,lang,total}]>, getSetInfo(setId, lang) -> Promise<{id,name,total}|null>. Nie reject.
+(function(){const SL={},TT=7*24*3600e3,K='ka_sets2:';let JPEN=null;
+ const nl=l=>{l=String(l||'').toLowerCase();if(l==='jp')l='ja';return ['de','en','ja'].includes(l)?l:''};
+ const fold=s=>String(s||'').normalize('NFKD').replace(/[\u0300-\u036f]/g,'').toLowerCase().replace(/[^\p{L}\p{N}]+/gu,' ').trim();
+ function list(l){if(SL[l])return SL[l];SL[l]=(async()=>{try{const c=JSON.parse(localStorage.getItem(K+l)||'null');if(c&&Date.now()-c.t<TT&&c.v.length)return c.v}catch(e){}
+  try{const r=await fetch(`https://api.tcgdex.net/v2/${l}/sets`,{signal:AbortSignal.timeout(10000)});if(!r.ok)throw 0;const d=await r.json();const v=(d||[]).map(s=>({id:s.id,name:s.name||s.id,lang:l,total:(s.cardCount&&(s.cardCount.official||s.cardCount.total))||null}));if(v.length)try{localStorage.setItem(K+l,JSON.stringify({t:Date.now(),v}))}catch(e){}return v}catch(e){delete SL[l];return []}})();return SL[l]}
+ async function jpEn(){if(JPEN)return JPEN;try{const j=await (await fetch('jpcards.json',{signal:AbortSignal.timeout(8000)})).json();JPEN=j&&j.sets||{}}catch(e){JPEN={}}return JPEN}
+ window.searchSets=async function(q,lang){try{const L=nl(lang),langs=L?[L]:['de','en','ja'],fq=fold(q);if(!fq)return [];const en=await jpEn();const out=[];
+  for(const l of langs){for(const s of await list(l)){const alt=l==='ja'&&en[s.id]&&en[s.id]!==s.id?en[s.id]:'';const id=s.id.toLowerCase(),ql=String(q).trim().toLowerCase();
+   const sc=id===ql?0:fold(s.name)===fq||fold(alt)===fq?1:id.startsWith(ql)?2:fold(s.name).startsWith(fq)||fold(alt).startsWith(fq)?3:(fold(s.name).includes(fq)||fold(alt).includes(fq)||fold(id).includes(fq))?4:-1;
+   if(sc>=0)out.push({sc,r:{id:s.id,name:alt&&!fold(s.name).includes(fq)?`${s.name} (${alt})`:s.name,lang:l,total:s.total}})}}
+  return out.sort((a,b)=>a.sc-b.sc).map(x=>x.r).slice(0,50)}catch(e){return []}};
+ window.getSetInfo=async function(setId,lang){try{const id=String(setId||'');for(const l of [...new Set([nl(lang)||'en','en','de','ja'])]){const s=(await list(l)).find(x=>x.id===id);if(s)return {id:s.id,name:s.name,total:s.total}}
+  const r=await fetch(`https://api.tcgdex.net/v2/${nl(lang)||'en'}/sets/${encodeURIComponent(id)}`,{signal:AbortSignal.timeout(10000)});if(!r.ok)return null;const j=await r.json();return j&&j.id?{id:j.id,name:j.name||j.id,total:(j.cardCount&&(j.cardCount.official||j.cardCount.total))||null}:null}catch(e){return null}}})();
  window.attachImgFallback=function(im,card){if(!im||!card)return im;const key=(card.id||'')+'|'+(card.image||'');if(im._kaFb&&im._kaFb.key===key)return im;if(im._kaFb){const o=im._kaFb;im.removeEventListener('error',o.h);im.removeEventListener('load',o.ok);clearTimeout(o.t);clearTimeout(o.rt);o.ph&&o.ph.remove();im.style.display=''}
   const L=[card.image,...(card.fallbacks||[])].filter(u=>u&&safeImg(u)),TO=6000;const st={key,i:Math.max(0,L.indexOf(im.getAttribute('src'))),retried:false,ph:null,t:0,rt:0};
   const showPh=()=>{if(st.ph)return;const d=document.createElement('div');d.className='phthumb phbox';d.dataset.kaPh='1';d.innerHTML=phCard(card.name,card.localId);st.ph=d;if(im.parentNode)im.before(d);im.style.display='none'};
