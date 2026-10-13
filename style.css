@@ -227,3 +227,7 @@ a.plink:hover{background:rgba(167,139,250,.28);color:#fff}
 html{background:var(--bg)}body{min-height:100vh;min-height:100dvh;background-attachment:fixed!important;background-repeat:no-repeat!important}
 #scanStatus2:empty,#liveText:empty,#scanPick:empty{display:none}
 .fedBox{text-align:center;margin:.3rem 0;position:relative;z-index:3}.fedChip{display:inline-flex;align-items:center;gap:.5rem;padding:.45rem .9rem;border-radius:999px;background:rgba(167,139,250,.14);border:1px solid rgba(167,139,250,.4);cursor:pointer;font-weight:700;user-select:none;-webkit-tap-highlight-color:transparent}.fedChip input{width:20px!important;height:20px;margin:0;accent-color:#a78bfa;cursor:pointer}.fedChip:has(input:checked){background:rgba(167,139,250,.35);color:#fff}
+
+/* v52: Tipps im Scan-Tab */
+.scantips{max-width:420px;margin:18px auto 0;padding:14px 16px;border-radius:18px;background:rgba(255,255,255,.05);border:1px solid rgba(167,139,250,.3);text-align:left}.scantips ul{margin:8px 0 0;padding-left:0;list-style:none}.scantips li{margin:6px 0;font-size:.9rem;color:var(--tx)}
+.scanbox.live .scantips,#scanPick:not([hidden]):not(:empty)~.scantips,.scanbox.hasres .scantips{display:none}

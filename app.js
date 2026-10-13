@@ -107,7 +107,7 @@ const LNAME={de:'🇩🇪 Deutsch',en:'🇬🇧 Englisch',ja:'🇯🇵 Japanisch
 // Suchergebnisse: EN-Datenbank (Cardmarket-Preise) + TCGdex nach Sprache gruppiert, progressiv
 async function searchRender(R,data,apiErr,tdxP,o){R.classList.remove('binder-src');R.innerHTML='';const head=document.createElement('p');head.className='muted small';head.style.gridColumn='1/-1';head.id='noHit';R.append(head);
  data.sort((a,b)=>(b.set.releaseDate||'').localeCompare(a.set.releaseDate||'')||numCmp(a.number,b.number));lastResults=data;
- const ps=window.pendingScan;if(ps&&ps.lang&&ps.lang!=='EN'){head.insertAdjacentHTML('beforebegin',`<div class="scanpick" style="grid-column:1/-1"><b>${ps.lang==='JP'?'🇯🇵 Japanische Karte':'Karte ('+ps.lang+')'}: ${esc(ps.name||'')} ${esc(ps.number||'')}</b><p class="muted small"><span id="tdxHint">Suche in TCGdex…</span></p><button type="button" class="chip" id="manScan">➕ Manuell hinzufügen</button></div>`)}
+ const ps=window.pendingScan;if(ps&&ps.lang&&(ps.lang!=='EN'||(ps.name&&ps.number))){head.insertAdjacentHTML('beforebegin',`<div class="scanpick" style="grid-column:1/-1"><b>${ps.lang==='JP'?'🇯🇵 Japanische Karte':'Karte ('+ps.lang+')'}: ${esc(ps.name||'')} ${esc(ps.number||'')}</b><p class="muted small"><span id="tdxHint">Suche in TCGdex…</span></p><button type="button" class="chip" id="manScan">➕ Manuell hinzufügen</button></div>`)}
  if(data.length){R.insertAdjacentHTML('beforeend',`<h3 class="small" style="grid-column:1/-1">🇬🇧 Englisch · Cardmarket-Preise (${data.length})</h3>`);for(const c of data)R.append(enTile(c))}
  head.textContent='';
  const box=document.createElement('div');box.style.cssText='display:contents';box.innerHTML='<p class="muted small" style="grid-column:1/-1" id="tdxWait">Weitere Sprachen werden geladen…</p>';R.append(box);
@@ -578,10 +578,10 @@ const imgU=(u,sz='low')=>!u?'':/\.(jpe?g|png|webp|gif)(\?.*)?$/i.test(u)?u:u+'/'
 async function jpHit(r){if(!window.Prices||r.lang!=='JP')return null;const num=String(r.number||'').replace(/^0+/,'')||null;
  for(const n of [r.jp,r.name,r.en].filter(Boolean)){try{const c=await Prices.lookup(n,'ja',r.set||null,num);if(c&&c.id&&(!num||String(c.localId||'').replace(/^0+/,'')===num))return c}catch(e){}}
  try{const L=await Prices.suggest(r.jp||r.name,'ja',60)||[];const c=L.find(c=>String(c.id).startsWith('jp:')&&(!r.set||sidOf(c.id).toLowerCase()===String(r.set).toLowerCase())&&(!num||String(c.localId||'').replace(/^0+/,'')===num));if(c)return{id:c.id,name:c.name,localId:c.localId,set:c.set,image:c.img}}catch(e){}return null}
-function scanResult(r){window.lastScan=r;const st=$('#scanStatus2');
+function scanResult(r){window.lastScan=r;$('#scanbox')?.classList.add('hasres');const st=$('#scanStatus2');
  st.textContent=`Erkannt: ${r.name||'?'}${r.jp?' ('+r.jp+')':''} · Nr. ${r.full||r.number||'?'}${r.lang?' · '+r.lang:''}`;
  if(r.confident&&(r.number||r.energy)&&r.lang!=='JP'){$('#scanPick').hidden=true;applyScan(r,r.lang)}else if(r.lang==='JP'&&r.name){const t=st.textContent;st.textContent='⏳ Suche japanische Karte…';jpHit(r).then(h=>{r.hit=h;st.textContent=t;scanPick(r)})}else scanPick(r)}
-async function handleFile(f){window.scanLang='';window.pendingScan=null;window.lastScan=null;const st=$('#scanStatus2');$('#scanPick').hidden=true;$('#scanPick').innerHTML='';st.textContent='';const lt=$('#liveText');if(lt)lt.textContent='';const ss=$('#scanStatus');if(ss)ss.textContent='';
+async function handleFile(f){$('#scanbox')?.classList.remove('hasres');window.scanLang='';window.pendingScan=null;window.lastScan=null;const st=$('#scanStatus2');$('#scanPick').hidden=true;$('#scanPick').innerHTML='';st.textContent='';const lt=$('#liveText');if(lt)lt.textContent='';const ss=$('#scanStatus');if(ss)ss.textContent='';
  if(!f){st.textContent='Kein Bild ausgewählt.';return}
  if(!window.Tesseract){st.textContent='❌ Texterkennung nicht geladen – Internet prüfen und neu laden.';return}
  $('#scanbox').classList.add('busy');
