@@ -260,8 +260,10 @@ $('#tGetAdd').onclick=()=>{const n=prompt('Name der Karte:');if(!n)return;const 
 // Scan / OCR
 const LANGS=['DE','EN','JP','FR','IT','ES','PT','KR','CN'];
 function detectLang(t){if(/[\u3040-\u30ff]/.test(t))return'JP';if(/[\uac00-\ud7af]/.test(t))return'KR';if(/[\u4e00-\u9fff]/.test(t))return'CN';
- const T=t.toLowerCase(),k={DE:/schw[aä]che|r[uü]ckzug|resistenz|f[aä]higkeit|entwickelt/,FR:/faiblesse|retraite|r[ée]sistance|talent/,IT:/debolezza|ritirata|resistenza|abilit/,ES:/debilidad|retirada|resistencia|habilidad/,PT:/fraqueza|recuo|habilidade/,EN:/weakness|retreat|resistance|ability|evolves/};
- for(const[l,r]of Object.entries(k))if(r.test(T))return l;return''}
+ const T=t.toLowerCase(),k={DE:/schw[aä]che|r[uü]ckzug|resistenz|f[aä]higkeit|entwickelt|basis-pok|\bkp\b|angriff/g,EN:/weakness|retreat( cost)?|\bresistance\b|ability|evolves|basic pok|\bhp\b|damage|pok[ée]mon power|illus/g,FR:/faiblesse|retraite|r[ée]sistance|talent|[ée]volue|\bpv\b|d[ée]g[aâ]ts|pok[ée]mon de base/g,IT:/debolezza|ritirata|resistenza|abilit|\bps\b|si evolve/g,ES:/debilidad|retirada|resistencia|habilidad|evoluciona/g,PT:/fraqueza|recuo|habilidade|evolui/g};
+ // Treffer zählen; 'resistance' zählt nicht für FR (nur mit Akzent oder weiteren FR-Wörtern)
+ const sc={};for(const[l,r]of Object.entries(k))sc[l]=(T.match(r)||[]).length;sc.FR-=(T.match(/\bresistance\b/g)||[]).length;
+ let best='',bv=0;for(const l of ['DE','EN','FR','IT','ES','PT'])if(sc[l]>bv){bv=sc[l];best=l}return best}
 function applyScan(r,lang){window.scanLang=lang||'';window.pendingScan={name:r.name,jp:r.jp,number:r.full||r.number,set:r.set,lang};$('#scanStatus').textContent=`Scan erkannt: ${r.name||'?'} ${r.number?'· Nr. '+r.number:''}${lang?' · Sprache '+lang:''}`;
  $('#qName').value=r.name||'';$('#qNum').value=r.energy?'':(r.number||'');go('v-search');search(r.name,r.energy?'':r.number,'',r.setId||'')}
 const JPN={'ミュウツー':'Mewtwo','ミュウ':'Mew','リザードン':'Charizard','リザード':'Charmeleon','ヒトカゲ':'Charmander','ピカチュウ':'Pikachu','ライチュウ':'Raichu','ピチュー':'Pichu','ゲンガー':'Gengar','ゴースト':'Haunter','ゴース':'Gastly','ブラッキー':'Umbreon','イーブイ':'Eevee','エーフィ':'Espeon','シャワーズ':'Vaporeon','サンダース':'Jolteon','ブースター':'Flareon','リーフィア':'Leafeon','グレイシア':'Glaceon','ニンフィア':'Sylveon','フシギバナ':'Venusaur','フシギダネ':'Bulbasaur','カメックス':'Blastoise','ゼニガメ':'Squirtle','カイリュー':'Dragonite','カビゴン':'Snorlax','ルギア':'Lugia','ホウオウ':'Ho-Oh','レックウザ':'Rayquaza','ルカリオ':'Lucario','ギャラドス':'Gyarados','フーディン':'Alakazam','ピッピ':'Clefairy','プリン':'Jigglypuff','ラプラス':'Lapras','メタモン':'Ditto','サンダー':'Zapdos','ファイヤー':'Moltres','フリーザー':'Articuno','スイクン':'Suicune','セレビィ':'Celebi','ジラーチ':'Jirachi','ダークライ':'Darkrai','アルセウス':'Arceus','ゲッコウガ':'Greninja','ミミッキュ':'Mimikyu','サーナイト':'Gardevoir','ガブリアス':'Garchomp','バンギラス':'Tyranitar','ウインディ':'Arcanine','コダック':'Psyduck','ニャース':'Meowth','ポッチャマ':'Piplup','ヒノアラシ':'Cyndaquil','ワニノコ':'Totodile','チコリータ':'Chikorita','ミロカロス':'Milotic','パルキア':'Palkia','ディアルガ':'Dialga','ギラティナ':'Giratina','ザシアン':'Zacian','テラパゴス':'Terapagos','マリル':'Marill','ヤドン':'Slowpoke','ガルーラ':'Kangaskhan','カイロス':'Pinsir','ストライク':'Scyther','エンテイ':'Entei','ライコウ':'Raikou','グラードン':'Groudon','カイオーガ':'Kyogre'};
@@ -339,6 +341,14 @@ async function readNumber(src){const w=await getW('num');const re=/(\d{1,3})\s*\
   for(const mm of (data.text||'').matchAll(re)){const v=mm[1]+'/'+mm[2];if(mm[1].length===mm[2].length)return mm[1].replace(/^0+(?=\d)/,'')+'/'+mm[2];weak||=v}}
  return weak?{weak}:''}
 // Gesamtanalyse: Text (DE/EN), bei Kana/schwacher Erkennung Japanisch, Nummer aus unterem Streifen
+// Karten mit gleicher Nummer + Gesamtzahl holen; Name nehmen, wenn sein Grundname im OCR-Text steht
+async function setNameCheck(num,lang,txt,name){const[a0,t0]=num.split('/');const tot=+t0,n=String(+a0);const sets=(SETS||[]).filter(s=>s.printedTotal===tot).slice(0,8);if(!sets.length)return null;
+ const T=nrm(txt),lg=(lang||'DE').toLowerCase().replace('jp','ja');const C=[];
+ await Promise.all(sets.map(async s=>{for(const L of [lg,'en']){try{const c=await wto(Prices.lookup('',L,s.id,n),6000,'t');if(c&&c.name){C.push({name:c.name,setId:s.id,setName:s.name,lg:L});break}}catch(e){}}}));
+ window.setChkDbg=C.map(c=>c.setId+':'+c.name);if(!C.length)return null;
+ const base=x=>nrm(String(x).replace(/[-\s]*(VMAX|VSTAR|V-UNION|V|GX|EX|ex|BREAK)$/,''));
+ const hit=C.find(c=>base(c.name)===base(name))||C.find(c=>base(c.name).length>=4&&T.includes(base(c.name)))||(C.length===1&&!name?C[0]:null);
+ if(!hit)return null;let nm=hit.name;if(hit.lg==='en'&&lg!=='en'){try{nm=deName(nm)||nm}catch(e){}}return{...hit,name:nm}}
 async function analyze(src,st=()=>{}){const t0=performance.now();const orig=src;src=cardCrop(src);let jpSet='';window.energyHue=hueType(src);st('Name & Nummer werden gelesen…');
  // parallel: Name-Streifen oben (JP + DE/EN) und Nummer-Streifen unten – keine Ganzkarten-OCR, solange das reicht
  const top=cropC(src,.15,.04,.65,.12,3,'dark'),topG=cropC(src,0,.02,1,.12,2);
@@ -372,11 +382,15 @@ async function analyze(src,st=()=>{}){const t0=performance.now();const orig=src;
  let name=jp?(jp.de||jp.en):'',confident=!!jp&&!numWeak,weak=false;
  if(energy){name='Basic '+energy+' Energy';confident=true}
  else if(!jp&&!kana&&p.name&&p.name.length>=3&&(latin||conf>=65)){name=deName(p.name);confident=!!number&&!numWeak&&(conf>=55||name!==p.name||latin);if(nrm(name).length<=5&&!(conf>=75&&nrm(p.name)===nrm(name))&&!/energ/i.test(name)&&conf<45){confident=false;weak=true}}
- if(!name&&p.name&&!kana)name=deName(p.name);window.scanMs=Math.round(performance.now()-t0);
+ if(!name&&p.name&&!kana)name=deName(p.name);
+ // Name gegen Set mit passender Gesamtzahl prüfen (z.B. 44/185 → Farbenschock: Pikachu VMAX)
+ if(!energy&&!jp&&lang!=='JP'&&number&&number.includes('/')&&window.Prices){try{st('Name wird mit Set abgeglichen…');const sn=await setNameCheck(number,lang,text+'\n'+numTxt,name);if(sn){name=sn.name;if(!sc)sc={id:sn.setId,name:sn.setName,tdx:sn.setId,total:+number.split('/')[1]};confident=true;numWeak=false;weak=false}}catch(e){console.warn('setNameCheck',e)}}
+ if(name&&!/\b(VMAX|VSTAR|V|GX|EX|ex)$/.test(name)){const tt=text.replace(/\n/g,' ');if(/\bv[mn]?[a-z]?ax\b/i.test(tt)&&/vmax|vinax|vmnax|v-max/i.test(tt))name+=' VMAX';else if(/\bvstar\b/i.test(tt))name+=' VSTAR'}
+ window.scanMs=Math.round(performance.now()-t0);
  if((jp||kana)&&lang!=='JP')lang='JP';
  return{name,en:jp&&jp.en,jp:jp&&jp.jp,weak,number:(number||'').split('/')[0],full:number,lang,confident,energy:!!energy,setId:lang==='JP'?'':(sc&&sc.id||''),set:lang==='JP'?(jpSet||setCode(text+'\n'+numTxt)):sc?(sc.tdx||sc.name):setCode(text+'\n'+numTxt),raw:text,conf:Math.round(conf),ms:window.scanMs}}
 // Sprache bei lateinischer Schrift (nie JP)
-function langLatin(t){const l=detectLang(t.replace(/[\u3040-\u9fff\uac00-\ud7af]/g,''));if(l)return l;if(/\b(BASIS|PHASE|ENERGIE|Energie|Entwickelt|KP)\b/.test(t))return'DE';if(/\b(BASIC|STAGE|ENERGY|Energy|HP)\b/.test(t))return'EN';return'DE'}
+function langLatin(t){if(/\b\d{2,3}\s*HP\b|\bHP\s*\d{2,3}\b/.test(t)&&!/\bKP\b/.test(t)&&!/schw[aä]che|r[uü]ckzug|faiblesse|debolezza|debilidad/i.test(t))return'EN';const l=detectLang(t.replace(/[\u3040-\u9fff\uac00-\ud7af]/g,''));if(l)return l;if(/\b(BASIS|PHASE|ENERGIE|Energie|Entwickelt|KP)\b/.test(t))return'DE';if(/\b(BASIC|STAGE|ENERGY|Energy|HP)\b/.test(t))return'EN';return'DE'}
 // Müll-Namen (z.B. 'dhs') verwerfen
 function okName(x){const l=(x.match(/[A-Za-zÄÖÜäöüßé]/g)||[]).length;if(l<3||!/[aeiouyäöüé]/i.test(x))return false;if(x===x.toLowerCase()&&l<4)return false;return true}
 // Fuzzy-Korrektur gegen DE/EN-Namensliste (OCR-Verwechsler kosten weniger)
@@ -443,18 +457,18 @@ function scanPick(r){const P=$('#scanPick');P.hidden=false;const noNum=r.name&&!
  const v=()=>({name:$('#spName').value,number:$('#spNum').value,set:$('#spSet').value,lang:$('#spLang').value});
  $('#spGo').onclick=()=>{const x=v();P.hidden=true;applyScan({name:x.name,jp:r.jp,number:x.number.split('/')[0],full:x.number,set:x.set,setId:ptcgId(x.set)},x.lang)};
  const G=$('#spGrid');let gT=0,gN=0;
- async function grid(){const n=++gN,name=$('#spName').value.trim();if(name.length<3||!window.Prices){G.innerHTML='';return}G.innerHTML='<p class="muted small">Lädt Karten…</p>';
+ async function grid(user){const n=++gN,name=$('#spName').value.trim();if(name.length<3||!window.Prices){G.innerHTML='';return}G.innerHTML='<p class="muted small">Lädt Karten…</p>';
   let lang=($('#spLang').value||'DE').toLowerCase();if(lang==='jp')lang='ja';let L=[];
   const get=async(q,lg)=>Prices.suggest?(await Prices.suggest(q,lg,60)||[]).map(c=>({id:c.id,localId:c.localId,name:c.name,image:(c.img||'').replace(/\/(low|high)\.webp$/,'')})).filter(c=>c.image):(await Prices.search(q,lg)||[]).filter(c=>c.image);
   const swg=setWant($('#spSet').value),setL=[];if(swg.length){for(const sid of swg)for(const lg of [lang,'en']){try{const j=await (await fetch('https://api.tcgdex.net/v2/'+lg+'/sets/'+encodeURIComponent(sid))).json();const q=nrm(name);(j.cards||[]).forEach(c=>{const nn=nrm(c.name);if(c.image&&q&&(nn.startsWith(q)||q.startsWith(nn))&&!setL.some(x=>x.id===c.id))setL.push({id:c.id,localId:c.localId,name:c.name,image:c.image})})}catch(e){}if(setL.length)break}}
   try{L=await get(name,lang);if(!L.length&&lang!=='en'&&!Prices.suggest)L=await get(name,'en');if(!L.length&&name.length>2)L=await get(name.slice(0,2),lang)}catch(e){}
-  L=setL.concat(L.filter(c=>!setL.some(x=>x.id===c.id)));if(n!==gN)return;if(!L.length){G.innerHTML='<p class="muted small">Keine Bilder gefunden</p>';return}
+  L=setL.concat(L.filter(c=>!setL.some(x=>x.id===c.id)));if(n!==gN)return;if(!L.length){G.innerHTML=user?'<p class="muted small">Keine Bilder gefunden</p>':'';return}
   const SR=['me','sv','swsh','sm','xy','bw','hgss','pl','dp','ex','ecard','neo','gym','base'],sr=c=>{const i=SR.indexOf((c.image.match(/\/[a-z]{2}\/([^/]+)\//)||[])[1]);return i<0?SR.length:i};const sw=setWant($('#spSet').value),inS=c=>{const sid=sidOf(c.id).toLowerCase();return sw.length&&sw.includes(sid)?0:1};L=L.map((c,i)=>[c,i]).sort((x,y)=>inS(x[0])-inS(y[0])||sr(x[0])-sr(y[0])||y[1]-x[1]).map(x=>x[0]).slice(0,40);G.innerHTML=swg.length&&!setL.length&&!L.some(c=>inS(c)===0)?`<p class="muted small" style="grid-column:1/-1">Im Set „${esc($('#spSet').value)}“ ist keine Karte „${esc(name)}“ in der Datenbank – ähnliche Karten:</p>`:'';
   for(const c of L){const sid=sidOf(c.id),b=document.createElement('button');b.type='button';b.className='spThumb';
    b.innerHTML=`<img loading="lazy" src="${esc(imgU(c.image))}" alt=""><span>${esc(sid)} · ${esc(c.localId)}</span>`;
    b.onclick=()=>{$('#spNum').value=c.localId;$('#spSet').value=sid;$('#spGo').click()};G.append(b)}}
  if(r.name&&(!r.number||!r.confident||jpNF))grid();
- $('#spName').addEventListener('input',()=>{clearTimeout(gT);gT=setTimeout(grid,400)});$('#spSet').addEventListener('input',()=>{clearTimeout(gT);gT=setTimeout(grid,400)});
+ $('#spName').addEventListener('input',()=>{clearTimeout(gT);gT=setTimeout(()=>grid(true),400)});$('#spSet').addEventListener('input',()=>{clearTimeout(gT);gT=setTimeout(()=>grid(true),400)});
  $('#spNoNum').onclick=()=>{const x=v();P.hidden=true;applyScan({name:x.name,jp:r.jp,number:'',set:x.set},x.lang);window.pendingScan.number=x.number};
  $('#spMan').onclick=()=>{const x=v();manualAdd({...x,name:r.jp&&x.name===r.name?`${x.name} (${r.jp})`:x.name,img:r.hit?imgU(r.hit.image,'high'):''})};
  $('#spX').onclick=()=>P.hidden=true;

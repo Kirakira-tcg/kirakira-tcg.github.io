@@ -204,3 +204,9 @@ html,body{max-width:100%;overflow-x:clip}
 .jpbadge[data-s=SV]{background:linear-gradient(135deg,#8b5cf6,#4c1d95)}
 .jpbadge[data-s=M],.jpbadge[data-s=ENE]{background:linear-gradient(135deg,#0ea5e9,#0c4a6e)}
 .set img.jpcover[src*="serebii.net/card/logo/"]{width:100%;max-width:140px;object-fit:contain;box-shadow:none;border-radius:0}
+/* v45: Scan-UI – kein leerer Sucher ohne Kamera, Bilder im Scan-Ergebnis begrenzt */
+.scanbox:not(.live) .camwrap{display:none}
+#scanPick img:not(.spThumb img),#scanbox>img,#scanbox .scanres img{max-width:160px;width:100%;height:auto;aspect-ratio:63/88;object-fit:contain}
+.jphit img{max-width:160px}
+.spThumb img{width:100%;height:auto;aspect-ratio:63/88;object-fit:contain}
+input.vh[type=file]{position:absolute!important;width:1px!important;height:1px!important;opacity:0!important;pointer-events:none!important;overflow:hidden!important}
