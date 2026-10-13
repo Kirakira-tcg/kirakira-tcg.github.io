@@ -38,16 +38,20 @@ function count(el,v){const from=last.get(el)??0;last.set(el,v);const fmt=n=>{con
  if(RM||Math.abs(v-from)<.005){el.textContent=fmt(v);return}const t0=performance.now(),d=900;
  (function step(t){const k=Math.min(1,(t-t0)/d),e=1-Math.pow(1-k,3);el.textContent=fmt(from+(v-from)*e);if(k<1)requestAnimationFrame(step);else{el.classList.remove('pop');void el.offsetWidth;el.classList.add('pop')}})(t0)}
 // Booster-Reveal
-function reveal(it){const L=document.getElementById('fxLayer');if(!L)return;const ty=((it.types||[])[0]||'none').toLowerCase(),col=TC[ty]||TC.none;
+let rvClose=null;
+function reveal(it){const L=document.getElementById('fxLayer');if(!L)return;if(rvClose)rvClose(true);const ty=((it.types||[])[0]||'none').toLowerCase(),col=TC[ty]||TC.none;
  const img=(it.img||'').replace('/small','/large')||it.img;
- L.innerHTML=`<div class="rv" style="--tc:${col}"><div class="rv-rays"></div>
+ L.innerHTML=`<div class="rv" style="--tc:${col}" role="dialog" aria-label="Neue Karte"><div class="rv-rays"></div><button type="button" class="rv-x" aria-label="Schließen">✕</button>
  <div class="pack"><div class="pack-top"></div><div class="pack-body"><svg viewBox="0 0 64 64" width="70" height="70"><path d="M32 6l7 15 16 2-12 11 3 17-14-8-14 8 3-17L9 23l16-2z" fill="#fff" opacity=".95"/></svg><b>NEUE KARTE</b><small>Tippen zum Öffnen</small></div></div>
  <div class="rv-card"><div class="dcard">${img?`<img src="${esc(img)}" alt="">`:`<div class="rv-ph">${esc(it.name)}</div>`}<i class="holo"></i></div><div class="rv-name">${esc(it.name)}</div><div class="rv-price">${money(it.price)}</div><button type="button" class="primary rv-ok">Super!</button></div>
  <div class="sparks">${Array.from({length:18},(_,i)=>`<i style="--a:${i*20}deg;--d:${80+Math.random()*90}px"></i>`).join('')}</div></div>`;
  const rv=L.firstChild;L.classList.add('on');requestAnimationFrame(()=>rv.classList.add('in'));
  const open=()=>{if(rv.classList.contains('open'))return;rv.classList.add('open');navigator.vibrate?.([30,40,60])};
- rv.querySelector('.pack').onclick=open;if(RM)open();
- rv.querySelector('.rv-ok').onclick=()=>{rv.classList.add('out');setTimeout(()=>{L.classList.remove('on');L.innerHTML=''},RM?0:350)}}
+ let done=false;const key=e=>{if(e.key==='Escape'||e.key==='Esc'){e.preventDefault();close()}};
+ let tm=setTimeout(()=>close(),4000);
+ function close(now){if(done)return;done=true;clearTimeout(tm);document.removeEventListener('keydown',key,true);rv.onclick=null;rvClose=null;rv.classList.add('out');const fin=()=>{if(L.firstChild===rv){L.classList.remove('on');L.innerHTML=''}};if(now||RM)fin();else setTimeout(fin,350)}
+ rvClose=close;document.addEventListener('keydown',key,true);
+ rv.onclick=e=>{const t=e.target;if(t.closest('.rv-x,.rv-ok'))return close();if(t.closest('.pack')){clearTimeout(tm);tm=setTimeout(()=>close(),4000);return open()}if(t.closest('.rv-card .dcard,.rv-name,.rv-price'))return;close()};if(RM)open()}
 // Binder-Ansicht für Sets
 function binder(R,set){const tiles=[...R.children];if(!tiles.length)return;const per=9,pages=Math.ceil(tiles.length/per);let pg=0;
  const wrap=document.createElement('div');wrap.className='binder';
@@ -62,4 +66,4 @@ function binder(R,set){const tiles=[...R.children];if(!tiles.length)return;const
  R.innerHTML='';R.append(wrap);show(0)}
 // Mikro-Interaktion: Tipp-Ripple
 document.addEventListener('pointerdown',e=>{const b=e.target.closest('button,.chip,.set');if(!b||RM)return;b.classList.remove('tap');void b.offsetWidth;b.classList.add('tap')},{passive:true});
-return{reveal,count,binder,gyro,TC}})();
+return{reveal,closeReveal:()=>rvClose&&rvClose(),count,binder,gyro,TC}})();
