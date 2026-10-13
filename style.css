@@ -445,3 +445,6 @@ body:has(#addToast:not([hidden])) .scantray .trayall{bottom:calc(var(--navh,72px
 .flipL,.flipR{animation-duration:.3s!important}
 @media(prefers-reduced-motion:reduce){.bflipwrap{display:none}.bin-prev,.flipL,.flipR{animation:none!important}}
 @media(min-width:900px){.bpage{grid-template-columns:repeat(6,minmax(0,1fr))!important}}
+/* v119: Update-Banner als Overlay – schiebt das Layout nicht mehr nach unten */
+body.hasupd main{padding-top:0!important}
+#updBanner{position:fixed!important;left:50%;transform:translateX(-50%);top:calc(var(--hdrh,64px) + 6px);width:min(94vw,520px);border-radius:12px;box-shadow:0 6px 20px rgba(0,0,0,.45)}

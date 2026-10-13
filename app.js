@@ -1,3 +1,17 @@
+// v119: früh benötigte Konstanten (vor dem ersten render(); vorher TDZ-Fehler bei vorhandener Sammlung)
+var OwnPhoto=(()=>{const DB='kartenapp_photos',ST='photos';let dbp=null;const U=new Map();
+ const db=()=>dbp||(dbp=new Promise((ok,no)=>{if(!window.indexedDB)return no(new Error('kein IndexedDB'));const r=indexedDB.open(DB,1);r.onupgradeneeded=()=>{if(!r.result.objectStoreNames.contains(ST))r.result.createObjectStore(ST)};r.onsuccess=()=>ok(r.result);r.onerror=()=>no(r.error)}).catch(e=>{dbp=null;throw e}));
+ const tx=async(m,f)=>{const d=await db();return new Promise((ok,no)=>{const t=d.transaction(ST,m),r=f(t.objectStore(ST));t.oncomplete=()=>ok(r&&r.result);t.onerror=()=>no(t.error)})};
+ const key=(id,lang)=>String(id)+'|'+String(lang||'DE').toUpperCase();
+ function snap(){const c=window.mSrcBest;if(!c||!c.width)return null;const k=Math.min(1,600/Math.max(c.width,c.height)),o=document.createElement('canvas');o.width=Math.round(c.width*k);o.height=Math.round(c.height*k);o.getContext('2d').drawImage(c,0,0,o.width,o.height);return o}
+ async function put(id,lang,cv){if(!id||!cv)return false;const blob=await new Promise(r=>cv.toBlob(r,'image/jpeg',.8));if(!blob)return false;const k=key(id,lang);await tx('readwrite',s=>s.put({blob,w:cv.width,h:cv.height,t:Date.now(),cardId:String(id),lang:String(lang||'DE').toUpperCase(),src:'scan'},k));const u=U.get(k);if(u)URL.revokeObjectURL(u);U.delete(k);return true}
+ async function url(id,lang){if(!id)return null;const k=key(id,lang);if(U.has(k))return U.get(k);let v=null;try{v=await tx('readonly',s=>s.get(k))}catch(e){}const u=v&&v.blob?URL.createObjectURL(v.blob):null;U.set(k,u);return u}
+ async function del(id,lang){const k=key(id,lang);await tx('readwrite',s=>s.delete(k));const u=U.get(k);if(u)URL.revokeObjectURL(u);U.delete(k)}
+ return{DB,ST,key,snap,put,url,del}})();window.OwnPhoto=OwnPhoto;
+let NAVIGN=0;const navSt=()=>history.state||{};
+const SORTK=v=>'kartenapp_sort_'+v;
+const RAR=['common','uncommon','rare','holo','reverse','double','ultra','illustration','special','hyper','secret','shiny','amazing','radiant','promo'];
+const rarRank=t=>{t=String(t||'').toLowerCase();if(!t)return-1;let r=0;RAR.forEach((k,i)=>{if(t.includes(k))r=Math.max(r,i+1)});return r};
 // Scan-Prefetch: kurzlebiger GET-Cache für TCGdex-Anfragen (nur Transport, Preislogik unverändert)
 (()=>{const C=new Map(),f0=window.fetch.bind(window),TTL=6e5;window.fetch=(u,o)=>{const s=typeof u==='string'?u:(u&&u.url)||'';if(!/^https:\/\/api\.tcgdex\.net\/v2\//.test(s)||(o&&o.method&&o.method!=='GET')||(typeof u!=='string'&&u&&u.method&&u.method!=='GET'))return f0(u,o);
  const e=C.get(s);if(e&&Date.now()-e.t<TTL)return e.p.then(r=>r.clone());const p=f0(s,o&&o.headers?{headers:o.headers}:undefined).then(r=>{if(!r.ok)C.delete(s);return r},err=>{C.delete(s);throw err});C.set(s,{p,t:Date.now()});if(C.size>400)C.delete(C.keys().next().value);
@@ -486,7 +500,7 @@ function render(){{const real=S.collection,es=$('#emptyStart');if(es){es.hidden=
  const pts=series(tf);const ch=pts.length>=2?pts.at(-1).v-pts[0].v:0;const chp=pts.length>=2&&pts[0].v?ch/pts[0].v*100:0;
  const sc=$('#sumChg');sc.className='chg '+cls(ch);sc.textContent=`${ch>=0?'▲ +':'▼ '}${money(Math.abs(ch))} (${chp.toFixed(1).replace('.',',')} %)`;if(window._pLoad){sc.textContent='…';sc.className='chg'}
  const C=S.collection.map(c=>({c,ch:itemChange(c,tf)}));
- const mk=(x,list)=>{const c=x.c;const el=tile({upd:itDate(c),src:c.estimate?'Schätzung':c.ownPrice!=null?'eigen':(c.tdx&&c.tdx.src)||'',type:c.types&&c.types[0],img:c.img,name:c.name,sub:`${c.set||''} ${c.number||''} · ${c.lang}`,price:c.price,chg:x.ch,badge:c.type==='sealed'?'SEALED':/PSA|CGC|BGS|Graded/.test(c.cond)?c.cond:c.lang==='JP'?'JP':'',qty:c.qty});el.onclick=()=>detail({item:c,list});if(!c.img&&(c.tdxId||c.apiId)&&!c._imgTry){c._imgTry=1;const lg0=String(c.lang||'de').toLowerCase(),id0=c.tdxId||c.apiId;Prices.byId(id0,lg0).then(async x=>{let en=false;if(!(x&&x.image)&&lg0!=='en'&&!String(id0).startsWith('jp:')){x=await Prices.byId(id0,'en').catch(()=>null);en=true}if(x&&x.image){c.img=x.image;if(en)c.imgEn=true;delete c._imgTry;save();const im=el.querySelector('.im');if(im){im.style.backgroundImage=`url('${x.image}')`;const sv=im.querySelector('svg');sv&&sv.remove();if(en&&!el.querySelector('.imgnote'))im.insertAdjacentHTML('afterend','<div class="imgnote">Bild: englische Version</div>')}}}).catch(()=>{})}if(c.imgEn&&!el.querySelector('.imgnote')){const im=el.querySelector('.im');im&&im.insertAdjacentHTML('afterend','<div class="imgnote">Bild: englische Version</div>')}if(!safeImg(c.img))phTile(el,c);return el};
+ const mk=(x,list)=>{const c=x.c;const el=tile({upd:itDate(c),src:c.estimate?'Schätzung':c.ownPrice!=null?'eigen':(c.tdx&&c.tdx.src)||'',type:c.types&&c.types[0],img:c.img,name:c.name,sub:`${c.set||''} ${c.number||''} · ${c.lang}`,price:c.price,chg:x.ch,badge:c.type==='sealed'?'SEALED':/PSA|CGC|BGS|Graded/.test(c.cond)?c.cond:c.lang==='JP'?'JP':'',qty:c.qty});el.onclick=()=>detail({item:c,list});if(!c.img&&(c.tdxId||c.apiId)&&!c._imgTry){c._imgTry=1;const lg0=String(c.lang||'de').toLowerCase(),id0=c.tdxId||c.apiId;Prices.byId(id0,lg0).then(async x=>{let en=false;if(!(x&&x.image)&&lg0!=='en'&&!String(id0).startsWith('jp:')){x=await Prices.byId(id0,'en').catch(()=>null);en=true}if(x&&x.image){c.img=x.image;if(en)c.imgEn=true;delete c._imgTry;save();const im=el.querySelector('.im');if(im){im.style.backgroundImage=`url('${x.image}')`;const sv=im.querySelector('svg');sv&&sv.remove();if(en&&!el.querySelector('.imgnote'))im.insertAdjacentHTML('afterend','<div class="imgnote">Bild: englische Version</div>')}}}).catch(()=>{})}if(c.imgEn&&!el.querySelector('.imgnote')){const im=el.querySelector('.im');im&&im.insertAdjacentHTML('afterend','<div class="imgnote">Bild: englische Version</div>')}if(!safeImg(c.img))try{phTile(el,c)}catch(e){}return el};
  const top=$('#topList');top.innerHTML='';{const G=new Map();for(const x of C){const c=x.c,k=[c.tdxId||c.apiId||'',c.name,c.set,c.number,c.lang,c.cond||'',c.variant||''].join('|');const e=G.get(k);if(e){e.n+=c.qty||1}else G.set(k,{x,n:c.qty||1})}
  [...G.values()].sort((a,b)=>(b.x.c.price||0)-(a.x.c.price||0)).slice(0,8).forEach(({x,n})=>{const el=mk(x,'collection');if(n>1){el.querySelector('.qty')?.remove();el.insertAdjacentHTML('beforeend',`<span class="qty">×${n}</span>`)}top.append(el)})}
  const tr=$('#trendList');tr.innerHTML='';const T=C.filter(x=>x.ch!=null).sort((a,b)=>Math.abs(b.ch)-Math.abs(a.ch)).slice(0,8);
@@ -670,7 +684,7 @@ window.setCardMatcher=m=>{if(m&&typeof m.match==='function')window.CardMatcher=O
 // Scores der Fingerabdrücke bleiben maßgeblich, Modell-Kandidaten liegen immer unter jeder Übernahme-Schwelle (≤0,44) -> keine eigene Auto-Übernahme
 (function(){const B=new URL('model/',document.baseURI).href,ORT='https://cdn.jsdelivr.net/npm/onnxruntime-web@1.30.0/dist/';let P=null,fail=0;
  const js=u=>new Promise((ok,no)=>{const s=document.createElement('script');s.src=u;s.async=true;s.crossOrigin='anonymous';s.onload=ok;s.onerror=()=>no(new Error('Laden fehlgeschlagen: '+u));document.head.append(s)});
- function ready(){if(window.cardModelOk)return Promise.resolve(true);if(fail&&Date.now()-fail<60e3)return Promise.resolve(false);return P||(P=(async()=>{if(!window.ort)await js(ORT+'ort.wasm.min.js');ort.env.wasm.wasmPaths=ORT;ort.env.wasm.numThreads=1;ort.env.logLevel='error';if(!window.CardModel)await js(B+'cardmodel.js?v=116');await CardModel.init({base:B,model:'model_fp16.onnx'});window.cardModelOk=true;return true})().catch(e=>{console.warn('Kartenmodell nicht geladen:',e&&e.message||e);fail=Date.now();P=null;return false}))}
+ function ready(){if(window.cardModelOk)return Promise.resolve(true);if(fail&&Date.now()-fail<60e3)return Promise.resolve(false);return P||(P=(async()=>{if(!window.ort)await js(ORT+'ort.wasm.min.js');ort.env.wasm.wasmPaths=ORT;ort.env.wasm.numThreads=1;ort.env.logLevel='error';if(!window.CardModel)await js(B+'cardmodel.js?v=119');await CardModel.init({base:B,model:'model_fp16.onnx'});window.cardModelOk=true;return true})().catch(e=>{console.warn('Kartenmodell nicht geladen:',e&&e.message||e);fail=Date.now();P=null;return false}))}
  async function match(c,o={}){const fp=fpMatch(c,o).catch(()=>[]);if(!window.cardModelOk){ready();return fp}
   let M=[];try{M=await CardModel.match(c,{setIds:o.setIds,lang:o.lang,limit:Math.min(o.limit||5,50)})}catch(e){M=[]}
   const F=(await fp)||[],seen=new Set(F.map(x=>x.cardId));for(const f of F){const m=M.find(x=>x.cardId===f.cardId);if(m)f.model=m.score}
@@ -1386,15 +1400,7 @@ setInterval(async()=>{const v=$('#liveVideo');if(!window.LIVEVOTE||LV.busy||!liv
 // v118: eigenes Scan-Foto – PRIVAT, nur lokal (IndexedDB), nie hochgeladen/synchronisiert, nie in Teilen/Export/öffentlichen Ansichten, nie Training.
 // DB 'kartenapp_photos' (Version 1), Object Store 'photos', Schlüssel `${cardId}|${LANG}` (cardId wie it.tdxId/apiId, z.B. 'M6a-137'; LANG groß: DE/EN/JP…)
 // Wert: {blob: Blob image/jpeg (~600 px lange Seite, Qualität 0,8), w, h, t: Zeitstempel ms, cardId, lang, src:'scan'}
-const OwnPhoto=(()=>{const DB='kartenapp_photos',ST='photos';let dbp=null;const U=new Map();
- const db=()=>dbp||(dbp=new Promise((ok,no)=>{if(!window.indexedDB)return no(new Error('kein IndexedDB'));const r=indexedDB.open(DB,1);r.onupgradeneeded=()=>{if(!r.result.objectStoreNames.contains(ST))r.result.createObjectStore(ST)};r.onsuccess=()=>ok(r.result);r.onerror=()=>no(r.error)}).catch(e=>{dbp=null;throw e}));
- const tx=async(m,f)=>{const d=await db();return new Promise((ok,no)=>{const t=d.transaction(ST,m),r=f(t.objectStore(ST));t.oncomplete=()=>ok(r&&r.result);t.onerror=()=>no(t.error)})};
- const key=(id,lang)=>String(id)+'|'+String(lang||'DE').toUpperCase();
- function snap(){const c=window.mSrcBest;if(!c||!c.width)return null;const k=Math.min(1,600/Math.max(c.width,c.height)),o=document.createElement('canvas');o.width=Math.round(c.width*k);o.height=Math.round(c.height*k);o.getContext('2d').drawImage(c,0,0,o.width,o.height);return o}
- async function put(id,lang,cv){if(!id||!cv)return false;const blob=await new Promise(r=>cv.toBlob(r,'image/jpeg',.8));if(!blob)return false;const k=key(id,lang);await tx('readwrite',s=>s.put({blob,w:cv.width,h:cv.height,t:Date.now(),cardId:String(id),lang:String(lang||'DE').toUpperCase(),src:'scan'},k));const u=U.get(k);if(u)URL.revokeObjectURL(u);U.delete(k);return true}
- async function url(id,lang){if(!id)return null;const k=key(id,lang);if(U.has(k))return U.get(k);let v=null;try{v=await tx('readonly',s=>s.get(k))}catch(e){}const u=v&&v.blob?URL.createObjectURL(v.blob):null;U.set(k,u);return u}
- async function del(id,lang){const k=key(id,lang);await tx('readwrite',s=>s.delete(k));const u=U.get(k);if(u)URL.revokeObjectURL(u);U.delete(k)}
- return{DB,ST,key,snap,put,url,del}})();window.OwnPhoto=OwnPhoto;
+
 function phId(it){return it&&(it.tdxId||it.apiId||(it.tdx&&it.tdx.id))||''}
 // Kachel ohne offizielles Bild: eigenes Foto statt Platzhalter, markiert 'eigenes Foto'
 function phTile(el,it){const id=phId(it);if(!id)return;OwnPhoto.url(id,it.lang).then(u=>{if(!u||!el.isConnected)return;const im=el.querySelector('.im,.cgim');
@@ -1411,7 +1417,7 @@ function cgTile(c,own,X={}){const p=cmPrice(c),ci=cmInfo(c),ch=ci&&ci.avg7&&p?(p
  if(X.price)X.price(el);else cmSync(c).then(ok=>{if(!ok)return;const b=el.querySelector('.cgp b');if(b)b.textContent=money(cmPrice(c))}).catch(()=>{});
  if(own&&!img){const it=S.collection.find(x=>x.apiId===c.id||x.tdxId===c.id);if(it)phTile(el,it)}return el}
 // v118: Navigation Suche → Set → Karte mit history.pushState (Zurück-Taste/Wischgeste geht eine Ebene hoch), Suchtext + Scrollposition werden wiederhergestellt
-let NAVIGN=0;const navSt=()=>history.state||{};
+
 function navBackBtn(){return navSt().lv==='set'?'<button type="button" class="navback" aria-label="Zurück" onclick="history.back()">←</button>':''}
 function navSet(setId){const q=[$('#qName').value,$('#qNum').value,($('#qSet')||{}).value||''];if(navSt().lv==='set')history.replaceState({lv:'set',setId,back:navSt().back},'');else{history.replaceState({...navSt(),lv:'search',q,y:scrollY},'');history.pushState({lv:'set',setId},'')}}
 {const D0=detail;detail=function(o){const r=D0.apply(this,arguments);const dlg=$('#dlg');if(dlg&&dlg.open&&!dlg._card){dlg._card=true;if(navSt().lv!=='card')history.pushState({lv:'card',up:navSt()},'');
@@ -1425,10 +1431,9 @@ addEventListener('popstate',e=>{if(NAVIGN>0){NAVIGN--;return}const d=$('#dlg'),s
   const y=s.y||0,sc=()=>scrollTo(0,y);if(q[0]||q[1]){Promise.resolve(search(q[0],q[1],q[2])).finally(()=>setTimeout(sc,60))}else{R.innerHTML='';requestAnimationFrame(sc)}}});
 
 // v118: Sortierung + Filter für Set-Ansicht und Suchergebnisse (pro Ansicht in localStorage, bleibt beim Zurückgehen erhalten)
-const SORTK=v=>'kartenapp_sort_'+v;
-function sortGet(v){try{return Object.assign({s:v==='set'?'num':'rel',p:false,o:'all'},JSON.parse(localStorage.getItem(SORTK(v))||'{}'))}catch(e){return{s:v==='set'?'num':'rel',p:false,o:'all'}}}
-const RAR=['common','uncommon','rare','holo','reverse','double','ultra','illustration','special','hyper','secret','shiny','amazing','radiant','promo'];
-const rarRank=t=>{t=String(t||'').toLowerCase();if(!t)return-1;let r=0;RAR.forEach((k,i)=>{if(t.includes(k))r=Math.max(r,i+1)});return r};
+
+function sortGet(v){const d={s:v==='set'?'num':'rel',p:false,o:'all'};let x=null;try{x=JSON.parse(localStorage.getItem(SORTK(v))||'null')}catch(e){}if(!x||typeof x!=='object')return d;const S0=['rel','num','pa','pd','name','rar'];return{s:S0.includes(x.s)&&!(v==='set'&&x.s==='rel')?x.s:d.s,p:x.p===true,o:['all','have','miss'].includes(x.o)?x.o:'all'}}
+
 function tInfo(el){const pb=el.querySelector('.cgp b,.p b'),pt=pb?pb.textContent:'',m=pt.match(/(\d[\d.]*,\d{2})\s*€/),num=el.dataset.num||((el.querySelector('.cgr,.s')||{}).textContent||'').match(/(?:^|[ #·•])#?([A-Za-z]{0,4}\d+[a-z]?)(?:\/|\s|$)/)?.[1]||'';
  return{p:m?parseFloat(m[1].replace(/\./g,'').replace(',','.')):null,n:((el.querySelector('.cgn,.n')||{}).textContent||'').replace(/^(✓\s*)?(#\S+\s+)?/,'').trim(),num,r:rarRank(el.dataset.rar||(el.querySelector('.cgr')||{}).textContent),own:el.classList.contains('owned')||/BESITZ/.test((el.querySelector('.badge')||{}).textContent||'')}}
 function sortApply(R,v){const o=sortGet(v);const tiles=[...R.querySelectorAll(':scope > .tile, :scope > div > .tile')];tiles.forEach((t,i)=>{if(t.dataset.i==null)t.dataset.i=i});
