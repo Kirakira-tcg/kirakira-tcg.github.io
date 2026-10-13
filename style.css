@@ -382,4 +382,6 @@ body:has(#addToast:not([hidden])) .scantray .trayall{bottom:calc(var(--navh,72px
 
 .nmbtns{display:flex;gap:8px}.nmbtns>*{flex:1}.spThumb.nmsel{outline:3px solid #ffcf3f;outline-offset:2px}.nmok{display:block;font-style:normal;font-weight:700;color:#ffcf3f;font-size:.85em}
 
-.nmgrid.nmweak .spThumb{opacity:.6}.nmbg{margin:.2em 0}
+.nmgrid.nmweak .spThumb{opacity:.6}.nmbg{margin:.4em 0;padding:.6em .8em;border-radius:12px;background:rgba(255,207,63,.15);border:1px solid #ffcf3f;font-weight:700;display:flex;align-items:center;gap:.6em}.nmspin{width:18px;height:18px;flex:none;border:3px solid #ffcf3f;border-top-color:transparent;border-radius:50%;animation:nmsp 0.8s linear infinite}@keyframes nmsp{to{transform:rotate(360deg)}}
+
+.nmbg.nmfail{background:rgba(255,90,90,.15);border-color:#ff6b6b}
