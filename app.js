@@ -642,7 +642,13 @@ $('#exportBtn').onclick=()=>{const a=document.createElement('a');a.href=URL.crea
 $('#importFile').onchange=async e=>{try{const d=JSON.parse(await e.target.files[0].text());if(!d.collection)throw 0;S=d;S.snapshots??=[];S.wishlist??=[];S.settings??={cur:'EUR',tf:30};S.trade??={give:[],get:[]};save();render();alert('Import erfolgreich')}catch(x){alert('Ungültige Datei')}};
 $('#resetBtn').onclick=()=>{if(confirm('Wirklich alle Daten löschen?')){localStorage.removeItem(K);S=load();S.settings={cur:'EUR',tf:30};S.trade={give:[],get:[]};save();render()}};
 
-if('serviceWorker' in navigator)navigator.serviceWorker.register('sw.js').catch(()=>{});
+if('serviceWorker' in navigator){const had=!!navigator.serviceWorker.controller;let rl=false;
+ navigator.serviceWorker.register('sw.js',{updateViaCache:'none'}).then(r=>{r.update().catch(()=>{});document.addEventListener('visibilitychange',()=>{if(!document.hidden)r.update().catch(()=>{})})}).catch(()=>{});
+ navigator.serviceWorker.addEventListener('controllerchange',()=>{if(had&&!rl&&!sessionStorage.getItem('swrl')){rl=true;sessionStorage.setItem('swrl','1');location.reload()}})}
+// Version sichtbar (aus sw.js gelesen)
+(async()=>{let v='';try{const t=await (await fetch('sw.js',{cache:'no-store'})).text();v=(t.match(/kartenapp-(v\d+)/)||[])[1]||''}catch(e){}
+ if(!v&&window.caches){try{v=((await caches.keys()).find(k=>/^kartenapp-v\d+$/.test(k))||'').replace('kartenapp-','')}catch(e){}}
+ if(v){const el=document.createElement('div');el.id='appVer';el.textContent='Kartenapp '+v;el.style.cssText='position:fixed;right:6px;bottom:calc(env(safe-area-inset-bottom,0px) + 74px);font-size:10px;opacity:.45;pointer-events:none;z-index:5';document.body.append(el);setTimeout(()=>sessionStorage.removeItem('swrl'),5000)}})();
 S.collection.forEach(trackPrice);snapshot();render();refreshPrices();loadSets();
 
 // ===== Scan-Status groß oben + im Kamerarahmen =====
