@@ -190,3 +190,15 @@ nav .scanNav i{background:linear-gradient(135deg,var(--ac),#ff8a5c);color:#fff;b
 html,body{max-width:100%;overflow-x:clip}
 .jphit{display:flex;gap:12px;align-items:center;margin:8px 0;text-align:left}.jphit img{width:110px;aspect-ratio:63/88;object-fit:contain;border-radius:8px;box-shadow:0 4px 14px rgba(0,0,0,.4)}
 .chip.on{background:var(--ac);color:#fff}
+.set .jplogo{height:40px;width:auto;object-fit:contain}
+.jpbadge{display:inline-flex;align-items:center;justify-content:center;min-width:56px;height:40px;padding:0 8px;border-radius:8px;font:800 15px/1 system-ui,sans-serif;letter-spacing:.5px;color:#fff;background:linear-gradient(135deg,#64748b,#334155);box-shadow:inset 0 0 0 2px rgba(255,255,255,.25);margin-right:6px;vertical-align:middle}
+.jpbadge[data-s=PMCG],.jpbadge[data-s=VS],.jpbadge[data-s=WEB]{background:linear-gradient(135deg,#f59e0b,#b45309)}
+.jpbadge[data-s=NEO]{background:linear-gradient(135deg,#a855f7,#6b21a8)}
+.jpbadge[data-s=E]{background:linear-gradient(135deg,#14b8a6,#0f766e)}
+.jpbadge[data-s=ADV],.jpbadge[data-s=PCG]{background:linear-gradient(135deg,#ef4444,#991b1b)}
+.jpbadge[data-s=L],.jpbadge[data-s=LL]{background:linear-gradient(135deg,#eab308,#854d0e)}
+.jpbadge[data-s=XY]{background:linear-gradient(135deg,#3b82f6,#1e3a8a)}
+.jpbadge[data-s=SM]{background:linear-gradient(135deg,#f97316,#9a3412)}
+.jpbadge[data-s=CS],.jpbadge[data-s=CSA]{background:linear-gradient(135deg,#dc2626,#1f2937)}
+.jpbadge[data-s=SV]{background:linear-gradient(135deg,#8b5cf6,#4c1d95)}
+.jpbadge[data-s=M],.jpbadge[data-s=ENE]{background:linear-gradient(135deg,#0ea5e9,#0c4a6e)}

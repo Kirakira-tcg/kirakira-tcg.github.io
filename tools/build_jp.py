@@ -30,6 +30,7 @@ for s in sorted({r[0] for r in rows}):
     t=get(f"https://api.tcgdex.net/v2/ja/sets/{urllib.parse.quote(s)}")
     if t is None:miss[s]=s
     print(s,"404" if t is None else "ok",file=sys.stderr)
+lh=""
 try:
     lh=get("https://limitlesstcg.com/cards/jp") or ""
     for sid,nm in re.findall(r'href="/cards/jp/([A-Za-z0-9-]+)"><img class="set"[^>]*>\s*([^<]+?)\s*<',lh):
@@ -40,5 +41,17 @@ for r in rows:
     k=(r[0],r[1] or r[4])
     if r[0] in miss and k not in seen:seen.add(k);out.append(r)
 out.sort(key=lambda r:(r[0],int(r[1] or 9999),r[4]))
-json.dump({"v":1,"base":IMG,"sets":miss,"c":out},sys.stdout,ensure_ascii=False,separators=(",",":"))
+# Set-Symbole (Limitless) fuer alle JP-Sets (TCGdex + fehlende), nur verifizierte Bild-URLs
+LB="https://s3.limitlesstcg.com/sets/jp/";logos={}
+try:
+    ids=list(miss)+[x["id"] for x in json.loads(get("https://api.tcgdex.net/v2/ja/sets") or "[]")]
+    lim={a.lower():b for a,b in re.findall(r'href="/cards/jp/([^"]+)"><img class="set"[^>]*src="([^"]+)"',lh)}
+    def ok(u):
+        try:return urllib.request.urlopen(urllib.request.Request(u,method="HEAD",headers={"User-Agent":"Mozilla/5.0"}),timeout=20).headers.get("content-type","").startswith("image")
+        except Exception:return False
+    for i in dict.fromkeys(ids):
+        u=lim.get(i.lower())
+        if u and u.startswith(LB) and ok(u):logos[i]=u[len(LB):]
+except Exception:pass
+json.dump({"v":1,"base":IMG,"sets":miss,"logoBase":LB,"logos":logos,"c":out},sys.stdout,ensure_ascii=False,separators=(",",":"))
 print(len(out),"cards",file=sys.stderr)

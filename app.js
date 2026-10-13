@@ -100,7 +100,7 @@ async function renderJpSets(){const L=$('#setList');if(!window.Prices||!Prices.j
  const f=$('#setFilter').value.toLowerCase();L.innerHTML='';const fl=JPSETL.filter(s=>!f||(s.id+' '+s.name).toLowerCase().includes(f));
  if(!fl.length){L.innerHTML='<p class="muted small">Keine Sets gefunden.</p>';return}
  for(const s of fl.slice(0,80)){const d=document.createElement('div');d.className='set';
-  d.innerHTML=`${s.logo?`<img loading="lazy" src="${esc(s.logo)}.webp" alt="">`:''}<b>${esc(s.id)}</b> ${esc(s.name)}<br><span class="muted">${s.count} Karten${s.src==='jp'?' · neu (pokemon-card.com)':''}</span>`;
+  d.innerHTML=`${s.logo?`<img class="jplogo" loading="lazy" src="${esc(s.logo)}" alt="" onerror="this.replaceWith(Object.assign(document.createElement('span'),{className:'jpbadge',textContent:this.dataset.c}))" data-c="${esc(s.id)}">`:`<span class="jpbadge" data-s="${esc((s.id.match(/^[A-Za-z]+/)||[''])[0].toUpperCase())}">${esc(s.id)}</span>`}<b>${esc(s.id)}</b> ${esc(s.name)}<br><span class="muted">${s.count} Karten${s.src==='jp'?' · neu (pokemon-card.com)':''}</span>`;
   d.onclick=()=>jpSetCardsView(s);L.append(d)}}
 async function jpSetCardsView(s){window.pendingScan=null;const R=$('#results');R.classList.remove('binder-src');R.innerHTML='<p class="muted">Lade Karten…</p>';window.scrollTo(0,0);
  let cs=[];try{cs=await Prices.jpSetCards(s.id)}catch(e){}
