@@ -14,9 +14,11 @@ const money=n=>{if(n==null||isNaN(n))return'–';const u=S.settings.cur==='USD';
 const pct=n=>n==null||!isFinite(n)?'':(n>=0?'▲ +':'▼ ')+n.toFixed(1).replace('.',',')+' %';
 const cls=n=>n==null?'muted':n>=0?'pos':'neg';
 const esc=s=>String(s??'').replace(/[&<>"]/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;'}[c]));
-function load(){try{const d=JSON.parse(localStorage.getItem(K));if(d){const bad=/^https?:\/\/([^/]*\.)?(pokemon-card\.com|snkrdunk\.com|tcgplayer\.com|serebii\.net|pokeca\.net)\//i;for(const k of ['collection','wishlist'])for(const it of d[k]||[])if(it&&bad.test(it.img||''))it.img='';return d}}catch(e){}
+// v105: pokemontcg.io-IDs ohne ptcg-Daten (me*, z.B. me55-152) auf TCGdex-IDs umstellen (30th-152), sonst 404 bei TCGdex
+function normIds(it){try{const P=window.Prices;if(!P||!P.tdxId)return;if(it.tdxId)it.tdxId=P.tdxId(it.tdxId);if(it.tdx&&it.tdx.id)it.tdx.id=P.tdxId(it.tdx.id);if(it.setId)it.setId=P.tdxSet(it.setId);if(it.apiId&&/^me\d/.test(it.apiId)){const t=P.tdxId(it.apiId);if(!it.tdxId)it.tdxId=t;delete it.apiId}}catch(e){}}
+function load(){try{const d=JSON.parse(localStorage.getItem(K));if(d){const bad=/^https?:\/\/([^/]*\.)?(pokemon-card\.com|snkrdunk\.com|tcgplayer\.com|serebii\.net|pokeca\.net)\//i;for(const k of ['collection','wishlist'])for(const it of d[k]||[]){if(it&&bad.test(it.img||''))it.img='';if(it)normIds(it)}return d}}catch(e){}
  return {collection:[{uid:'ex1',manual:true,name:'Glurak (30th Celebration, JP)',set:'30th Celebration (JP)',number:'',lang:'JP',cond:'NM',qty:1,buy:0,price:140,note:'≈ 23.120 ¥',img:''}],
-  wishlist:[{uid:'ex2',apiId:'me55-152',name:'Mew ex',set:'30th Celebration',number:'152',lang:'DE',target:60,price:null,img:'https://images.scrydex.com/pokemon/me55-152/small'}],snapshots:[]}}
+  wishlist:[{uid:'ex2',tdxId:'30th-152',name:'Mew ex',set:'30th Celebration',number:'152',lang:'DE',target:60,price:null,img:''}],snapshots:[]}}
 function save(){localStorage.setItem(K,JSON.stringify(S))}
 const uid=()=>Date.now().toString(36)+Math.random().toString(36).slice(2,6);
 const today=()=>new Date().toISOString().slice(0,10);
@@ -260,7 +262,7 @@ $('#setFilter').oninput=()=>SETTAB==='ja'?renderJpSets():renderSets();
 
 // Zweite Preisquelle (prices.js / TCGdex): Fallback bei fehlendem Preis oder nicht-englischer Karte
 // 1st Edition im Detail: nur wenn TCGdex variants.firstEdition
-async function fedInit(f,c){try{const id=String(c.id).replace(/^jp:.*/,'');if(!id)return;const lg=(c._lang||'EN').toLowerCase()==='jp'?'ja':(c._lang||'EN').toLowerCase();
+async function fedInit(f,c){try{let id=String(c.id).replace(/^jp:.*/,'');if(!id)return;if(window.Prices&&Prices.tdxId)id=Prices.tdxId(id);const lg=(c._lang||'EN').toLowerCase()==='jp'?'ja':(c._lang||'EN').toLowerCase();
  let d=null;for(const l of [...new Set([lg,'en'])]){const r=await fetch(`https://api.tcgdex.net/v2/${l}/cards/${encodeURIComponent(id)}`,{signal:AbortSignal.timeout(8000)});if(r.ok){d=await r.json();break}}
  if(!d||!d.variants||!d.variants.firstEdition||!f.isConnected)return;
  const tp=(d.pricing&&d.pricing.tcgplayer)||{},k=Object.keys(tp).find(x=>/1st/i.test(x)),o=k&&tp[k],val=o&&(o.marketPrice??o.midPrice??o.lowPrice);let eur=null;

@@ -16,9 +16,13 @@ function cget(k,ttl){const m=mem.get(k);if(m&&Date.now()-m.t<ttl)return m.v;cons
 function cset(k,v){const e={t:Date.now(),v};mem.set(k,e);load().c[k]=e;save()}
 async function getJSON(u){const r=await fetch(u,{signal:AbortSignal.timeout(8000)});if(r.status===404)return null;if(!r.ok)throw new Error('TCGdex '+r.status);return r.json()}
 const normLang=l=>{l=(l||'de').toLowerCase();if(l==='jp')l='ja';return LANGS.includes(l)?l:'en'};
-// pokemontcg.io-Set-IDs -> TCGdex (sv1->sv01, sv3pt5->sv03.5, swsh12pt5->swsh12.5, swsh45->swsh4.5, me1->me01)
-const tdxSet=s=>{s=String(s||'');let m;if((m=s.match(/^(sv|me)(\d)(pt5)?$/)))return m[1]+'0'+m[2]+(m[3]?'.5':'');if((m=s.match(/^(swsh|sm|xy|bw)(\d+)pt5$/)))return m[1]+m[2]+'.5';if(s==='swsh45')return'swsh4.5';return s};
-const tdxId=id=>{const m=String(id||'').match(/^(.*)-([^-]+)$/);return m?tdxSet(m[1])+'-'+m[2]:id};
+// pokemontcg.io-Set-IDs -> TCGdex (sv1->sv01, sv3pt5->sv03.5, swsh12pt5->swsh12.5, swsh45->swsh4.5, me1->me01, me55->30th)
+// v105: Sonder-IDs gegen beide Set-Listen geprüft (api.pokemontcg.io/v2/sets vs api.tcgdex.net/v2/en/sets)
+const TDX_SET={me55:'30th',me55c:'30th-c',base6:'lc',hsp:'hgssp',bp:'bog',fut20:'fut2020',pgo:'swsh10.5',cel25c:'cel25cc',swsh45sv:'swsh4.5sv',swsh12pt5gg:'swsh12.5gg',zsv10pt5:'sv10.5b',rsv10pt5:'sv10.5w',sm35:'sm3.5',sm75:'sm7.5',swsh35:'swsh3.5',swsh45:'swsh4.5',tk1a:'tk-ex-latia',tk1b:'tk-ex-latio',tk2a:'tk-ex-p',tk2b:'tk-ex-m',mcd11:'2011bw',mcd12:'2012bw',mcd14:'2014xy',mcd15:'2015xy',mcd16:'2016xy',mcd17:'2017sm',mcd18:'2018sm',mcd19:'2019sm',mcd21:'2021swsh',mcd22:'2022swsh'};
+const tdxSet=s=>{s=String(s||'');if(TDX_SET[s])return TDX_SET[s];let m;if((m=s.match(/^(sv|me)(\d)(pt5)?$/)))return m[1]+'0'+m[2]+(m[3]?'.5':'');if((m=s.match(/^(sv|me)(\d\d)pt5$/)))return m[1]+m[2]+'.5';if((m=s.match(/^(swsh|sm|xy|bw)(\d+)pt5$/)))return m[1]+m[2]+'.5';return s};
+// TCGdex schreibt Nummern bei SV/ME/30th dreistellig (sv01-086, 30th-005, 30th-c-001), sonst ungepolstert (swsh1-1)
+const tdxPad=s=>/^(sv|me|30th)/.test(s);
+const tdxId=id=>{const m=String(id||'').match(/^(.*)-([^-]+)$/);if(!m)return id;let s=m[1],n=m[2];const t=tdxSet(s);if(tdxPad(t)&&/^\d+$/.test(n))n=n.padStart(3,'0');return t+'-'+n};
 const pad3=n=>String(n).replace(/^0+/,'').padStart(3,'0');
 
 async function rate(cur){cur=(cur||'EUR').toUpperCase();if(cur==='EUR')return{rate:1,fallback:false};
