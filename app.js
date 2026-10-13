@@ -945,7 +945,7 @@ async function shareRender(){const W=1080,H=1350,cv=document.createElement('canv
    else{g.font=`800 34px ${F}`;g.fillStyle='#fff';g.textAlign='center';const words=String(c.name).split(/\s+/);let line='',ly=y+ch/2-30;for(const wd of words){if(g.measureText(line+' '+wd).width>cw-30&&line){g.fillText(line,x+cw/2,ly);ly+=42;line=wd}else line=(line?line+' ':'')+wd}g.fillText(line,x+cw/2,ly);g.font=`500 26px ${F}`;g.fillStyle='#c9c3e6';g.fillText(`${c.set||''} ${c.number||''}`.trim().slice(0,22),x+cw/2,ly+44)}
    txt(String(c.name).slice(0,20),x+cw/2,y+ch+44,30,'#ffffff','700','center');txt(money(c.price),x+cw/2,y+ch+86,34,'#ffd84d','800','center')}}
  txt('Kartenapp',80,H-150,44,'#ffffff','900');txt('jayezhdtwitch.github.io/kartenapp',80,H-108,28,'#c9c3e6','500');
- txt('Inoffizielles Fanprojekt, keine Verbindung zu Nintendo/The Pokémon Company · Preise ohne Gewähr',W/2,H-44,22,'#8f88b5','500','center');txt('Pokémon und zugehörige Namen/Bilder © Nintendo, Creatures, GAME FREAK, The Pokémon Company',W/2,H-16,22,'#8f88b5','500','center');
+ txt('Inoffizielles Fanprojekt, keine Verbindung zu Nintendo/The Pokémon Company · Preise ohne Gewähr',W/2,H-46,19,'#8f88b5','500','center');txt('Pokémon und zugehörige Namen/Bilder © Nintendo, Creatures, GAME FREAK, The Pokémon Company',W/2,H-20,19,'#8f88b5','500','center');
  return await new Promise(r=>cv.toBlob(r,'image/png'))}
 window.shareRender=shareRender;
 {const b=$('#shareBtn');if(b){const upd=()=>{b.hidden=!S.collection.length};upd();const r0=render;render=function(){const x=r0.apply(this,arguments);upd();return x};
