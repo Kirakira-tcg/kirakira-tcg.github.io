@@ -321,3 +321,7 @@ body{padding-bottom:calc(var(--navh,72px) + env(safe-area-inset-bottom,0px) + 20
 .appver{font-size:10px;opacity:.5;text-align:center;margin-top:2px}
 a.plink{position:relative}a.plink::after{content:'';position:absolute;left:-6px;right:-6px;top:50%;height:44px;transform:translateY(-50%)}
 #qNum{min-width:5.4rem!important;width:5.8rem!important}
+#scanBanner{pointer-events:none}
+.scantray .trayall{position:fixed;left:max(12px,env(safe-area-inset-left));right:max(12px,env(safe-area-inset-right));bottom:calc(var(--navh) + 18px);width:auto;max-width:520px;margin:0 auto;z-index:40}
+.scantray:not([hidden]){margin-bottom:96px}
+.scanbox.live~* .trayall,.scanbox.live .trayall{display:none}
