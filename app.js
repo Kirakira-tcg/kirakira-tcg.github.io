@@ -42,6 +42,9 @@ let filt='all';$$('#filt button').forEach(b=>b.onclick=()=>{filt=b.dataset.f;$$(
 $('#sort').onchange=render;
 
 // Suche
+// Neue manuelle Eingabe: alten Scan-Zustand (Hinweis, Nummer, Sprache) verwerfen
+$('#qName').addEventListener('input',e=>{if(!e.isTrusted||!window.pendingScan)return;window.pendingScan=null;window.scanLang='';const st=$('#scanStatus');if(st)st.textContent='';$('#qNum').value=''});
+['#qName','#qNum'].forEach(id=>$(id).addEventListener('keydown',e=>{if(e.key==='Enter'&&!e.isComposing){e.preventDefault();$('#searchForm').requestSubmit?$('#searchForm').requestSubmit():$('#searchForm').onsubmit(new Event('submit'))}}));
 $('#searchForm').onsubmit=e=>{e.preventDefault();if(window.pendingScan&&$('#qName').value!==pendingScan.name)window.pendingScan=null;if(!window.pendingScan)window.scanLang='';search($('#qName').value,$('#qNum').value,$('#qSet').value)};
 let lastResults=[];
 // JP-Bilder (pokemon-card.com): bei Fehler ohne Referrer neu laden, dann snkrdunk-Bild aus jpprices.json
@@ -127,7 +130,7 @@ function enTile(c){const p=cmPrice(c);const ci=cmInfo(c);const ch=ci&&ci.avg7&&p
  cmSync(c).then(ok=>{if(!ok)return;const pb=el.querySelector('.p b');if(pb)pb.textContent=money(cmPrice(c))});el.onclick=()=>detail({api:c});const a=document.createElement('div');a.className='acts';a.innerHTML='<button>+ Sammlung</button><button>☆</button>';
  a.children[0].onclick=e=>{e.stopPropagation();addDialog(c,'coll')};a.children[1].onclick=e=>{e.stopPropagation();addDialog(c,'wish')};el.append(a);return el}
 const PIO=('IntersectionObserver' in window)?new IntersectionObserver(es=>es.forEach(e=>{if(e.isIntersecting){PIO.unobserve(e.target);e.target._ld&&e.target._ld()}}),{rootMargin:'200px'}):null;
-function tdxTile(c,load){const el=tile({img:c.img,name:c.name,sub:`${c.set.name} · ${c.localId} · ${c.lang==='ja'?'JP':c.lang.toUpperCase()}`,price:null,badge:owned(c.id)?'✓ BESITZ':''});
+function tdxTile(c,load){const el=tile({img:c.img,name:c.name,sub:`${c.set.name}${c.lang==='ja'&&c.set.id&&c.set.id!==c.set.name?' ('+c.set.id+')':''} · ${c.localId} · ${c.lang==='ja'?'JP':c.lang.toUpperCase()}`,price:null,badge:owned(c.id)?'✓ BESITZ':''});
  let pb=el.querySelector('.p b');if(!pb){const pd=document.createElement('div');pd.className='p';pd.innerHTML='<b></b>';el.append(pd);pb=pd.querySelector('b')}pb.textContent='…';
  const cmL=`<a class="plink" style="font-size:.7rem;padding:.05rem .4rem" href="https://www.cardmarket.com/de/Pokemon/Products/Search?searchString=${encodeURIComponent(c.name)}" target="_blank" rel="noopener" onclick="event.stopPropagation()">CM ↗</a>`;
  el._ld=()=>pool(()=>Prices.byId(c.id,c.lang)).then(async x=>{pb.innerHTML=x&&x.best?x.best.eur.toFixed(2).replace('.',',')+' €':'– '+cmL;if(!c.img&&c.lang!=='en'&&!String(c.id).startsWith('jp:')){const e=await pool(()=>Prices.byId(c.id,'en'));const u=(x&&x.image)||(e&&e.image);if(u){const im=el.querySelector('.im');if(im){im.style.backgroundImage=`url('${u.replace(/\/high\.webp$/,'/low.webp')}')`;const sv=im.querySelector('svg');sv&&sv.remove()}c.img=u.replace(/\/high\.webp$/,'/low.webp')}}});
