@@ -1122,3 +1122,49 @@ window.showToast=window.showToast||kaToast;
 function undoAdd(uids){S.collection=S.collection.filter(x=>!uids.includes(x.uid));save();snapshot();render()}
 if(window.FX&&FX.reveal){const _rv=FX.reveal;FX.reveal=function(it){const now=Date.now();ADDLOG.push(now);while(ADDLOG.length&&now-ADDLOG[0]>30000)ADDLOG.shift();const p=+(it&&it.price)||0;
  if(!window._bulkAdd&&ADDLOG.length<=1&&p>=20)return _rv.apply(this,arguments);const u=it&&it.uid;if(window.showAddedToast&&u){showAddedToast(u);return}kaToast(`✓ Hinzugefügt: ${it&&it.name||'Karte'}${p?' · '+money(p):''}`,u?()=>undoAdd([u]):null)}}
+// ── Bild-Vergleich für den Scan (Fingerabdrücke aus tools/build_fingerprints.py, nur Hashes – keine Bilder) ──
+// window.matchCardImage(canvas, {setIds?, lang?, limit=5}) -> Promise<[{cardId, score}]>
+//   canvas: Karte bereits gerade gezogen + zugeschnitten (Seitenverhältnis ~0,716, Hochformat), beliebige Größe
+//   setIds: optional Liste von Set-IDs (z.B. ['sv01'] / ['SV4a']) -> nur diese Shards (fp/<intl|ja>/<set>.json)
+//           ohne setIds: globaler Index fp/all-<intl|ja>.txt (1,8 MB / 0,35 MB, gzip ~0,9 MB, einmal geladen, dann im Speicher)
+//   lang: 'ja'|'jp' -> japanische Karten (IDs wie SV4a-115); sonst DE/EN (IDs wie sv01-086, 30th-023, wie getSetCards)
+//   Ergebnis: bestes zuerst, score 0..1 (1 = identisch). Test (verzerrte Handyfotos): richtige Treffer meist 0,55–0,87, Fremdkarten meist < 0,45.
+//   Reprints mit gleichem Artwork (z.B. sv01-086 / sv04.5-029) haben fast gleiche Scores -> Nummer/Set zum Entscheiden nutzen.
+//   Verglichen wird nur der Artwork-Bereich: x 8–92 %, y 11–53 % (Standardkarten; bei Full-Arts ist das ebenfalls Artwork).
+// window.matchCardImageReady(lang?, setIds?) -> Promise<boolean>: lädt die Daten vorab (z.B. beim Öffnen der Kamera).
+(()=>{const FPV=1,CROP=[0.08,0.11,0.92,0.53],N=32;
+ const fpBase=()=>new URL('fp/',document.baseURI).href;const LS={};
+ const fam=l=>/^(ja|jp)$/i.test(String(l||''))?'ja':'intl';
+ const parse=h=>{const a=new Uint32Array(4);for(let i=0;i<4;i++)a[i]=parseInt(h.substr(i*8,8),16)>>>0;const c=new Uint8Array(48);for(let i=0;i<48;i++)c[i]=parseInt(h[32+i],16);return{a,c}};
+ async function shard(f,sid){const k=f+'/'+sid;if(!LS[k])LS[k]=fetch(fpBase()+f+'/'+encodeURIComponent(sid)+'.json?v='+FPV).then(r=>r.ok?r.json():null).then(d=>d?d.c.map(([l,h])=>({id:sid+'-'+l,...parse(h)})):[]).catch(()=>{delete LS[k];return[]});return LS[k]}
+ async function all(f){const k='*'+f;if(!LS[k])LS[k]=fetch(fpBase()+'all-'+f+'.txt?v='+FPV).then(r=>r.ok?r.text():'').then(t=>t.split('\n').filter(Boolean).map(x=>{const i=x.indexOf(' ');return{id:x.slice(0,i),...parse(x.slice(i+1))}})).catch(()=>{delete LS[k];return[]});return LS[k]}
+ async function cands(o){const f=fam(o.lang);const S=(o.setIds||[]).filter(Boolean);if(!S.length)return all(f);
+  // Set-IDs ohne Groß/Klein-Gefahr: intl-Shards sind klein geschrieben wie TCGdex de/en
+  return (await Promise.all(S.map(s=>shard(f,String(s))))).flat()}
+ const DCT=(()=>{const m=new Float64Array(8*N);for(let u=0;u<8;u++)for(let x=0;x<N;x++)m[u*N+x]=Math.cos(Math.PI*(2*x+1)*u/(2*N));return m})();
+ function fpOf(cv){const W=cv.width,H=cv.height,sx=Math.round(CROP[0]*W),sy=Math.round(CROP[1]*H),sw=Math.round(CROP[2]*W)-sx,sh=Math.round(CROP[3]*H)-sy;
+  // erst auf 128x128 (geglättet), dann exaktes 4x4-Flächenmittel auf 32x32 (wie PIL BOX)
+  const c=document.createElement('canvas');c.width=c.height=128;const g=c.getContext('2d',{willReadFrequently:true});g.imageSmoothingEnabled=true;g.imageSmoothingQuality='high';
+  let src=cv;if(sw>512||sh>512){const t=document.createElement('canvas');t.width=256;t.height=256;const tg=t.getContext('2d');tg.imageSmoothingQuality='high';tg.drawImage(cv,sx,sy,sw,sh,0,0,256,256);src=t;g.drawImage(t,0,0,256,256,0,0,128,128)}else g.drawImage(cv,sx,sy,sw,sh,0,0,128,128);
+  const d=g.getImageData(0,0,128,128).data,R=new Float64Array(N*N),G=new Float64Array(N*N),B=new Float64Array(N*N);
+  for(let y=0;y<128;y++)for(let x=0;x<128;x++){const i=(y*128+x)*4,j=(y>>2)*N+(x>>2);R[j]+=d[i];G[j]+=d[i+1];B[j]+=d[i+2]}
+  const gr=new Float64Array(N*N);for(let j=0;j<N*N;j++){R[j]/=16;G[j]/=16;B[j]/=16;gr[j]=R[j]*0.299+G[j]*0.587+B[j]*0.114}
+  // pHash
+  const tmp=new Float64Array(8*N);for(let u=0;u<8;u++)for(let x=0;x<N;x++){let s=0;for(let y=0;y<N;y++)s+=DCT[u*N+y]*gr[y*N+x];tmp[u*N+x]=s}
+  const co=[];for(let u=0;u<8;u++)for(let v=0;v<8;v++){let s=0;for(let x=0;x<N;x++)s+=tmp[u*N+x]*DCT[v*N+x];co.push(s)}
+  const srt=co.slice(1).sort((a,b)=>a-b),med=(srt[31]+srt[32])/2;
+  const a=new Uint32Array(4);const setb=(k,b)=>{if(b)a[k>>5]|=(1<<(31-(k&31)))>>>0};co.forEach((v,k)=>setb(k,v>med));
+  // dHash auf 8x8-Blockmitteln
+  const m=new Float64Array(64);for(let y=0;y<N;y++)for(let x=0;x<N;x++)m[(y>>2)*8+(x>>2)]+=gr[y*N+x]/16;
+  for(let y=0;y<8;y++)for(let x=0;x<8;x++)setb(64+y*8+x,m[y*8+x]>m[y*8+((x+1)&7)]);
+  const cc=new Uint8Array(48);for(let by=0;by<4;by++)for(let bx=0;bx<4;bx++){let r=0,gg=0,b=0;for(let y=by*8;y<by*8+8;y++)for(let x=bx*8;x<bx*8+8;x++){const j=y*N+x;r+=R[j];gg+=G[j];b+=B[j]}const k=(by*4+bx)*3;cc[k]=Math.min(255,r/64)>>4;cc[k+1]=Math.min(255,gg/64)>>4;cc[k+2]=Math.min(255,b/64)>>4}
+  return{a,c:cc}}
+ const pc=x=>{x-=(x>>>1)&0x55555555;x=(x&0x33333333)+((x>>>2)&0x33333333);return(((x+(x>>>4))&0x0f0f0f0f)*0x01010101)>>>24};
+ function score(q,t){const ph=pc(q.a[0]^t.a[0])+pc(q.a[1]^t.a[1]),dh=pc(q.a[2]^t.a[2])+pc(q.a[3]^t.a[3]);
+  // Farbe: Kanal-Mittelwert-Verschiebung (Weißabgleich) herausrechnen
+  let s=[0,0,0];for(let i=0;i<48;i++)s[i%3]+=q.c[i]-t.c[i];s=s.map(v=>v/16);let cd=0;for(let i=0;i<48;i++)cd+=Math.abs(q.c[i]-t.c[i]-s[i%3]);
+  const v=1-(0.45*ph/32+0.25*dh/32+0.30*Math.min(1,cd/96));return Math.max(0,Math.min(1,v))}
+ window.matchCardImage=async function(canvas,o={}){const limit=o.limit||5;const C=await cands(o);if(!C.length||!canvas||!canvas.width)return[];const q=fpOf(canvas);
+  const top=[];for(const t of C){const s=score(q,t);if(top.length<limit||s>top[top.length-1].score){top.push({cardId:t.id,score:+s.toFixed(4)});top.sort((x,y)=>y.score-x.score);if(top.length>limit)top.pop()}}return top};
+ window.matchCardImageReady=async(lang,setIds)=>(await cands({lang,setIds})).length>0;
+ window._fpOf=fpOf})();
