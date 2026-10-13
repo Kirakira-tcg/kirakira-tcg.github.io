@@ -92,7 +92,10 @@ const CMS=new Map();function cmSync(c){if(!window.Prices||!c||c._tdx)return Prom
  c._sy=(CMS.has(c.id)?Promise.resolve(CMS.get(c.id)):pool(()=>Prices.byId(c.id,'en')).then(r=>{CMS.set(c.id,r);return r})).then(r=>{const cm=r&&r.prices&&r.prices.find(p=>/^Cardmarket/.test(p.source));if(!cm)return false;
   c.cardmarket={url:cm.url||(c.cardmarket&&c.cardmarket.url),prices:{trendPrice:cm.trend,avg1:cm.avg1,avg7:cm.avg7,avg30:cm.avg30,lowPrice:cm.low,averageSellPrice:cm.avg}};return true}).catch(()=>false);return c._sy}
 // Set-Reihenfolge (TCGdex en/sets ist chronologisch); Promo-Sets ans Ende
-let SETORD=null;const setOrd=()=>SETORD||(SETORD=fetch('https://api.tcgdex.net/v2/en/sets',{signal:AbortSignal.timeout(8000)}).then(r=>r.json()).then(L=>{const m={};L.forEach((x,i)=>m[x.id.toLowerCase()]=i);return m}).catch(()=>({})));
+let SETORD={};const isPocket=id=>/^(a\d+[a-z]?|b\d+[a-z]?|p-[ab])$/i.test(String(id||''));
+// Set-Rang nach Erscheinungsdatum (größer = neuer); JP: TCGdex ja + jpcards-Sets (Prices.jpSets, neueste zuerst)
+const setOrd=lg=>SETORD[lg]||(SETORD[lg]=(async()=>{const m={};try{const L=await (await fetch(`https://api.tcgdex.net/v2/${lg==='ja'?'ja':'en'}/sets?sort:field=releaseDate&sort:order=DESC`,{signal:AbortSignal.timeout(8000)})).json();L.forEach((x,i)=>m[x.id.toLowerCase()]=1e4-i*10)}catch(e){}
+ if(lg==='ja'&&window.Prices&&Prices.jpSets){try{const J=await Prices.jpSets();J.forEach((x,i)=>{const k=String(x.id).toLowerCase();if(m[k]==null){const nb=J.slice(0,i).reverse().find(y=>m[String(y.id).toLowerCase()]!=null);m[k]=nb?m[String(nb.id).toLowerCase()]-5:2e4-i}})}catch(e){}}return m})());
 const isPromo=id=>/(^|[^a-z])(svp|swshp|smp|xyp|bwp|dpp|np|hgssp|mep|basep|wp)$|promo|-p$/i.test(String(id||''));
 let SEARCHN=0;$('#results').addEventListener('click',e=>{if(e.target.closest('.bprev,.bnext'))$('#results').scrollIntoView({block:'start'})});
 const owned=id=>S.collection.some(x=>x.apiId===id||x.tdxId===id||(x.tdx&&x.tdx.id===id));
@@ -112,12 +115,12 @@ async function searchRender(R,data,apiErr,tdxP,o){R.classList.remove('binder-src
  head.textContent='';
  const box=document.createElement('div');box.style.cssText='display:contents';box.innerHTML='<p class="muted small" style="grid-column:1/-1" id="tdxWait">Weitere Sprachen werden geladen…</p>';R.append(box);
  const r=await tdxP;if(o.my!==SEARCHN||!box.isConnected)return;box.innerHTML='';
- let L=r.list||[];if(data.length)L=L.filter(c=>c.lang!=='en');
+ let L=(r.list||[]).filter(c=>!isPocket(c.set&&c.set.id));if(data.length)L=L.filter(c=>c.lang!=='en');
  const h=$('#tdxHint');if(h)h.textContent=L.length?`Treffer bei TCGdex${r.exact?'':' (Nummer nicht gefunden, alle Treffer zum Namen)'}.`:'Auch bei TCGdex nicht gefunden – manuell hinzufügen.';
  if(!L.length&&!data.length){head.innerHTML='Keine Karte gefunden. <button type="button" id="manScan2" class="chip">➕ Manuell hinzufügen</button>';bindMan(o.tdxName,o.num,o.set);return}
  bindMan(o.tdxName,o.num,o.set);
- const SO=await setOrd();if(o.my!==SEARCHN)return;const ord=[(r.lang||'de'),'de','en','ja'].filter((x,i,a)=>a.indexOf(x)===i);
- for(const lg of ord){const G=L.filter(c=>c.lang===lg).sort((a,b)=>{const sa=String(a.set.id).toLowerCase(),sb=String(b.set.id).toLowerCase(),oa=SO[sa]??-1,ob=SO[sb]??-1;return (o.setId?(sb===String(o.setId).toLowerCase())-(sa===String(o.setId).toLowerCase()):0)||(isPromo(sa)-isPromo(sb))||(ob-oa)||sa.localeCompare(sb)||numCmp(a.localId,b.localId)});if(!G.length)continue;
+ const SOS={de:await setOrd('en'),en:await setOrd('en'),ja:await setOrd('ja')};if(o.my!==SEARCHN)return;const ord=[(r.lang||'de'),'de','en','ja'].filter((x,i,a)=>a.indexOf(x)===i);
+ for(const lg of ord){const SO=SOS[lg]||{};const G=L.filter(c=>c.lang===lg).sort((a,b)=>{const sa=String(a.set.id).toLowerCase(),sb=String(b.set.id).toLowerCase(),oa=SO[sa]??-1,ob=SO[sb]??-1;return (o.setId?(sb===String(o.setId).toLowerCase())-(sa===String(o.setId).toLowerCase()):0)||(isPromo(sa)-isPromo(sb))||(ob-oa)||sa.localeCompare(sb)||numCmp(a.localId,b.localId)});if(!G.length)continue;
   box.insertAdjacentHTML('beforeend',`<h3 class="small" style="grid-column:1/-1">${LNAME[lg]||lg} (${G.length})${r.exact?'':''}</h3>`);G.forEach((c,i)=>box.append(tdxTile(c,i<12)))}}
 function enTile(c){const p=cmPrice(c);const ci=cmInfo(c);const ch=ci&&ci.avg7&&p?(p-ci.avg7)/ci.avg7*100:null;
  const el=tile({type:c.types&&c.types[0],img:c.images.small,name:c.name,sub:`${c.set.name} · ${c.number}/${c.set.printedTotal}`,price:p,chg:ch,badge:owned(c.id)?'✓ BESITZ':c.rarity&&/Special|Hyper|Secret|Illustration/i.test(c.rarity)?'SAR/SIR':''});
@@ -163,7 +166,7 @@ async function tdxResults(R,name,num,lang,append){const box=document.createEleme
    window.tdxPick={id:c.id,setId:c.set.id,price:pe,tdx:x&&x.best?{label:x.label,id:x.id,src:x.best.source,conv:x.best.umgerechnet,url:x.best.url}:{label:'kein Preis bei TCGdex',id:c.id}}};
   R.append(el)})}
 // Sets
-let SETS=[];async function loadSets(){try{const d=await api(`${API}/sets?orderBy=-releaseDate&pageSize=250&select=id,name,series,releaseDate,images,total,printedTotal,ptcgoCode`);SETS=d.data.map(s=>s.name==='Base'?{...s,name:'Base Set'}:s);if(SETTAB!=='ja')renderSets()}catch(e){try{const j=await (await fetch('https://api.tcgdex.net/v2/en/sets',{signal:AbortSignal.timeout(8000)})).json();SETS=j.reverse().map(x=>({id:x.id,name:x.name,series:'',releaseDate:'',total:x.cardCount&&x.cardCount.total||'',printedTotal:x.cardCount&&x.cardCount.official||'',images:{logo:x.logo?x.logo+'.png':''}}));if(SETTAB!=='ja')renderSets()}catch(_){$('#setList').innerHTML='<p class="muted small">Sets nicht ladbar.</p>'}}}
+let SETS=[];async function loadSets(){try{const d=await api(`${API}/sets?orderBy=-releaseDate&pageSize=250&select=id,name,series,releaseDate,images,total,printedTotal,ptcgoCode`);SETS=d.data.map(s=>s.name==='Base'?{...s,name:'Base Set'}:s);if(SETTAB!=='ja')renderSets()}catch(e){try{const j=await (await fetch('https://api.tcgdex.net/v2/en/sets',{signal:AbortSignal.timeout(8000)})).json();SETS=j.reverse().filter(x=>!isPocket(x.id)).map(x=>({id:x.id,name:x.name,series:'',releaseDate:'',total:x.cardCount&&x.cardCount.total||'',printedTotal:x.cardCount&&x.cardCount.official||'',images:{logo:x.logo?x.logo+'.png':''}}));if(SETTAB!=='ja')renderSets()}catch(_){$('#setList').innerHTML='<p class="muted small">Sets nicht ladbar.</p>'}}}
 function renderSets(){const f=$('#setFilter').value.toLowerCase();$('#setList').innerHTML='';
  for(const s of SETS.filter(s=>!f||(s.name+' '+s.series+' '+s.id+' '+(s.ptcgoCode||'')).toLowerCase().includes(f))){const d=document.createElement('div');d.className='set';
   d.innerHTML=`<img loading="lazy" src="${s.images.logo}" alt=""><b>${esc(s.name)}</b><br><span class="muted">${esc(s.series)} · ${s.total} Karten · ${(s.releaseDate||'').slice(0,4)}</span>`;
@@ -220,7 +223,7 @@ function attachSuggest(inp,onPick,getLang,anchor){if(!inp||!window.Prices||!Pric
  inp.setAttribute('autocomplete','off');
  inp.addEventListener('input',()=>{clearTimeout(t);const q=inp.value.trim();if(q.length<2){seq++;hide();return}
   t=setTimeout(async()=>{const my=++seq;let L=[];try{L=await Prices.suggest(q,(getLang&&getLang())||'de',24)}catch(e){}
-   if(my!==seq)return;if(!L.length){hide();return}
+   if(my!==seq)return;L=L.filter(c=>!isPocket(c.set&&c.set.id));if(!L.length){hide();return}
    box.innerHTML=L.map((c,i)=>`<button type="button" class="sugItem" data-i="${i}">${c.img?`<img src="${esc(c.img)}" alt="" loading="lazy">`:'<div class="sugNo">?</div>'}<b>${esc(c.name)}</b><span>${esc(c.set.name)} ${esc(c.localId)}</span></button>`).join('');box.hidden=false;
    box.querySelectorAll('.sugItem').forEach(b=>b.onclick=()=>{const c=L[+b.dataset.i];hide();onPick(c)})},300)});
  inp.addEventListener('keydown',e=>{if(e.key==='Escape')hide()});return{hide}}
