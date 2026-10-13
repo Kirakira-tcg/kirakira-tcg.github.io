@@ -448,3 +448,9 @@ body:has(#addToast:not([hidden])) .scantray .trayall{bottom:calc(var(--navh,72px
 /* v119: Update-Banner als Overlay – schiebt das Layout nicht mehr nach unten */
 body.hasupd main{padding-top:0!important}
 #updBanner{position:fixed!important;left:50%;transform:translateX(-50%);top:calc(var(--hdrh,64px) + 6px);width:min(94vw,520px);border-radius:12px;box-shadow:0 6px 20px rgba(0,0,0,.45)}
+
+/* v121: Binder-Kopf bei 400 px umbrechen statt Titel zu quetschen; Blätter-Knöpfe springen nicht (feste Fachhöhe) */
+.bhead{flex-wrap:wrap;row-gap:4px}.bhead>div:first-child{flex:1 1 160px;min-width:140px}.bhead b{overflow-wrap:break-word;word-break:normal}.bhead .bval{flex:0 0 auto}.bhead .bper{flex:0 0 auto;max-width:100%}
+@media(max-width:520px){.bhead .bper{margin-left:auto!important}}
+.bpage .bslot{aspect-ratio:5/9;overflow:hidden}.bpage .bslot img,.bpage .bslot .phthumb{flex:1 1 auto;min-height:0;aspect-ratio:auto;height:0}
+.bnav{min-height:48px}.bnav span{flex:1;text-align:center;font-variant-numeric:tabular-nums}

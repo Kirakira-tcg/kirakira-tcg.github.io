@@ -36,7 +36,8 @@ function load(){try{const d=JSON.parse(localStorage.getItem(K));if(d){const bad=
 function save(){localStorage.setItem(K,JSON.stringify(S))}
 const uid=()=>Date.now().toString(36)+Math.random().toString(36).slice(2,6);
 const today=()=>new Date().toISOString().slice(0,10);
-async function api(url,tries=4,ms=7000){for(let i=0;i<tries;i++){try{const r=await fetch(url,{signal:AbortSignal.timeout(ms)});if(r.ok)return await r.json()}catch(e){}if(i<tries-1)await new Promise(r=>setTimeout(r,500*(i+1)))}throw new Error('API nicht erreichbar')}
+// v121: pokemontcg.io nicht erreichbar -> 90 s Pause (keine Fehlerserie in der Konsole), Aufrufer fallen auf TCGdex zurück
+let APIDOWN=0;async function api(url,tries=2,ms=7000){if(/pokemontcg\.io/.test(url)&&Date.now()<APIDOWN)throw new Error('API nicht erreichbar');tries=Math.min(tries,2);for(let i=0;i<tries;i++){try{const r=await fetch(url,{signal:AbortSignal.timeout(ms)});if(r.ok)return await r.json();if(r.status<500&&r.status!==429)break}catch(e){if(/pokemontcg\.io/.test(url)&&i===tries-1)APIDOWN=Date.now()+90000}if(i<tries-1)await new Promise(r=>setTimeout(r,800*(i+1)))}throw new Error('API nicht erreichbar')}
 // Trend unplausibel (< 25 % von Ø7 und Ø30) -> Ø7 (bzw. Ø30) verwenden
 function trendFix(t,a7,a30){if(t&&a7&&a30&&t<.25*a7&&t<.25*a30)return{v:a7,fixed:'Ø 7 Tage'};if(t&&!a7&&a30&&t<.25*a30)return{v:a30,fixed:'Ø 30 Tage'};return{v:t,fixed:null}}
 function cmFix(c){const p=c&&c.cardmarket&&c.cardmarket.prices;if(!p)return{v:null,fixed:null};const f=trendFix(p.trendPrice,p.avg7,p.avg30);return f.v?f:{v:p.avg30||p.averageSellPrice||p.lowPrice||null,fixed:null}}
@@ -268,13 +269,17 @@ async function tdxResults(R,name,num,lang,append){const box=document.createEleme
 // Sets
 let SETS=[];async function loadSets(){try{const d=await api(`${API}/sets?orderBy=-releaseDate&pageSize=250&select=id,name,series,releaseDate,images,total,printedTotal,ptcgoCode`);SETS=d.data.map(s=>s.name==='Base'?{...s,name:'Base Set'}:s);if(SETTAB!=='ja')renderSets()}catch(e){try{const j=await (await fetchRetry('https://api.tcgdex.net/v2/en/sets')).json();SETS=j.reverse().filter(x=>!isPocket(x.id)).map(x=>({id:x.id,name:x.name,series:'',releaseDate:'',total:x.cardCount&&x.cardCount.total||'',printedTotal:x.cardCount&&x.cardCount.official||'',images:{logo:x.logo?x.logo+'.png':''}}));if(SETTAB!=='ja')renderSets()}catch(_){$('#setList').innerHTML='<p class="muted small">Sets nicht ladbar.</p>'}}}
 function renderSets(){const f=$('#setFilter').value.toLowerCase();$('#setList').innerHTML='';
- for(const s of SETS.filter(s=>!f||(s.name+' '+s.series+' '+s.id+' '+(s.ptcgoCode||'')).toLowerCase().includes(f))){const d=document.createElement('div');d.className='set';
+ for(const s of setFilt(SETS,f,s=>[s.id,s.ptcgoCode],s=>s.name+' '+s.series)){const d=document.createElement('div');d.className='set';
   d.innerHTML=`<img loading="lazy" src="${s.images.logo}" alt=""><b>${esc(s.name)}</b><br><span class="muted">${esc(s.series)} · ${s.total} Karten · ${(s.releaseDate||'').slice(0,4)}</span>`;
   d.onclick=()=>{navSet(s.id);window.pendingScan=null;window.scanLang='';$('#qName').value='';$('#qNum').value='';search('','','',s.id);window.scrollTo(0,0)};$('#setList').append(d)}}
+// v121: Set-Filter: Code exakt > Code-Präfix > Wort im Namen; kein Treffer mitten in einem anderen Code (M6a findet nicht SM6a)
+function setFilt(L,f,codes,txt){f=String(f||'').trim().toLowerCase();if(!f)return L;const r=[];L.forEach((s,i)=>{const cs=codes(s).filter(Boolean).map(x=>String(x).toLowerCase()),t=String(txt(s)||'').toLowerCase();let k=cs.includes(f)?0:cs.some(c=>c.startsWith(f))?1:new RegExp('(^|[^a-z0-9])'+f.replace(/[.*+?^${}()|[\]\\]/g,'\\$&')).test(t)?2:-1;if(k>=0)r.push([k,i,s])});return r.sort((a,b)=>a[0]-b[0]||a[1]-b[1]).map(x=>x[2])}
+// v121: JP-Name + deutscher/englischer Name aus PNAMES (Dex-Liste [EN,DE,JA]); nur bei sicherem Treffer, sonst nichts
+function jpDeEn(n){n=String(n||'').trim();if(!n||!window.PNAMES)return'';let best=null;for(const r of PNAMES){const j=r[2];if(!j)continue;if(n===j){best=r;break}if(n.startsWith(j)&&/^[\sA-Za-z\-&ＶＭｅｘＧＸ]*$/.test(n.slice(j.length))&&(!best||j.length>best[2].length))best=r}if(!best)return'';const rest=n.slice(best[2].length).trim();return(best[1]===best[0]?best[0]:best[1]+' / '+best[0])+(rest?' '+rest:'')}
 let SETTAB='en',JPSETL=null;
 async function renderJpSets(){const L=$('#setList');if(!window.Prices||!Prices.jpSets){L.innerHTML='<p class="muted small">Nicht verfügbar.</p>';return}
  if(!JPSETL){L.innerHTML='<p class="muted small">Lade japanische Sets…</p>';try{JPSETL=await Prices.jpSets()}catch(e){JPSETL=[]}if(SETTAB!=='ja')return}
- const f=$('#setFilter').value.toLowerCase();L.innerHTML='';const fl=JPSETL.filter(s=>!f||(s.id+' '+s.name).toLowerCase().includes(f));
+ const f=$('#setFilter').value.toLowerCase();L.innerHTML='';const fl=setFilt(JPSETL,f,s=>[s.id],s=>s.name);
  if(!fl.length){L.innerHTML='<p class="muted small">Keine Sets gefunden.</p>';return}
  for(const s of fl.slice(0,80)){const d=document.createElement('div');d.className='set';
   d.innerHTML=`${s.logo?`<img class="jpcover" loading="lazy" src="${esc(s.logo)}" alt="" onerror="this.replaceWith(Object.assign(document.createElement('span'),{className:'jpbadge',textContent:this.dataset.c}))" data-c="${esc(s.id)}">`:`<span class="jpbadge" data-s="${esc((s.id.match(/^[A-Za-z]+/)||[''])[0].toUpperCase())}">${esc(s.id)}</span>`}<b>${esc(s.id)}</b> ${esc(s.name)}<br><span class="muted">${s.count} Karten${s.src==='jp'?' · neu (pokemon-card.com)':''}</span>`;
@@ -282,16 +287,14 @@ async function renderJpSets(){const L=$('#setList');if(!window.Prices||!Prices.j
 async function jpSetCardsView(s){window.pendingScan=null;const R=$('#results');R.classList.remove('binder-src');R.innerHTML='<p class="muted">Lade Karten…</p>';window.scrollTo(0,0);
  let cs=[];try{cs=await Prices.jpSetCards(s.id)}catch(e){}
  if(!cs.length){R.innerHTML='<p class="muted">Keine Karten gefunden.</p>';return}
- cs.sort((a,b)=>(parseInt(a.localId)||9999)-(parseInt(b.localId)||9999));
- R.innerHTML=`<h3 class="small" style="grid-column:1/-1">🇯🇵 ${esc(s.id)} · ${esc(s.name)} · ${cs.length} Karten</h3>`;
- cs.forEach((c,i)=>{const el=tile({img:c.img,name:c.name,sub:`${s.id} · ${c.localId}`,price:null});const pb=el.querySelector('.p b');if(pb)pb.textContent=c.id.startsWith('jp:')?'–':'';
-  let pr=null;const ld=()=>pr||(pr=Prices.byId(c.id,'ja').catch(()=>null));
-  if(!c.id.startsWith('jp:')&&i<24)ld().then(x=>{if(pb)pb.textContent=x&&x.best?x.best.eur.toFixed(2).replace('.',',')+' €':'–'});
-  el.onclick=async()=>{const x=await ld();manualAdd({name:c.name,number:c.localId,set:c.set.name||s.name,lang:'JP'});const f=$('#dlgForm');
-   if(f.img)f.img.value=(x&&x.image)||(c.img||'').replace(/\/low\.webp$/,'/high.webp');
-   const pe=x&&x.best?x.best.eur:null;if(f.price&&pe!=null){f.price.value=pe;f.price.required=false}
-   window.tdxPick={id:c.id,setId:s.id,price:pe,tdx:x&&x.best?{label:x.label,id:x.id,src:x.best.source,conv:x.best.umgerechnet,url:x.best.url,upd:x.best.updated||null}:{label:(x&&x.label)||'kein Preis bei TCGdex',id:c.id}}};
-  R.append(el)})}
+ cs.sort((a,b)=>numCmp(a.localId,b.localId));
+ // v121: gleiches Karten-Raster wie internationale Sets; Preis über Prices.byId (auch jp:-IDs -> jpprices.json), Tipp = Kartenansicht
+ R.classList.add('cgset');R.innerHTML=`<h3 class="small cghead" style="grid-column:1/-1">🇯🇵 ${esc(s.id)} · ${esc(s.name)} · ${cs.length} Karten</h3>`;
+ cs.forEach(c=>{const de=jpDeEn(c.name),nm=de?`${c.name} (${de})`:c.name,tc={id:c.id,lang:'ja',name:nm,localId:c.localId,set:{id:s.id,name:(c.set&&c.set.name)||s.name},img:c.img||''};
+  const el=cgTile({id:c.id,name:nm,number:c.localId,rarity:'',types:[],set:{id:s.id,name:s.name,printedTotal:c.total||''},images:{small:safeImg(c.img)},cardmarket:null},owned(c.id),{open:()=>tdxDetail(tc),add:()=>tdxDetail(tc,'binder'),price:el=>{const go=()=>pool(()=>Prices.byId(c.id,'ja'),30000).then(x=>{const b=el.querySelector('.cgp b');if(!b)return;if(x&&x.best){b.textContent=money(x.best.eur);const od=(d=>isOld(d)?d:null)(pDate(x.best.updated)||pDate(x.best.source));if(od)el.classList.add('oldp');el.querySelector('.cgb').insertAdjacentHTML('beforeend',`<div class="tsrc">${esc(od?oldLbl(od):'JP-Marktpreis (pokeca-souba, umgerechnet)')}</div>`)}else b.textContent='–'}).catch(()=>{const b=el.querySelector('.cgp b');if(b)b.textContent='–'});if(PIO){el._ld=go;PIO.observe(el)}else go()}});
+  {const a=el.querySelector('.cgsl');if(a)a.onclick=e=>{e.preventDefault();e.stopPropagation();scrollTo(0,0)}}
+  if(!safeImg(c.img)){const it=S.collection.find(x=>x.tdxId===c.id||x.apiId===c.id);if(it)phTile(el,it)}
+  R.append(el)});sortBar(R,'set')}
 function setTab(t){SETTAB=t;document.querySelectorAll('#setTabs button').forEach(b=>b.classList.toggle('on',b.dataset.t===t));t==='ja'?renderJpSets():renderSets()}
 document.querySelectorAll('#setTabs button').forEach(b=>b.onclick=()=>setTab(b.dataset.t));
 $('#setFilter').oninput=()=>SETTAB==='ja'?renderJpSets():renderSets();
@@ -1313,7 +1316,7 @@ function binderPage(view){const b=binderList().find(x=>x.id===BND.sel);if(b&&b.s
 {const _dt=detail;detail=function(o){window._detItem=o&&o.item&&S.collection.includes(o.item)?o.item:null;return _dt.apply(this,arguments)}}
 new MutationObserver(()=>{const f=$('#dlgForm'),it=window._detItem;if(!f||!it||!f.querySelector('.detail')||f.querySelector('.bpick'))return;const sel=it.binders?[...it.binders]:[];const p=binderPicker(sel,s=>{it.binders=[...s];save();try{binderUI()}catch(e){}});f.querySelector('.detail').append(p)}).observe(document.getElementById('dlgForm')||document.body,{childList:true,subtree:true});
 // 'Zur Sammlung'-Dialog: Ordner wählen
-{const _ad=addDialog;addDialog=function(c,mode,sealed){window._detItem=null;const n0=S.collection.length;const r=_ad.apply(this,arguments);if(mode==='coll'||!mode){const f=$('#dlgForm'),sel=BND.sel!=='all'?[BND.sel]:[];const row=f&&f.querySelector('.row:last-of-type');if(f&&!f.querySelector('.bpick')){const p=binderPicker(sel);row?row.before(p):f.append(p)}if(window._bndFocus){window._bndFocus=0;const p=f&&f.querySelector('.bpick');if(p){const h=f.querySelector('h3');if(h)h.textContent='In Binder legen';p.style.outline='2px solid #a78bfa';p.style.borderRadius='8px';setTimeout(()=>p.scrollIntoView({block:'center'}),50)}}window._mergedInto=null;
+{const _ad=addDialog;addDialog=function(c,mode,sealed){window._detItem=null;const n0=S.collection.length;const r=_ad.apply(this,arguments);if(mode==='coll'||!mode){const f=$('#dlgForm'),sel=BND.sel!=='all'&&$('#binderView')&&!$('#binderView').hidden&&$('#binderView').closest('.view.active')?[BND.sel]:[];const row=f&&f.querySelector('.row:last-of-type');if(f&&!f.querySelector('.bpick')){const p=binderPicker(sel);row?row.before(p):f.append(p)}if(window._bndFocus){window._bndFocus=0;const p=f&&f.querySelector('.bpick');if(p){const h=f.querySelector('h3');if(h)h.textContent='In Binder legen';p.style.outline='2px solid #a78bfa';p.style.borderRadius='8px';setTimeout(()=>p.scrollIntoView({block:'center'}),50)}}window._mergedInto=null;
   $('#dlg').addEventListener('close',()=>setTimeout(()=>{if(S.collection.length>n0&&sel.length){S.collection.slice(n0).forEach(it=>{it.binders=[...new Set([...(it.binders||[]),...sel])]});save();render()}else if(window._mergedInto&&sel.length){const it=window._mergedInto;it.binders=[...new Set([...(it.binders||[]),...sel])];save();render()}window._mergedInto=null},0),{once:true})}return r}}
 // ===== FX 'NEUE KARTE' nur ab 20 € und nicht bei Serien-Hinzufügen; sonst Toast =====
 const ADDLOG=[];window._bulkAdd=false;
@@ -1455,3 +1458,6 @@ function sortBar(R,v){if(!R)return;R.querySelector('.sortbar')?.remove();const o
   const r=BP0.apply(this,arguments);if(view){view._pg=BND.pg;view._sel=BND.sel}
   if(dir<0&&!RM()){const t=view._ft=(view._ft||0)+1;const go=(n)=>{if(view._ft!==t)return;const P=view.querySelector('.bpage');if(P&&P!==old){P.classList.remove('bin-prev');void P.offsetWidth;P.classList.add('bin-prev');P.addEventListener('animationend',()=>P.classList.remove('bin-prev'),{once:true})}else if(n<20)setTimeout(()=>go(n+1),25)};requestAnimationFrame(()=>go(0))}
   return r}}
+
+// v121: Erkennungsmodell im Hintergrund vorladen (nach dem ersten Bild, im Leerlauf), nicht erst beim Öffnen des Scans; nicht bei Datensparmodus
+addEventListener('load',()=>{const c=navigator.connection;if(c&&(c.saveData||/2g/.test(c.effectiveType||'')))return;const run=()=>{try{const p=window.cardModelReady&&cardModelReady();p&&p.catch&&p.catch(()=>{})}catch(e){}};requestAnimationFrame(()=>setTimeout(()=>('requestIdleCallback' in window)?requestIdleCallback(run,{timeout:8000}):setTimeout(run,2500),1500))});
