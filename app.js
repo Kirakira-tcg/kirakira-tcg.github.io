@@ -379,7 +379,7 @@ async function refreshPrices(){const btn=$('#refresh');btn.textContent='…';con
 $('#refresh').onclick=refreshPrices;
 
 // Gewinn/Verlust nur für Karten mit Kaufpreis (>0); ohne Kaufpreis zählt nur der Wert
-function totals(){let v=0,b=0,n=0,vb=0;for(const c of S.collection){const w=(c.price||0)*c.qty;v+=w;n+=c.qty;if(c.buy>0){b+=c.buy*c.qty;vb+=w}}return{v,b,n,g:vb-b}}
+function totals(){let v=0,b=0,n=0,vb=0,nb=0;for(const c of S.collection){const w=(c.price||0)*c.qty;v+=w;n+=c.qty;if(c.buy>0){b+=c.buy*c.qty;vb+=w;nb+=c.qty}}return{v,b,n,g:vb-b,vb,nb}}
 function snapshot(){const d=today();const t=totals();S.snapshots=S.snapshots.filter(s=>s.d!==d);S.snapshots.push({d,v:+t.v.toFixed(2)});S.snapshots.sort((a,b)=>a.d.localeCompare(b.d));save()}
 
 // Keine Bilder von riskanten Hosts (Rechteinhaber/Marktplätze/Fanseiten) – stattdessen Platzhalter mit Name + Nummer
@@ -402,7 +402,7 @@ function tdxNext(im){const cs=im.getAttribute('src')||'';if(im.dataset.tdxo&&im.
 document.addEventListener('error',e=>{const t=e.target;if(t&&t.tagName==='IMG'&&!t.hasAttribute('onerror'))tdxNext(t)},true);
 
 function render(){{const real=S.collection,es=$('#emptyStart');if(es){es.hidden=real.length>0;const ch=$('#chart'),tf=$('#tf');if(ch)ch.style.display=real.length?'':'none';if(tf)tf.style.display=real.length?'':'none'}}const t=totals();const tf=S.settings.tf;$('#tfLbl').textContent=({1:'1T',7:'7T',30:'30T',90:'3M',365:'1J',0:'Alle'})[tf];
- if(window._pLoad&&S.collection.length){$('#sumVal').textContent='Preise laden…';$('#sumVal').classList.add('loading')}else{$('#sumVal').classList.remove('loading');window.FX?FX.count($('#sumVal'),t.v):($('#sumVal').textContent=money(t.v))}$('#sumBuy').textContent=money(t.b);const g=$('#sumGain');g.textContent=window._pLoad?'…':(t.g>=0?'+':'')+money(t.g);g.className=window._pLoad?'':cls(t.g);$('#sumCnt').textContent=t.n;
+ if(window._pLoad&&S.collection.length){$('#sumVal').textContent='Preise laden…';$('#sumVal').classList.add('loading')}else{$('#sumVal').classList.remove('loading');window.FX?FX.count($('#sumVal'),t.v):($('#sumVal').textContent=money(t.v))}$('#sumBuy').textContent=t.nb?money(t.b):'–';{const lb=t.nb?` (${t.nb} von ${t.n} Karten mit Kaufpreis)`:' (noch kein Kaufpreis)';const a=$('#sumBuyL'),b2=$('#sumGainL');if(a)a.textContent='Einstand'+lb;if(b2)b2.textContent='Gewinn/Verlust'+lb}const g=$('#sumGain');g.textContent=window._pLoad?'…':!t.nb?'–':(t.g>=0?'+':'')+money(t.g);g.className=window._pLoad||!t.nb?'':cls(t.g);$('#sumCnt').textContent=t.n;
  const pts=series(tf);const ch=pts.length>=2?pts.at(-1).v-pts[0].v:0;const chp=pts.length>=2&&pts[0].v?ch/pts[0].v*100:0;
  const sc=$('#sumChg');sc.className='chg '+cls(ch);sc.textContent=`${ch>=0?'▲ +':'▼ '}${money(Math.abs(ch))} (${chp.toFixed(1).replace('.',',')} %)`;if(window._pLoad){sc.textContent='…';sc.className='chg'}
  const C=S.collection.map(c=>({c,ch:itemChange(c,tf)}));
@@ -943,7 +943,7 @@ async function shareRender(){const W=1080,H=1350,cv=document.createElement('canv
  const t=totals(),cards=S.collection.filter(c=>c.type!=='sealed');const txt=(s,x,y,sz,col,w='700',al='left')=>{g.font=`${w} ${sz}px ${F}`;g.fillStyle=col;g.textAlign=al;g.fillText(s,x,y)};
  txt('Meine Sammlung',80,140,56,'#ffffff','800');
  txt(money(t.v),80,270,112,'#ffd84d','900');txt('Gesamtwert',80,320,34,'#c9c3e6','600');
- let y=400;if(t.b>0){const pc=t.g/t.b*100,sg=t.g>=0?'+':'−';txt(`${sg}${money(Math.abs(t.g))} (${sg}${Math.abs(pc).toFixed(1).replace('.',',')} %) seit Kauf`,80,y,44,t.g>=0?'#7ee2a8':'#e6e1f5','700');txt(`bezogen auf Karten mit Kaufpreis (Einstand ${money(t.b)})`,80,y+44,28,'#a49dc6','500');y+=110}
+ let y=400;if(t.b>0){const pc=t.g/t.b*100,sg=t.g>=0?'+':'−';txt(`${sg}${money(Math.abs(t.g))} (${sg}${Math.abs(pc).toFixed(1).replace('.',',')} %) seit Kauf`,80,y,44,t.g>=0?'#7ee2a8':'#e6e1f5','700');txt(`${t.nb} von ${t.n} Karten mit Kaufpreis · Einstand ${money(t.b)} · Wert ${money(t.vb)}`,80,y+44,28,'#a49dc6','500');y+=110}
  txt(`${t.n} ${t.n===1?'Karte':'Karten'}`,80,y,44,'#ffffff','700');y+=70;
  const top=[...S.collection].filter(c=>c.price!=null).sort((a,b)=>b.price-a.price).slice(0,3);
  if(top.length){txt('Top '+top.length,80,y,36,'#c9c3e6','700');y+=30;const cw=280,ch=390,gap=(W-160-3*cw)/2;
