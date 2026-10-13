@@ -14,7 +14,7 @@ function load(){try{const d=JSON.parse(localStorage.getItem(K));if(d)return d}ca
 function save(){localStorage.setItem(K,JSON.stringify(S))}
 const uid=()=>Date.now().toString(36)+Math.random().toString(36).slice(2,6);
 const today=()=>new Date().toISOString().slice(0,10);
-async function api(url,tries=4){for(let i=0;i<tries;i++){try{const r=await fetch(url);if(r.ok)return await r.json()}catch(e){}await new Promise(r=>setTimeout(r,800*(i+1)))}throw new Error('API nicht erreichbar')}
+async function api(url,tries=4,ms=7000){for(let i=0;i<tries;i++){try{const r=await fetch(url,{signal:AbortSignal.timeout(ms)});if(r.ok)return await r.json()}catch(e){}if(i<tries-1)await new Promise(r=>setTimeout(r,500*(i+1)))}throw new Error('API nicht erreichbar')}
 function cmPrice(c){const p=c.cardmarket&&c.cardmarket.prices;if(!p)return null;return p.trendPrice||p.avg30||p.averageSellPrice||p.lowPrice||null}
 function cmInfo(c){const p=c.cardmarket&&c.cardmarket.prices;if(!p)return null;return{trend:p.trendPrice,avg1:p.avg1,avg7:p.avg7,avg30:p.avg30,low:p.lowPrice,sell:p.averageSellPrice,url:c.cardmarket.url}}
 const DE={glurak:'Charizard',nachtara:'Umbreon',mewtu:'Mewtwo',evoli:'Eevee',bisaflor:'Venusaur',turtok:'Blastoise',gengar:'Gengar',glaziola:'Glaceon',folipurba:'Leafeon',psiana:'Espeon',aquana:'Vaporeon',blitza:'Jolteon',flamara:'Flareon',feelinara:'Sylveon',dragoran:'Dragonite',relaxo:'Snorlax',lugia:'Lugia',piepi:'Clefairy',gewaldro:'Sceptile',lohgock:'Blaziken',sumpex:'Swampert',garados:'Gyarados',simsala:'Alakazam',bisasam:'Bulbasaur',glumanda:'Charmander',schiggy:'Squirtle',rayquaza:'Rayquaza',suicune:'Suicune',lucario:'Lucario',pummeluff:'Jigglypuff',enton:'Psyduck',knogga:'Marowak',arkani:'Arcanine',lapras:'Lapras',ditto:'Ditto',zapdos:'Zapdos',lavados:'Moltres',arktos:'Articuno','ho-oh':'Ho-Oh',hooh:'Ho-Oh',pikachu:'Pikachu',raichu:'Raichu',mew:'Mew',celebi:'Celebi',victini:'Victini',reshiram:'Reshiram',zekrom:'Zekrom',kyogre:'Kyogre',groudon:'Groudon',entei:'Entei',raikou:'Raikou',arceus:'Arceus',darkrai:'Darkrai',dialga:'Dialga',palkia:'Palkia',giratina:'Giratina',vulpix:'Vulpix',vulnona:'Ninetales',owei:'Exeggcute',kokowei:'Exeggutor',volbeat:'Volbeat',illumise:'Illumise',tropius:'Tropius',kikugi:'Cherubi',kinoso:'Cherrim',vivillon:'Vivillon',flegmon:'Slowpoke',krokel:'Fuecoco',glutexo:'Charmeleon',pikachu:'Pikachu',quajutsu:'Greninja',mimigma:'Mimikyu',guardevoir:'Gardevoir',knakrack:'Garchomp',despotar:'Tyranitar',karpador:'Magikarp',zacian:'Zacian',terapagos:'Terapagos',marill:'Marill',kangama:'Kangaskhan',pinsir:'Pinsir',sichlor:'Scyther',endivie:'Chikorita',feurigel:'Cyndaquil',karnimani:'Totodile',plinfa:'Piplup',psiana:'Espeon',mauzi:'Meowth',jirachi:'Jirachi',milotic:'Milotic'};
@@ -39,13 +39,13 @@ let filt='all';$$('#filt button').forEach(b=>b.onclick=()=>{filt=b.dataset.f;$$(
 $('#sort').onchange=render;
 
 // Suche
-$('#searchForm').onsubmit=e=>{e.preventDefault();if(window.pendingScan&&$('#qName').value!==pendingScan.name)window.pendingScan=null;search($('#qName').value,$('#qNum').value,$('#qSet').value)};
+$('#searchForm').onsubmit=e=>{e.preventDefault();if(window.pendingScan&&$('#qName').value!==pendingScan.name)window.pendingScan=null;if(!window.pendingScan)window.scanLang='';search($('#qName').value,$('#qNum').value,$('#qSet').value)};
 let lastResults=[];
 // JP-Bilder (pokemon-card.com): bei Fehler ohne Referrer neu laden, dann snkrdunk-Bild aus jpprices.json
 document.addEventListener('error',async e=>{const im=e.target;if(!(im instanceof HTMLImageElement))return;const u=im.dataset.orig||im.src;if(!/pokemon-card\.com/.test(u))return;
  const n=+(im.dataset.fb||0);im.dataset.fb=n+1;im.dataset.orig=u;if(n===0){im.referrerPolicy='no-referrer';im.src=u+(u.includes('?')?'&':'?')+'r=1';return}
  if(n===1&&window.Prices&&Prices.jpImgFallback){const f=await Prices.jpImgFallback(u);if(f)im.src=f}},true);
-function manualAdd(x){window.scanLang=x.lang||window.scanLang||'';addDialog(null,'coll');const f=$('#dlgForm');
+function manualAdd(x){window._dlgLang=x.lang||'';addDialog(null,'coll');const f=$('#dlgForm');
  if(window.Prices&&x.name&&f.price){const lg=(x.lang||'DE').toLowerCase(),nm=String(x.name).replace(/\s*\(.*\)\s*$/,'').trim();Prices.lookup(lg==='jp'||lg==='ja'?String(x.name):nm,lg,x.set||null,x.number||null).then(r=>{if(r&&f.img&&!f.img.value&&r.image&&$('#dlg').open)f.img.value=r.image;if(r&&!r.best&&f.price&&$('#dlg').open){const l=f.price.closest('label');if(l&&!l.querySelector('.apl'))l.insertAdjacentHTML('beforeend','<span class="muted small apl">Noch kein Preis in den Datenbanken – wird später automatisch nachgeladen</span>')}if(r&&r.best&&f.price&&!f.price.value&&$('#dlg').open){f.price.value=r.best.eur;f.price.dataset.auto=r.best.eur;f.price.dataset.lbl=r.label;f.price.dataset.aid=r.id;const l=f.price.closest('label');if(l&&!l.querySelector('.apl'))l.insertAdjacentHTML('beforeend',`<span class="muted small apl">${esc(r.label)}</span>`)}}).catch(()=>{})}
  if(f.name)f.name.value=x.name||'';if(f.number)f.number.value=x.number||'';if(f.set)f.set.value=x.set||'';if(f.lang&&x.lang)f.lang.value=x.lang;if(f.img&&x.img)f.img.value=x.img}
 function bindMan(name,num,set){const ps=window.pendingScan||{};const x={name:ps.jp?`${ps.name} (${ps.jp})`:(ps.name||name),number:ps.number||num,set:ps.set||set,lang:ps.lang};
@@ -54,8 +54,16 @@ async function search(name,num,set,setId){const q=[];const raw=clean(name||''),i
  if(isJ){const sm=raw.match(/\s*(ex|EX|GX|V|VMAX|VSTAR)$/),b0=sm?raw.slice(0,sm.index):raw,r=(window.PNAMES||[]).find(x=>x[2]&&x[2].replace(/\s/g,'')===b0.replace(/\s/g,''));if(r&&r[0])nm=r[0]+(sm?' '+sm[1]:'')}
  name=isJ?nm:deName(raw);const tdxName=isJ?raw:name,ascii=/^[\x00-\x7f]*$/.test(name);num=clean(num||'').split('/')[0].replace(/^0+(?=\d)/,'');set=clean(set||'');
  if(name)q.push(name.includes(' ')?`name:"${name}"`:`name:${name}*`);if(num)q.push(`number:${num}`);if(set)q.push(`set.name:"${set}*"`);if(setId)q.push(`set.id:${setId}`);
- if(!q.length)return;const R=$('#results');R.innerHTML='<p class="muted">Suche…</p>';
- try{let d={data:[]},apiErr=false;if(ascii){try{d=await api(`${API}/cards?q=${encodeURIComponent(q.join(' '))}&pageSize=60&select=id,name,number,set,images,cardmarket,rarity,types,supertype`,2)}catch(e){apiErr=true}}
+ if(!q.length)return;const R=$('#results'),my=++SEARCHN;R.innerHTML='<p class="muted">Suche…</p>';
+ const tlE=isJ?'JP':((window.pendingScan&&window.pendingScan.lang)||'').toUpperCase();
+ // TCGdex (DE/EN/JP) parallel zur englischen Datenbank starten
+ const tdxP=window.Prices&&!setId&&raw?tdxFind(tdxName,num,tlE||'DE').catch(()=>({list:[]})):null;
+ try{let d={data:[]},apiErr=false;const sel='&select=id,name,number,set,images,cardmarket,rarity,types,supertype';
+  if(setId){try{d=await setCards(setId,q,sel)}catch(e){apiErr=true}}
+  else if(ascii){try{d=await api(`${API}/cards?q=${encodeURIComponent(q.join(' '))}&pageSize=60${sel}`,1,4500)}catch(e){apiErr=true}}
+  if(my!==SEARCHN)return;
+  if(setId&&(apiErr||!d.data.length)&&window.Prices){if(await tdxSetView(R,setId,my))return}
+  if(!setId&&tdxP)return searchRender(R,d.data||[],apiErr,tdxP,{name,num,set,tdxName,my});
   if(apiErr&&!(window.Prices&&!setId&&raw))throw new Error('API nicht erreichbar');
   const ps=window.pendingScan,jpB=ps&&ps.lang&&ps.lang!=='EN'?`<div class="scanpick"><b>${ps.lang==='JP'?'🇯🇵 Japanische Karte':'Karte ('+ps.lang+')'}: ${esc(ps.name||'')} ${esc(ps.number||'')}</b><p class="muted small"><span id="tdxHint">Suche in TCGdex nach der ${ps.lang}-Version…</span></p><button type="button" class="primary big" id="manScan">➕ Manuell hinzufügen</button></div>`:'';
   const tl=isJ?'JP':((ps&&ps.lang)||window.scanLang||'').toUpperCase(),useT=window.Prices&&!setId&&name&&(tl&&tl!=='EN');
@@ -63,22 +71,60 @@ async function search(name,num,set,setId){const q=[];const raw=clean(name||''),i
   if(!d.data.length){R.innerHTML=jpB+'<p class="muted" id="noHit">'+(apiErr?'Englische Datenbank gerade nicht erreichbar – suche bei TCGdex…':'Nichts in der englischen Datenbank gefunden.')+(jpB?'':' <button type="button" id="manScan2">➕ Manuell hinzufügen</button>')+'</p>';bindMan(tdxName,num,set);if(window.Prices&&!setId&&raw)tdxResults(R,tdxName,num,tl||'DE');return}
   d.data.sort((a,b)=>setId?(parseInt(a.number)||0)-(parseInt(b.number)||0):(b.set.releaseDate||'').localeCompare(a.set.releaseDate||''));lastResults=d.data;
   R.innerHTML='';R.classList.toggle('binder-src',!!setId);for(const c of d.data){const p=cmPrice(c);const ci=cmInfo(c);const ch=ci&&ci.avg7&&p?(p-ci.avg7)/ci.avg7*100:null;
-   const el=tile({type:c.types&&c.types[0],img:c.images.small,name:c.name,sub:`${c.set.name} · ${c.number}/${c.set.printedTotal}`,price:p,chg:ch,badge:c.rarity&&/Special|Hyper|Secret|Illustration/i.test(c.rarity)?'SAR/SIR':''});
-   el.onclick=()=>detail({api:c});
+   const own=owned(c.id),el=tile({type:c.types&&c.types[0],img:c.images.small,name:setId?`${own?'✓ ':''}#${c.number} ${c.name}`:c.name,sub:`${c.set.name} · ${c.number}/${c.set.printedTotal}`,price:p,chg:ch,badge:own?'✓ BESITZ':c.rarity&&/Special|Hyper|Secret|Illustration/i.test(c.rarity)?'SAR/SIR':''});
+   if(setId&&own)el.classList.add('owned');el.onclick=()=>detail({api:c});
    const a=document.createElement('div');a.className='acts';a.innerHTML='<button>+ Sammlung</button><button>☆</button>';
    a.children[0].onclick=e=>{e.stopPropagation();addDialog(c,'coll')};a.children[1].onclick=e=>{e.stopPropagation();addDialog(c,'wish')};el.append(a);R.append(el)}
-  if(setId&&window.FX)FX.binder(R,SETS.find(s=>s.id===setId));if(jpB){R.insertAdjacentHTML('afterbegin',jpB);bindMan(name,num,set)}if(useT)tdxResults(R,tdxName,num,tl,true)
+  if(setId&&window.FX)FX.binder(R,SETS.find(s=>s.id===setId));if(setId){R.insertAdjacentHTML('afterbegin',`<h3 class="small" style="grid-column:1/-1">${esc((SETS.find(s=>s.id===setId)||{}).name||setId)} · ${d.data.length} Karten</h3>`);window.scrollTo(0,0)}if(jpB){R.insertAdjacentHTML('afterbegin',jpB);bindMan(name,num,set)}if(useT)tdxResults(R,tdxName,num,tl,true)
  }catch(e){R.innerHTML=`<p class="neg">${e.message}. Bitte später erneut versuchen.</p>`}}
 
+let SEARCHN=0;$('#results').addEventListener('click',e=>{if(e.target.closest('.bprev,.bnext'))$('#results').scrollIntoView({block:'start'})});
+const owned=id=>S.collection.some(x=>x.apiId===id||x.tdxId===id||(x.tdx&&x.tdx.id===id));
+// alle Karten eines Sets (pokemontcg.io, mit Seiten)
+async function setCards(setId,q,sel){let all=[],page=1,tot=1;while(all.length<tot&&page<6){const d=await api(`${API}/cards?q=${encodeURIComponent(q.join(' '))}&pageSize=250&page=${page}${sel}`,2,8000);all=all.concat(d.data||[]);tot=d.totalCount||all.length;page++;if(!(d.data||[]).length)break}return{data:all}}
+// Set-Fallback über TCGdex (gleiche Set-IDs bei älteren Sets)
+async function tdxSetView(R,setId,my){try{const r=await fetch('https://api.tcgdex.net/v2/en/sets/'+encodeURIComponent(setId),{signal:AbortSignal.timeout(8000)});if(!r.ok)return false;const j=await r.json();if(my!==SEARCHN)return true;
+ const cs=(j.cards||[]).sort((a,b)=>(parseInt(a.localId)||9999)-(parseInt(b.localId)||9999)||String(a.localId).localeCompare(String(b.localId)));if(!cs.length)return false;
+ R.classList.remove('binder-src');R.innerHTML=`<h3 class="small" style="grid-column:1/-1">${esc(j.name)} · ${cs.length} Karten <span class="muted">(TCGdex)</span></h3>`;
+ cs.forEach(c=>{const id=c.id,el=tile({img:c.image?c.image+'/low.webp':'',name:`${owned(id)?'✓ ':''}#${c.localId} ${c.name}`,sub:`#${c.localId}/${j.cardCount&&j.cardCount.official||''}`,price:null,badge:owned(id)?'✓ BESITZ':''});const pb=el.querySelector('.p b');if(pb)pb.textContent='';el.onclick=()=>tdxDetail({id,lang:'en',name:c.name,localId:c.localId,set:{id:j.id,name:j.name},img:c.image?c.image+'/low.webp':''});R.append(el)});window.scrollTo(0,0);return true}catch(e){return false}}
+const LNAME={de:'🇩🇪 Deutsch',en:'🇬🇧 Englisch',ja:'🇯🇵 Japanisch'};
+// Suchergebnisse: EN-Datenbank (Cardmarket-Preise) + TCGdex nach Sprache gruppiert, progressiv
+async function searchRender(R,data,apiErr,tdxP,o){R.classList.remove('binder-src');R.innerHTML='';const head=document.createElement('p');head.className='muted small';head.style.gridColumn='1/-1';head.id='noHit';R.append(head);
+ data.sort((a,b)=>(b.set.releaseDate||'').localeCompare(a.set.releaseDate||'')||(parseInt(a.number)||0)-(parseInt(b.number)||0));lastResults=data;
+ const ps=window.pendingScan;if(ps&&ps.lang&&ps.lang!=='EN'){head.insertAdjacentHTML('beforebegin',`<div class="scanpick" style="grid-column:1/-1"><b>${ps.lang==='JP'?'🇯🇵 Japanische Karte':'Karte ('+ps.lang+')'}: ${esc(ps.name||'')} ${esc(ps.number||'')}</b><p class="muted small"><span id="tdxHint">Suche in TCGdex…</span></p><button type="button" class="chip" id="manScan">➕ Manuell hinzufügen</button></div>`)}
+ if(data.length){R.insertAdjacentHTML('beforeend',`<h3 class="small" style="grid-column:1/-1">🇬🇧 Englisch · Cardmarket-Preise (${data.length})</h3>`);for(const c of data)R.append(enTile(c))}
+ head.textContent=apiErr?'Englische Datenbank gerade nicht erreichbar – zeige TCGdex.':'';
+ const box=document.createElement('div');box.style.cssText='display:contents';box.innerHTML='<p class="muted small" style="grid-column:1/-1" id="tdxWait">Weitere Sprachen werden geladen…</p>';R.append(box);
+ const r=await tdxP;if(o.my!==SEARCHN||!box.isConnected)return;box.innerHTML='';
+ let L=r.list||[];if(data.length)L=L.filter(c=>c.lang!=='en');
+ const h=$('#tdxHint');if(h)h.textContent=L.length?`Treffer bei TCGdex${r.exact?'':' (Nummer nicht gefunden, alle Treffer zum Namen)'}.`:'Auch bei TCGdex nicht gefunden – manuell hinzufügen.';
+ if(!L.length&&!data.length){head.innerHTML='Keine Karte gefunden. <button type="button" id="manScan2" class="chip">➕ Manuell hinzufügen</button>';bindMan(o.tdxName,o.num,o.set);return}
+ bindMan(o.tdxName,o.num,o.set);
+ const ord=[(r.lang||'de'),'de','en','ja'].filter((x,i,a)=>a.indexOf(x)===i);
+ for(const lg of ord){const G=L.filter(c=>c.lang===lg).sort((a,b)=>String(a.set.name).localeCompare(String(b.set.name))||(parseInt(a.localId)||0)-(parseInt(b.localId)||0));if(!G.length)continue;
+  box.insertAdjacentHTML('beforeend',`<h3 class="small" style="grid-column:1/-1">${LNAME[lg]||lg} (${G.length})${r.exact?'':''}</h3>`);G.forEach((c,i)=>box.append(tdxTile(c,i<12)))}}
+function enTile(c){const p=cmPrice(c);const ci=cmInfo(c);const ch=ci&&ci.avg7&&p?(p-ci.avg7)/ci.avg7*100:null;
+ const el=tile({type:c.types&&c.types[0],img:c.images.small,name:c.name,sub:`${c.set.name} · ${c.number}/${c.set.printedTotal}`,price:p,chg:ch,badge:owned(c.id)?'✓ BESITZ':c.rarity&&/Special|Hyper|Secret|Illustration/i.test(c.rarity)?'SAR/SIR':''});
+ el.onclick=()=>detail({api:c});const a=document.createElement('div');a.className='acts';a.innerHTML='<button>+ Sammlung</button><button>☆</button>';
+ a.children[0].onclick=e=>{e.stopPropagation();addDialog(c,'coll')};a.children[1].onclick=e=>{e.stopPropagation();addDialog(c,'wish')};el.append(a);return el}
+function tdxTile(c,load){const el=tile({img:c.img,name:c.name,sub:`${c.set.name} · ${c.localId} · ${c.lang==='ja'?'JP':c.lang.toUpperCase()}`,price:null,badge:owned(c.id)?'✓ BESITZ':''});const pb=el.querySelector('.p b');if(pb)pb.textContent=load?'…':'';
+ if(load)Prices.byId(c.id,c.lang).then(x=>{if(pb)pb.textContent=x&&x.best?x.best.eur.toFixed(2).replace('.',',')+' €':'–'}).catch(()=>{if(pb)pb.textContent='–'});
+ el.onclick=()=>tdxDetail(c);return el}
+// TCGdex-Karte -> Detailansicht (Cardmarket/eBay), danach + Sammlung
+async function tdxDetail(c){let x=null;try{x=await Prices.byId(c.id,c.lang)}catch(e){}const cm=x&&x.prices&&x.prices.find(p=>/^Cardmarket/.test(p.source));
+ const pc={id:c.id,_tdx:x,_lang:c.lang==='ja'?'JP':c.lang.toUpperCase(),name:c.name,number:c.localId,rarity:null,types:[],set:{id:c.set.id,name:c.set.name,printedTotal:(x&&x.total)||''},
+  images:{small:c.img||(x&&x.image)||'',large:(x&&x.image)||(c.img||'').replace(/\/low\.webp$/,'/high.webp')},
+  cardmarket:cm?{url:cm.url,prices:{trendPrice:cm.eur,avg1:cm.avg1,avg7:cm.avg7,avg30:cm.avg30,lowPrice:cm.low}}:null};
+ detail({api:pc})}
 // TCGdex-Fallback für die Suche (andere Sprachen / nicht in pokemontcg.io)
 function tdxNames(name,lang){const n=name.toLowerCase(),out=new Set([name]),i=lang==='de'?1:lang==='ja'?2:0;
  for(const r of [...(window.PNAMES||[]),...(window.TNAMES||[])])if(r.some(x=>x&&x.toLowerCase()===n)){if(r[i])out.add(r[i]);if(r[0])out.add(r[0])}return[...out]}
 async function tdxFind(name,num,lang){lang=(lang||'de').toLowerCase();if(lang==='jp')lang='ja';const nn=num?String(num).replace(/^0+(?=\d)/,''):'';const seen=new Set();let all=[];
- for(const lg of lang==='en'?['en']:[lang,'en'])for(const q of tdxNames(name,lg)){let L=[];try{L=await Prices.suggest(q,lg,100)||[]}catch(e){}
-  for(const c of L)if(!seen.has(c.lang+c.id)){seen.add(c.lang+c.id);all.push(c)}}
+ const jobs=[];for(const lg of lang==='en'?['en']:[lang,'en'])for(const q of tdxNames(name,lg))jobs.push(Prices.suggest(q,lg,100).catch(()=>[]));
+ for(const L of await Promise.all(jobs))for(const c of L||[])if(!seen.has(c.lang+c.id)){seen.add(c.lang+c.id);all.push(c)}
  const hit=nn?all.filter(c=>String(c.localId||'').replace(/^0+(?=\d)/,'')===nn):[];
  const pref=a=>a.filter(c=>c.lang===lang).length?a.filter(c=>c.lang===lang):a;
- return{list:hit.length?pref(hit):pref(all).slice(0,40),exact:!!hit.length,lang}}
+ return{list:hit.length?hit:all.slice(0,60),exact:!!hit.length,lang}}
 async function tdxResults(R,name,num,lang,append){const box=document.createElement('div');box.className='tdxRes';box.innerHTML='<p class="muted small">TCGdex wird durchsucht…</p>';
  if(append)R.append(box);else R.append(box);let r;try{r=await tdxFind(name,num,lang)}catch(e){r={list:[]}}
  if(!box.isConnected)return;const h=$('#tdxHint'),nh=$('#noHit');
@@ -90,18 +136,18 @@ async function tdxResults(R,name,num,lang,append){const box=document.createEleme
  r.list.forEach((c,i)=>{const el=tile({img:c.img,name:c.name,sub:`${c.set.name} · ${c.localId} · ${c.lang.toUpperCase()}`,price:null});const pb=el.querySelector('.p b');if(pb)pb.textContent='…';
   let pr=null;const ld=()=>pr||(pr=Prices.byId(c.id,c.lang).catch(()=>null));
   if(i<16)ld().then(x=>{if(!pb)return;pb.textContent=x&&x.best?x.label:'kein Preis bei TCGdex'});else if(pb)pb.textContent='';
-  el.onclick=async()=>{const x=await ld();const lg=c.lang==='ja'?'JP':c.lang.toUpperCase();
+  el.onclick=()=>tdxDetail(c);el.onclickOld=async()=>{const x=await ld();const lg=c.lang==='ja'?'JP':c.lang.toUpperCase();
    manualAdd({name:c.name,number:c.localId,set:c.set.name,lang:lg});const f=$('#dlgForm');
    if(f.img)f.img.value=(x&&x.image)||(c.img||'').replace(/\/low\.webp$/,'/high.webp');
    const pe=x&&x.best?x.best.eur:null;if(f.price&&pe!=null){f.price.value=pe;f.price.required=false}
    window.tdxPick={id:c.id,setId:c.set.id,price:pe,tdx:x&&x.best?{label:x.label,id:x.id,src:x.best.source,conv:x.best.umgerechnet,url:x.best.url}:{label:'kein Preis bei TCGdex',id:c.id}}};
   R.append(el)})}
 // Sets
-let SETS=[];async function loadSets(){try{const d=await api(`${API}/sets?orderBy=-releaseDate&pageSize=250&select=id,name,series,releaseDate,images,total,printedTotal,ptcgoCode`);SETS=d.data;if(SETTAB!=='ja')renderSets()}catch(e){$('#setList').innerHTML='<p class="muted small">Sets nicht ladbar.</p>'}}
+let SETS=[];async function loadSets(){try{const d=await api(`${API}/sets?orderBy=-releaseDate&pageSize=250&select=id,name,series,releaseDate,images,total,printedTotal,ptcgoCode`);SETS=d.data.map(s=>s.name==='Base'?{...s,name:'Base Set'}:s);if(SETTAB!=='ja')renderSets()}catch(e){try{const j=await (await fetch('https://api.tcgdex.net/v2/en/sets',{signal:AbortSignal.timeout(8000)})).json();SETS=j.reverse().map(x=>({id:x.id,name:x.name,series:'',releaseDate:'',total:x.cardCount&&x.cardCount.total||'',printedTotal:x.cardCount&&x.cardCount.official||'',images:{logo:x.logo?x.logo+'.png':''}}));if(SETTAB!=='ja')renderSets()}catch(_){$('#setList').innerHTML='<p class="muted small">Sets nicht ladbar.</p>'}}}
 function renderSets(){const f=$('#setFilter').value.toLowerCase();$('#setList').innerHTML='';
- for(const s of SETS.filter(s=>!f||(s.name+s.series).toLowerCase().includes(f)).slice(0,60)){const d=document.createElement('div');d.className='set';
+ for(const s of SETS.filter(s=>!f||(s.name+' '+s.series+' '+s.id+' '+(s.ptcgoCode||'')).toLowerCase().includes(f))){const d=document.createElement('div');d.className='set';
   d.innerHTML=`<img loading="lazy" src="${s.images.logo}" alt=""><b>${esc(s.name)}</b><br><span class="muted">${esc(s.series)} · ${s.total} Karten · ${(s.releaseDate||'').slice(0,4)}</span>`;
-  d.onclick=()=>{window.pendingScan=null;$('#qName').value='';$('#qNum').value='';search('','','',s.id);window.scrollTo(0,0)};$('#setList').append(d)}}
+  d.onclick=()=>{window.pendingScan=null;window.scanLang='';$('#qName').value='';$('#qNum').value='';search('','','',s.id);window.scrollTo(0,0)};$('#setList').append(d)}}
 let SETTAB='en',JPSETL=null;
 async function renderJpSets(){const L=$('#setList');if(!window.Prices||!Prices.jpSets){L.innerHTML='<p class="muted small">Nicht verfügbar.</p>';return}
  if(!JPSETL){L.innerHTML='<p class="muted small">Lade japanische Sets…</p>';try{JPSETL=await Prices.jpSets()}catch(e){JPSETL=[]}if(SETTAB!=='ja')return}
@@ -128,8 +174,11 @@ document.querySelectorAll('#setTabs button').forEach(b=>b.onclick=()=>setTab(b.d
 $('#setFilter').oninput=()=>SETTAB==='ja'?renderJpSets():renderSets();
 
 // Zweite Preisquelle (prices.js / TCGdex): Fallback bei fehlendem Preis oder nicht-englischer Karte
+// 1st Edition: TCGdex-Variantenpreis (TCGplayer 1st-edition*) wenn vorhanden, sonst Hinweis
+async function firstEd(it){if(!window.Prices)return;try{const nm=(it.name||'').replace(/\s*\(.*\)\s*$/,'').trim(),num=String(it.number||'').split('/')[0]||null;let r=it.tdxId?await Prices.byId(it.tdxId,'en'):null;if(!r)r=await Prices.lookup(deName(nm),'en',null,num);
+ const v=r&&r.prices&&r.prices.find(x=>/1st/i.test(x.variant||'')&&x.eur!=null);if(v&&it.ownPrice==null){it.price=v.eur;it.priceNote='';it.tdx={label:`${v.eur.toFixed(2).replace('.',',')} € · ${v.source} · 1st Edition`,id:r.id,src:v.source+' 1st',url:null};trackPrice(it);save();snapshot();render()}}catch(e){}}
 const tdxNeed=x=>x.ownPrice==null&&(x.price==null||(x.lang&&x.lang!=='EN'));
-async function tdxFill(x){if(!window.Prices||x.ownPrice!=null)return false;const lang=(x.lang||'DE').toLowerCase(),name=(x.name||'').replace(/\s*\(.*\)\s*$/,'').trim(),num=String(x.number||'').split('/')[0]||null;
+async function tdxFill(x){if(!window.Prices||x.ownPrice!=null||(x.variant==='1st'&&x.tdx&&/1st/.test(x.tdx.src||'')))return false;const lang=(x.lang||'DE').toLowerCase(),name=(x.name||'').replace(/\s*\(.*\)\s*$/,'').trim(),num=String(x.number||'').split('/')[0]||null;
  let r=null;try{const same=n=>{const p=nrm(n),q=nrm(name);if(!p||!q)return true;let d=q;try{d=nrm(deName(name))}catch(e){}return p===q||p===d||p.startsWith(q)||q.startsWith(p)||p.startsWith(d)||d.startsWith(p)};r=await Prices.lookup(name,lang,x.setId||null,num);if(r&&!same(r.name))r=await Prices.lookup(name,lang,null,num);if(r&&!same(r.name))r=null;if(!(r&&r.best)&&lang!=='en'&&lang!=='jp'&&lang!=='ja'){r=await Prices.lookup(name,'en',null,num);if(r&&!same(r.name))r=null}}catch(e){console.warn(e)}
  if(!(r&&r.best))return false;x.price=r.best.eur;delete x.noPrice;x.tdx={label:r.label,id:r.id,src:r.best.source,conv:r.best.umgerechnet,url:r.best.url};return true}
 // Type-ahead mit Bildvorschlägen (Prices.suggest / TCGdex)
@@ -142,23 +191,23 @@ function attachSuggest(inp,onPick,getLang,anchor){if(!inp||!window.Prices||!Pric
    box.innerHTML=L.map((c,i)=>`<button type="button" class="sugItem" data-i="${i}">${c.img?`<img src="${esc(c.img)}" alt="" loading="lazy">`:'<div class="sugNo">?</div>'}<b>${esc(c.name)}</b><span>${esc(c.set.name)} ${esc(c.localId)}</span></button>`).join('');box.hidden=false;
    box.querySelectorAll('.sugItem').forEach(b=>b.onclick=()=>{const c=L[+b.dataset.i];hide();onPick(c)})},300)});
  inp.addEventListener('keydown',e=>{if(e.key==='Escape')hide()});return{hide}}
-const sugMain=attachSuggest($('#qName'),c=>{$('#qName').value=c.name;$('#qNum').value=c.localId.replace(/^0+(?=\d)/,'');window.pendingScan=null;search(c.name,$('#qNum').value,'')},()=>(window.scanLang||'DE').toLowerCase(),$('#searchForm'));
+const sugMain=attachSuggest($('#qName'),c=>{$('#qName').value=c.name;$('#qNum').value=c.localId.replace(/^0+(?=\d)/,'');window.pendingScan=null;window.scanLang='';tdxDetail(c);search(c.name,$('#qNum').value,'')},()=>(window.scanLang||'DE').toLowerCase(),$('#searchForm'));
 $('#searchForm').addEventListener('submit',()=>sugMain&&sugMain.hide());
-function addDialog(c,mode,sealed){const manual=!c;window.tdxPick=null;const f=$('#dlgForm');const p=c?cmPrice(c):null;
+function addDialog(c,mode,sealed){const manual=!c;window.tdxPick=null;const f=$('#dlgForm');const tx=c&&c._tdx;const p=c?(cmPrice(c)??(tx&&tx.best?tx.best.eur:null)):null;const dLang=(c&&c._lang)||window._dlgLang||window.scanLang||'DE';window._dlgLang='';
  f.innerHTML=`<h3>${mode==='wish'?'Zur Wunschliste':sealed?'Sealed-Produkt hinzufügen':'Zur Sammlung'}</h3>
- ${manual?`<label>Name<input name="name" required placeholder="${sealed?'z.B. 30 Jahre Booster Bundle':''}"></label><label>Set<input name="set"></label>${sealed?'':'<label>Nummer<input name="number"></label>'}<label>Bild-URL (optional)<input name="img"></label>`:`<p><b>${esc(c.name)}</b> – ${esc(c.set.name)} ${c.number}<br>Cardmarket-Trend: ${money(p)}<br><span class="muted small" id="tdxLbl"></span></p>`}
- <label>Sprache<select name="lang">${LANGS.map(l=>`<option${l===(window.scanLang||'DE')?' selected':''}>${l}</option>`).join('')}</select></label>${window.scanLang?'<p class="muted small">Sprache per Scan erkannt: '+window.scanLang+'</p>':''}
+ ${manual?`<label>Name<input name="name" required placeholder="${sealed?'z.B. 30 Jahre Booster Bundle':''}"></label><label>Set<input name="set"></label>${sealed?'':'<label>Nummer<input name="number"></label>'}<label>Bild-URL (optional)<input name="img"></label>`:`<p><b>${esc(c.name)}</b> – ${esc(c.set.name)} ${c.number}<br>${tx?esc(tx.best?tx.label:'Noch kein Preis – wird später nachgeladen'):'Cardmarket-Trend: '+money(p)}<br><span class="muted small" id="tdxLbl"></span></p>`}
+ <label>Sprache<select name="lang">${LANGS.map(l=>`<option${l===dLang?' selected':''}>${l}</option>`).join('')}</select></label>${window.scanLang&&!(c&&c._tdx)?'<p class="muted small">Sprache per Scan erkannt: '+window.scanLang+'</p>':''}
  ${mode==='wish'?`<label>Zielpreis (€)<input name="target" type="number" step="0.01" required></label>`:
  `${sealed?'<input type="hidden" name="cond" value="Sealed">':`<label>Zustand<select name="cond"><option>NM</option><option>EX</option><option>GD</option><option>LP</option><option>PL</option><option>PSA 10</option><option>PSA 9</option><option>CGC 10</option><option>BGS 9.5</option><option>PSA/Graded</option></select></label>`}
- <label>Anzahl<input name="qty" type="number" value="1" min="1"></label><label>Kaufpreis pro Stück (€)<input name="buy" type="number" step="0.01" value="0"></label>`}
+ ${sealed?'':'<label class="row" style="gap:.4rem;align-items:center"><input type="checkbox" name="first" style="width:auto"> 1st Edition</label>'}<label>Anzahl<input name="qty" type="number" value="1" min="1"></label><label>Kaufpreis pro Stück (€, optional)<input name="buy" type="number" step="0.01" placeholder="leer = nicht in Gewinn/Verlust"></label>`}
  <label>${manual?'Aktueller Wert (€, optional)':'Eigener Preis (€, leer = Cardmarket)'}<input name="price" type="number" step="0.01" placeholder="leer = automatisch aus Datenbanken"></label>
  <div class="row"><button value="ok">Speichern</button><button value="cancel" formnovalidate>Abbrechen</button></div>`;
  if(manual&&!sealed&&f.name)attachSuggest(f.name,c=>{f.name.value=c.name;if(f.set)f.set.value=c.set.name;if(f.number)f.number.value=c.localId;if(f.img&&c.img)f.img.value=c.img.replace(/\/low\.webp$/,'/high.webp')},()=>(f.lang&&f.lang.value||'DE').toLowerCase(),f.name.closest('label'));
  const dlg=$('#dlg');dlg.returnValue='';dlg.showModal();dlg.onclose=()=>{if(dlg.returnValue!=='ok')return;const v=Object.fromEntries(new FormData(f));
-  const base=manual?{manual:true,name:v.name,set:v.set,number:v.number||'',img:v.img}:{apiId:c.id,name:c.name,set:c.set.name,number:c.number,img:c.images.small,apiPrice:p,cm:cmInfo(c),types:c.types||[]};
+  const base=manual?{manual:true,name:v.name,set:v.set,number:v.number||'',img:v.img}:tx?{manual:true,tdxId:c.id,setId:c.set.id,name:c.name,set:c.set.name,number:c.number,img:c.images.large||c.images.small,types:[],tdx:tx.best?{label:tx.label,id:tx.id,src:tx.best.source,conv:tx.best.umgerechnet,url:tx.best.url}:{label:'kein Preis',id:c.id}}:{apiId:c.id,name:c.name,set:c.set.name,number:c.number,img:c.images.small,apiPrice:p,cm:cmInfo(c),types:c.types||[]};
   if(sealed)base.type='sealed';let own=v.price?parseFloat(v.price):null;const tp=manual?window.tdxPick:null;window.tdxPick=null;let tpp=null;{const au=f.price&&f.price.dataset.auto;if(au&&own===+au){own=null;tpp=+au;base.tdx={label:f.price.dataset.lbl||'',id:f.price.dataset.aid||''}}}if(tp){base.tdx=tp.tdx;base.tdxId=tp.id;base.setId=tp.setId;if(tp.price!=null&&(own==null||own===tp.price)){own=null;tpp=tp.price}}
   if(mode==='wish')S.wishlist.push({uid:uid(),...base,lang:v.lang,target:parseFloat(v.target),price:own??tpp??p,ownPrice:own});
-  else{const it={uid:uid(),...base,lang:v.lang,cond:v.cond,qty:parseInt(v.qty)||1,buy:parseFloat(v.buy)||0,price:own??tpp??p,ownPrice:own,added:today()};if(it.price==null)it.noPrice=true;trackPrice(it);S.collection.push(it);window.FX&&FX.reveal(it)}
+  else{const it={uid:uid(),...base,lang:v.lang,cond:v.cond,qty:parseInt(v.qty)||1,buy:v.buy!==''&&v.buy!=null&&!isNaN(parseFloat(v.buy))?parseFloat(v.buy):null,price:own??tpp??p,ownPrice:own,added:today()};if(v.first){it.variant='1st';it.priceNote='Preis gilt nicht für 1st Edition';}if(it.price==null)it.noPrice=true;trackPrice(it);S.collection.push(it);if(v.first)firstEd(it);window.FX&&FX.reveal(it)}
   save();snapshot();render();const nw=mode==='wish'?S.wishlist[S.wishlist.length-1]:S.collection[S.collection.length-1];
   if(nw&&tdxNeed(nw))tdxFill(nw).then(ok=>{if(ok){trackPrice(nw);save();snapshot();render()}})};
  if(c&&window.Prices){const l=$('#tdxLbl');Prices.lookup(c.name,(window.scanLang||'DE').toLowerCase(),null,c.number).then(r=>{if(l&&r&&r.best)l.textContent='TCGdex: '+r.label}).catch(()=>{})}}
@@ -179,21 +228,24 @@ async function langFlags(f,{name,number,lang,tid}){const box=f.querySelector('#l
  const showP=l=>{const pe=f.querySelector('#lflP');if(!pe)return;const r=recs[l],cm=cmOf(r),cd=cmOf(recs.de),ce=cmOf(recs.en);
   if(!r||!r.best){pe.textContent=`${l.toUpperCase()}: kein Preis bei TCGdex`;return}
   const shared=l!=='ja'&&cm&&cm.idProduct&&cd&&ce&&cd.idProduct===ce.idProduct;
-  if(shared){const u=cm.url?cm.url+'&language='+CML[l]:null;pe.innerHTML=`Cardmarket: ${esc(money(cm.eur))} · gilt für alle Sprachen (Sprachfilter auf Cardmarket)${u?` · <a href="${esc(u)}" target="_blank" rel="noopener" style="color:#a78bfa">${l.toUpperCase()}-Angebote ↗</a>`:''}`}
+  if(shared){const u=cm.url?cm.url+'&language='+CML[l]:null;pe.innerHTML=`Cardmarket: ${esc(money(cm.eur))} · gilt für alle Sprachen (Sprachfilter auf Cardmarket)${u?` · <a href="${esc(u)}" target="_blank" rel="noopener" class="plink">${l.toUpperCase()}-Angebote ↗</a>`:''}`}
   else pe.textContent=`${l.toUpperCase()}: ${r.label}`};
  const set=l=>{if(!imgs[l])return;im.src=imgs[l];mark(l);showP(l)};
  box.querySelectorAll('button').forEach(b=>b.onclick=e=>{e.preventDefault();set(b.dataset.l)});
  if(own&&imgs[own])set(own);else mark(null)}
-function detail({api:c,item,list}){const f=$('#dlgForm');const it=item||{};const ci=c?cmInfo(c):it.cm;const price=item?item.price:cmPrice(c);
+function detail({api:c,item,list}){const f=$('#dlgForm');const it=item||{};const ci=c?cmInfo(c):it.cm;const price=item?item.price:(cmPrice(c)??(c._tdx&&c._tdx.best?c._tdx.best.eur:null));
  const img=c?c.images.large||c.images.small:(it.img||'').replace('/small','/large');const name=c?c.name:it.name;
  const rows=ci?[['Trend',ci.trend],['Ø 1 Tag',ci.avg1],['Ø 7 Tage',ci.avg7],['Ø 30 Tage',ci.avg30],['Ab-Preis',ci.low],['Ø Verkauf',ci.sell]].filter(r=>r[1]!=null):[];
  const raw=price||0;
  const ty=((c?c.types:it.types)||[])[0];f.innerHTML=`<div class="detail" data-type="${esc((ty||'none').toLowerCase())}">${img?`<div class="dcard tiltable"><img src="${esc(img)}" alt=""><i class="holo"></i></div><div class="langFlags" id="lfl" style="display:flex;gap:.4rem;justify-content:center;margin:.35rem 0"></div><p class="muted small" id="lflP" style="text-align:center;margin:0"></p><button type="button" class="chip gyroBtn" onclick="FX.gyro()">📱 Bewegungssensor</button>`:''}<h3>${esc(name)}</h3><p class="muted small">${esc(c?c.set.name:it.set)} ${esc(c?c.number:it.number)}${item?` · ${esc(it.lang)} · ${esc(it.cond)} · ${it.qty}×`:''}</p>
- ${price!=null&&!isNaN(price)?`<div class="big" style="font-size:1.8rem">${money(price)}</div>`:`<div class="big" style="font-size:1.8rem">–</div><p class="muted small" style="margin:.2rem 0">Noch kein Preis · <a href="https://www.cardmarket.com/de/Pokemon/Products/Search?searchString=${encodeURIComponent(name)}" target="_blank" rel="noopener" style="color:#a78bfa">auf Cardmarket ansehen ↗</a></p>`}${(()=>{const n=String((c?c.number:it.number)||'');const tot=c&&c.set&&c.set.printedTotal;const nn=n.includes('/')||!tot?n:n+'/'+tot;const q=['Pokemon',name,nn,c?c.set.name:it.set].filter(Boolean).join(' ');const cmu=(ci&&ci.url)||(it.tdx&&it.tdx.url);return `<p class="row" style="gap:.5rem;flex-wrap:wrap"><a class="chip" href="https://www.ebay.de/sch/i.html?_nkw=${encodeURIComponent(q)}&LH_Sold=1&LH_Complete=1" target="_blank" rel="noopener">Auf eBay vergleichen ↗</a>${cmu?`<a class="chip" href="${esc(cmu)}" target="_blank" rel="noopener">Cardmarket ↗</a>`:''}</p>`})()}${item?`<div class="${cls(itemChange(it,S.settings.tf))}">${pct(itemChange(it,S.settings.tf))||'Noch keine Änderung'}</div>`:''}
+ ${price!=null&&!isNaN(price)?`<div class="big" style="font-size:1.8rem">${money(price)}</div>`:`<div class="big" style="font-size:1.8rem">–</div><p class="muted small" style="margin:.2rem 0">Noch kein Preis · <a class="plink" href="https://www.cardmarket.com/de/Pokemon/Products/Search?searchString=${encodeURIComponent(name)}" target="_blank" rel="noopener">auf Cardmarket ansehen ↗</a></p>`}${(()=>{const n=String((c?c.number:it.number)||'');const tot=c&&c.set&&c.set.printedTotal;const nn=n.includes('/')||!tot?n:n+'/'+tot;const q=['Pokemon',name,nn,c?c.set.name:it.set].filter(Boolean).join(' ');
+ const cmu=(ci&&ci.url)||(it.tdx&&it.tdx.url&&/cardmarket/.test(it.tdx.url)?it.tdx.url:null)||`https://www.cardmarket.com/de/Pokemon/Products/Search?searchString=${encodeURIComponent(name.replace(/\s*\(.*\)\s*$/,''))}`;
+ const cmv=(ci&&ci.trend)||(item&&it.tdx&&/Cardmarket/.test(it.tdx.src||'')?it.price:null),jpv=(c&&c._tdx&&c._tdx.jpMarket)||(item&&it.tdx&&/JP-Markt/.test(it.tdx.src||'')?{eur:it.price,value:null}:null);
+ return `<div class="pcmp"><div><span class="muted small">Cardmarket</span><b>${cmv!=null?money(cmv):'–'}</b><a class="plink" href="${esc(cmu)}" target="_blank" rel="noopener">Cardmarket ↗</a></div><div><span class="muted small">eBay (verkauft)</span><b>–</b><span class="muted small">kein eBay-Preis verfügbar</span><a class="plink" href="https://www.ebay.de/sch/i.html?_nkw=${encodeURIComponent(q)}&LH_Sold=1&LH_Complete=1" target="_blank" rel="noopener">eBay ↗</a></div>${jpv?`<div><span class="muted small">JP-Markt</span><b>${money(jpv.eur)}</b><span class="muted small">${jpv.value?'¥'+jpv.value.toLocaleString('de-DE')+' · ':''}pokeca-souba</span></div>`:''}</div>`})()}${item?`<div class="${cls(itemChange(it,S.settings.tf))}">${pct(itemChange(it,S.settings.tf))||'Noch keine Änderung'}</div>`:''}
  <h3>Preisguide (Cardmarket)</h3><table class="ptable">${rows.map(r=>`<tr><td>${r[0]}</td><td>${money(r[1])}</td></tr>`).join('')||'<tr><td colspan=2 class="muted">Keine Cardmarket-Daten in dieser Quelle (siehe TCGdex-Zeile unten)</td></tr>'}</table>
  ${raw?`<h3>Graded (Schätzung)</h3><table class="ptable">${Object.entries(GRADE).map(([g,[k]])=>`<tr><td>${g}</td><td>≈ ${money(raw*k)}</td></tr>`).join('')}</table><p class="muted small">Faktor-Schätzung auf Raw-Preis, keine echten Graded-Verkäufe/Pop-Reports.</p>`:''}
  ${item&&it.buy?`<p>Einstand ${money(it.buy*it.qty)} · <span class="${cls(raw-it.buy)}">${raw-it.buy>=0?'+':''}${money((raw-it.buy)*it.qty)}</span></p>`:''}
- ${it.tdx?`<p class="muted small">Preis: ${esc(it.tdx.label)}${it.tdx.url?` · <a href="${esc(it.tdx.url)}" target="_blank" rel="noopener" style="color:#a78bfa">Cardmarket ↗</a>`:''}</p>`:''}<p class="muted small" id="tdxDet"></p>${it.note?`<p class="muted small">${esc(it.note)}</p>`:''}${ci&&ci.url?`<p><a href="${ci.url}" target="_blank" rel="noopener" style="color:#a78bfa">Auf Cardmarket ansehen ↗</a></p>`:''}</div>
+ ${it.tdx?`<p class="muted small">Preis: ${esc(it.tdx.label)}${it.tdx.url?` · <a href="${esc(it.tdx.url)}" target="_blank" rel="noopener" class="plink">Cardmarket ↗</a>`:''}</p>`:''}<p class="muted small" id="tdxDet"></p>${it.note?`<p class="muted small">${esc(it.note)}</p>`:''}${it.priceNote?`<p class="small" style="color:#fbbf24">⚠️ ${esc(it.priceNote)}</p>`:''}${ci&&ci.url?`<p><a href="${ci.url}" target="_blank" rel="noopener" class="plink">Auf Cardmarket ansehen ↗</a></p>`:''}</div>
  <div class="row">${item?'<button value="edit">Preis ändern</button><button value="del" class="danger">Entfernen</button>':`<button value="add">+ Sammlung</button><button value="wish">☆ Wunsch</button>`}<button value="cancel">Schließen</button></div>`;
  const dlg=$('#dlg');dlg.returnValue='';dlg.showModal();
  langFlags(f,{name,number:c?c.number:it.number,lang:item?it.lang:(window.scanLang||''),tid:it.tdx&&it.tdx.id});
@@ -213,7 +265,8 @@ async function refreshPrices(){const btn=$('#refresh');btn.textContent='…';con
  S.collection.forEach(trackPrice);btn.textContent='⟳';save();snapshot();render()}
 $('#refresh').onclick=refreshPrices;
 
-function totals(){let v=0,b=0,n=0;for(const c of S.collection){v+=(c.price||0)*c.qty;b+=(c.buy||0)*c.qty;n+=c.qty}return{v,b,n,g:v-b}}
+// Gewinn/Verlust nur für Karten mit Kaufpreis (>0); ohne Kaufpreis zählt nur der Wert
+function totals(){let v=0,b=0,n=0,vb=0;for(const c of S.collection){const w=(c.price||0)*c.qty;v+=w;n+=c.qty;if(c.buy>0){b+=c.buy*c.qty;vb+=w}}return{v,b,n,g:vb-b}}
 function snapshot(){const d=today();const t=totals();S.snapshots=S.snapshots.filter(s=>s.d!==d);S.snapshots.push({d,v:+t.v.toFixed(2)});S.snapshots.sort((a,b)=>a.d.localeCompare(b.d));save()}
 
 function tile({img,name,sub,price,chg,badge,qty,hit,type}){const el=document.createElement('div');el.className='tile'+(hit?' hit':'');el.dataset.type=(type||'none').toLowerCase();

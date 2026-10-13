@@ -210,3 +210,12 @@ html,body{max-width:100%;overflow-x:clip}
 .jphit img{max-width:160px}
 .spThumb img{width:100%;height:auto;aspect-ratio:63/88;object-fit:contain}
 input.vh[type=file]{position:absolute!important;width:1px!important;height:1px!important;opacity:0!important;pointer-events:none!important;overflow:hidden!important}
+
+/* Preisvergleich Cardmarket | eBay | JP-Markt */
+.pcmp{display:grid;grid-template-columns:repeat(auto-fit,minmax(110px,1fr));gap:.5rem;margin:.6rem 0}
+.pcmp>div{background:rgba(255,255,255,.05);border:1px solid rgba(167,139,250,.25);border-radius:12px;padding:.55rem .65rem;display:flex;flex-direction:column;gap:.15rem}
+.pcmp b{font-size:1.15rem}
+a.plink{display:inline-block;color:#c4b5fd;text-decoration:none;font-size:.82rem;font-weight:600;padding:.2rem .55rem;border-radius:999px;background:rgba(167,139,250,.14);border:1px solid rgba(167,139,250,.35);width:max-content;margin-top:.15rem}
+a.plink:hover{background:rgba(167,139,250,.28);color:#fff}
+
+.tile.owned{outline:2px solid #34d399;outline-offset:-2px}

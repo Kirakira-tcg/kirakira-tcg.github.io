@@ -14,7 +14,7 @@ function load(){if(store)return store;try{store=JSON.parse(ls()?.getItem(KEY)||'
 function save(){try{ls()?.setItem(KEY,JSON.stringify(store))}catch(e){/* voll: Cache leeren */try{store.c={};ls()?.setItem(KEY,JSON.stringify(store))}catch(_){}}}
 function cget(k,ttl){const m=mem.get(k);if(m&&Date.now()-m.t<ttl)return m.v;const s=load().c[k];if(s&&Date.now()-s.t<ttl){mem.set(k,s);return s.v}return undefined}
 function cset(k,v){const e={t:Date.now(),v};mem.set(k,e);load().c[k]=e;save()}
-async function getJSON(u){const r=await fetch(u);if(r.status===404)return null;if(!r.ok)throw new Error('TCGdex '+r.status);return r.json()}
+async function getJSON(u){const r=await fetch(u,{signal:AbortSignal.timeout(8000)});if(r.status===404)return null;if(!r.ok)throw new Error('TCGdex '+r.status);return r.json()}
 const normLang=l=>{l=(l||'de').toLowerCase();if(l==='jp')l='ja';return LANGS.includes(l)?l:'en'};
 const pad3=n=>String(n).replace(/^0+/,'').padStart(3,'0');
 
