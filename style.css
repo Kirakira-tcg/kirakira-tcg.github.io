@@ -381,3 +381,5 @@ body:has(#addToast:not([hidden])) .scantray .trayall{bottom:calc(var(--navh,72px
 .scanpick .scanset{font-size:.85rem;font-weight:700;opacity:.85;margin-top:2px;overflow-wrap:anywhere}
 
 .nmbtns{display:flex;gap:8px}.nmbtns>*{flex:1}.spThumb.nmsel{outline:3px solid #ffcf3f;outline-offset:2px}.nmok{display:block;font-style:normal;font-weight:700;color:#ffcf3f;font-size:.85em}
+
+.nmgrid.nmweak .spThumb{opacity:.6}.nmbg{margin:.2em 0}
