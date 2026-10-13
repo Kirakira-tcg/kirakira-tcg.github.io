@@ -48,7 +48,7 @@ async function normalize(card,lang){const p=card?.pricing||{};const out={id:card
 // Japanische Sets, die TCGdex fehlen: statische jpcards.json (tools/build_jp.py)
 let jpP=null,jpLogos={};
 function jpLoad(){if(jpP)return jpP;const u=(typeof document!=='undefined'&&document.baseURI)?new URL('jpcards.json',document.baseURI).href:'jpcards.json';
- jpP=fetch(u).then(r=>r.ok?r.json():null).then(d=>{if(!d||!Array.isArray(d.c))return[];if(d.logos&&d.logoBase)for(const[k,v]of Object.entries(d.logos))jpLogos[k]=d.logoBase+v;return d.c.map(([set,localId,total,name,img])=>({id:'jp:'+set+'-'+(localId||img.replace(/^.*\/|\.\w+$/g,'')),set,localId,total,name,image:d.base+img,setName:(d.sets||{})[set]||set}))}).catch(()=>{jpP=null;return[]});return jpP}
+ jpP=fetch(u).then(r=>r.ok?r.json():null).then(d=>{if(!d||!Array.isArray(d.c))return[];if(d.covers)for(const[k,v]of Object.entries(d.covers))jpLogos[k]=/assets\.tcgdex\.net/.test(v)&&!/\.\w{3,4}$/.test(v)?v+'/low.webp':v;return d.c.map(([set,localId,total,name,img])=>({id:'jp:'+set+'-'+(localId||img.replace(/^.*\/|\.\w+$/g,'')),set,localId,total,name,image:d.base+img,setName:(d.sets||{})[set]||set}))}).catch(()=>{jpP=null;return[]});return jpP}
 const jpNorm=c=>({id:c.id,name:c.name,lang:'ja',set:{id:c.set,name:c.setName},localId:c.localId,total:c.total,image:c.image,prices:[],best:null,label:'kein Preis – siehe Cardmarket',source:'pokemon-card.com'});
 const nz=x=>String(x??'').replace(/^0+/,'');
 async function jpLookup(name,setId,number){const L=await jpLoad();if(!L.length)return null;let c=null;
