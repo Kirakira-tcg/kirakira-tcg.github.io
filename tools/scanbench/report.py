@@ -2,10 +2,12 @@
 """Kartenapp scan benchmark - step 3: summarize results.csv into summary.md."""
 import argparse, csv, json, os, re, statistics, collections, urllib.request
 
+ALIAS = {'me55': '30th', 'me55c': '30th-c', 'sv1': 'sv01', 'sv2': 'sv02', 'sv3': 'sv03', 'sv4': 'sv04', 'sv5': 'sv05', 'sv6': 'sv06', 'sv7': 'sv07', 'sv8': 'sv08', 'sv9': 'sv09', 'sv3pt5': 'sv03.5', 'sv4pt5': 'sv04.5', 'sv6pt5': 'sv06.5', 'sv8pt5': 'sv08.5'}
 def nid(x):
     x = (x or '').strip()
     if '-' not in x: return x.lower()
     s, n = x.rsplit('-', 1); n = n.lstrip('0') or '0'
+    s = ALIAS.get(s.lower(), s)  # pokemontcg.io set ids that the OCR path reports
     return s.lower() + '-' + n.lower()
 def sid(x): return (x or '').rsplit('-', 1)[0].lower()
 def pct(a, b): return f"{100*a/b:.1f}%" if b else '–'
