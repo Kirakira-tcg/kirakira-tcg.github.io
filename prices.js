@@ -58,7 +58,7 @@ async function jpm(out){if(!out||out.best)return out;try{const d=await jppLoad()
 // Japanische Sets, die TCGdex fehlen: statische jpcards.json (tools/build_jp.py)
 let jpP=null,jpLogos={};
 function jpLoad(){if(jpP)return jpP;const u=(typeof document!=='undefined'&&document.baseURI)?new URL('jpcards.json',document.baseURI).href:'jpcards.json';
- jpP=fetch(u).then(r=>r.ok?r.json():null).then(d=>{if(!d||!Array.isArray(d.c))return[];if(d.covers)for(const[k,v]of Object.entries(d.covers))jpLogos[k]=/assets\.tcgdex\.net/.test(v)&&!/\.\w{3,4}$/.test(v)?v+'/low.webp':v;return d.c.map(([set,localId,total,name,img])=>({id:'jp:'+set+'-'+(localId||img.replace(/^.*\/|\.\w+$/g,'')),set,localId,total,name,image:/^https?:\/\//.test(img||'')?img:(d.base&&img?d.base+img:''),setName:(d.sets||{})[set]||set}))}).catch(()=>{jpP=null;return[]});return jpP}
+ jpP=fetch(u).then(r=>r.ok?r.json():null).then(d=>{if(!d||!Array.isArray(d.c))return[];if(d.covers)for(const[k,v]of Object.entries(d.covers))jpLogos[k]=/assets\.tcgdex\.net/.test(v)&&!/\.\w{3,4}$/.test(v)?v+'/low.webp':v;return d.c.map(([set,localId,total,name,img])=>({id:'jp:'+set+'-'+(localId||img.replace(/^.*\/|\.\w+$/g,'')),set,localId,total,name,image:(u=>/pokemon-card\.com|snkrdunk\.com|tcgplayer\.com|serebii\.net|pokeca\.net/i.test(u)?'':u)(/^https?:\/\//.test(img||'')?img:(d.base&&img?d.base+img:'')),setName:(d.sets||{})[set]||set}))}).catch(()=>{jpP=null;return[]});return jpP}
 const jpNorm=c=>({id:c.id,name:c.name,lang:'ja',set:{id:c.set,name:c.setName&&c.setName!==c.set&&!c.setName.includes(c.set)?`${c.setName} (${c.set})`:c.setName},localId:c.localId,total:c.total,image:c.image,prices:[],best:null,label:'kein Preis – siehe Cardmarket',source:'pokemon-card.com'});
 const nz=x=>String(x??'').split('/')[0].trim().replace(/^0+(?=\d)/,'');
 const numN=n=>{if(n==null)return null;const v=String(n).split('/')[0].trim();return v||null};
@@ -120,7 +120,7 @@ async function jpSetCards(id){if(String(id).startsWith('jp:'))id=id.slice(3);con
  const k='jpset:'+id;let d=cget(k,SET_TTL);if(d===undefined){d=await getJSON(`${BASE}/ja/sets/${encodeURIComponent(id)}`);d=d?{name:d.name,cards:(d.cards||[]).map(c=>({id:c.id,localId:c.localId,name:c.name,image:c.image||null}))}:null;cset(k,d)}
  if(!d)return[];return d.cards.map(c=>({id:c.id,localId:c.localId,name:c.name,img:c.image?c.image+'/low.webp':null,set:{id,name:d.name},lang:'ja'}))}
 
-async function jpImgFallback(url){try{const d=await jppLoad(),L=await jpLoad(),c=L.find(x=>x.image===url);const e=c&&d.p[c.set+'-'+nz(c.localId)];return e&&e.i||null}catch(e){return null}}
+async function jpImgFallback(url){return null;try{const d=await jppLoad(),L=await jpLoad(),c=L.find(x=>x.image===url);const e=c&&d.p[c.set+'-'+nz(c.localId)];return e&&e.i||null}catch(e){return null}}
 root.Prices={jpImgFallback,jpSets,jpSetCards,lookup,suggest,byId:async(id,lang)=>{lang=normLang(lang);if(String(id).startsWith('jp:')){const L=await jpLoad();const c=L.find(x=>x.id===id);return c?jpm(jpNorm(c)):null}const c=await getCard(id,lang);return c?normalize(c,lang):null},search,toEUR,rate,
  clearCache(){mem.clear();store={c:{}};save()},CACHE_KEY:KEY,LANGS};
 })(typeof window!=='undefined'?window:globalThis);
