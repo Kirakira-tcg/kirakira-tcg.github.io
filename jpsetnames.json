@@ -1,0 +1,243 @@
+{
+"source": "https://bulbapedia.bulbagarden.net/w/index.php?title=List_of_Japanese_Pok%C3%A9mon_Trading_Card_Game_expansions&action=raw",
+"built": "2026-10-13",
+"sets": {
+"SV1S": {
+"en": "Scarlet ex",
+"ja": "スカーレットex",
+"src": "bulbapedia-ja-name"
+},
+"SV1V": {
+"en": "Violet ex",
+"ja": "バイオレットex",
+"src": "bulbapedia-ja-name"
+},
+"SV1a": {
+"en": "Triplet Beat",
+"ja": "トリプレットビート",
+"src": "bulbapedia-logo-id"
+},
+"SV2P": {
+"en": "Snow Hazard",
+"ja": "スノーハザード",
+"src": "bulbapedia-ja-name"
+},
+"SV2D": {
+"en": "Clay Burst",
+"ja": "クレイバースト",
+"src": "bulbapedia-ja-name"
+},
+"SV2a": {
+"en": "Pokémon Card 151",
+"ja": "ポケモンカード151",
+"src": "bulbapedia-logo-id"
+},
+"SV3": {
+"en": "Ruler of the Black Flame",
+"ja": "黒炎の支配者",
+"src": "bulbapedia-ja-name"
+},
+"SV3a": {
+"en": "Raging Surf",
+"ja": "レイジングサーフ",
+"src": "bulbapedia-logo-id"
+},
+"SV4K": {
+"en": "Ancient Roar",
+"ja": "古代の咆哮",
+"src": "bulbapedia-ja-name"
+},
+"SV4M": {
+"en": "Future Flash",
+"ja": "未来の一閃",
+"src": "bulbapedia-ja-name"
+},
+"SV4a": {
+"en": "Shiny Treasure ex",
+"ja": "シャイニートレジャーex",
+"src": "bulbapedia-logo-id",
+"tcgdexName": "レイジングサーフ"
+},
+"SV5K": {
+"en": "Wild Force",
+"ja": "ワイルドフォース",
+"src": "bulbapedia-ja-name"
+},
+"SV5M": {
+"en": "Cyber Judge",
+"ja": "サイバージャッジ",
+"src": "bulbapedia-ja-name"
+},
+"SV5a": {
+"en": "Crimson Haze",
+"ja": "クリムゾンヘイズ",
+"src": "bulbapedia-logo-id"
+},
+"SV6": {
+"en": "Transformation Mask",
+"ja": "変幻の仮面",
+"src": "bulbapedia-ja-name"
+},
+"SV6a": {
+"en": "Night Wanderer",
+"ja": "ナイトワンダラー",
+"src": "bulbapedia-logo-id"
+},
+"SV7": {
+"en": "Stellar Miracle",
+"ja": "ステラミラクル",
+"src": "bulbapedia-ja-name"
+},
+"SV7a": {
+"en": "Paradise Dragona",
+"ja": "楽園ドラゴーナ",
+"src": "bulbapedia-logo-id"
+},
+"SV8": {
+"en": "Super Electric Breaker",
+"ja": "超電ブレイカー",
+"src": "bulbapedia-ja-name"
+},
+"SV8a": {
+"en": "Terastal Fest ex",
+"ja": "テラスタルフェスex",
+"src": "bulbapedia-logo-id"
+},
+"SV9": {
+"en": "Battle Partners",
+"ja": "バトルパートナーズ",
+"src": "bulbapedia-ja-name"
+},
+"SV9a": {
+"en": "Hot Wind Arena",
+"ja": "熱風のアリーナ",
+"src": "bulbapedia-logo-id"
+},
+"SV10": {
+"en": "Glory of the Rocket Gang",
+"ja": "ロケット団の栄光",
+"src": "bulbapedia-ja-name"
+},
+"SV11B": {
+"en": "Black Bolt",
+"ja": "ブラックボルト",
+"src": "bulbapedia-ja-name"
+},
+"SV11W": {
+"en": "White Flare",
+"ja": "ホワイトフレア",
+"src": "bulbapedia-ja-name"
+},
+"M1L": {
+"en": "Mega Brave",
+"ja": "メガブレイブ",
+"src": "bulbapedia-ja-name"
+},
+"M1S": {
+"en": "Mega Symphonia",
+"ja": "メガシンフォニア",
+"src": "bulbapedia-ja-name"
+},
+"M2": {
+"en": "Inferno X",
+"ja": "インフェルノX",
+"src": "bulbapedia-ja-name"
+},
+"M2a": {
+"en": "MEGA Dream ex",
+"ja": "MEGAドリームex",
+"src": "bulbapedia-ja-name"
+},
+"M3": {
+"en": "Nihil Zero",
+"ja": "ムニキスゼロ",
+"src": "bulbapedia-ja-name"
+},
+"M4": {
+"en": "Ninja Spinner",
+"ja": "ニンジャスピナー",
+"src": "bulbapedia-ja-name"
+},
+"M5": {
+"en": "Abyss Eye",
+"ja": "アビスアイ",
+"src": "bulbapedia-ja-name"
+},
+"M6": {
+"en": "Storm Emeralda",
+"ja": "ストームエメラルダ",
+"src": "bulbapedia-ja-name"
+},
+"S1a": {
+"en": "VMAX Rising",
+"ja": "VMAXライジング",
+"src": "bulbapedia-ja-name"
+},
+"S4a": {
+"en": "Shiny Star V",
+"ja": "シャイニースターV",
+"src": "bulbapedia-ja-name"
+},
+"S6a": {
+"en": "Eevee Heroes",
+"ja": "イーブイヒーローズ",
+"src": "bulbapedia-logo-id"
+},
+"S8a": {
+"en": "25th Anniversary Collection",
+"ja": "25th ANNIVERSARY COLLECTION",
+"src": "bulbapedia-logo-id",
+"tcgdexName": "25th アニバーサリーコレクション"
+},
+"S8b": {
+"en": "VMAX Climax",
+"ja": "VMAXクライマックス",
+"src": "bulbapedia-logo-id"
+},
+"S9": {
+"en": "Star Birth",
+"ja": "スターバース",
+"src": "bulbapedia-ja-name"
+},
+"S10a": {
+"en": "Dark Phantasma",
+"ja": "ダークファンタズマ",
+"src": "bulbapedia-logo-id"
+},
+"S11": {
+"en": "Lost Abyss",
+"ja": "ロストアビス",
+"src": "bulbapedia-ja-name"
+},
+"S11a": {
+"en": "Incandescent Arcana",
+"ja": "白熱のアルカナ",
+"src": "bulbapedia-logo-id"
+},
+"S12a": {
+"en": "VSTAR Universe",
+"ja": "VSTARユニバース",
+"src": "bulbapedia-logo-id"
+},
+"S5a": {
+"en": "Peerless Fighters",
+"ja": "双璧のファイター",
+"src": "bulbapedia-logo-id"
+},
+"S9a": {
+"en": "Battle Region",
+"ja": "バトルリージョン",
+"src": "bulbapedia-logo-id"
+},
+"SM12a": {
+"en": "TAG TEAM GX: Tag All Stars",
+"ja": "TAG TEAM GX タッグオールスターズ",
+"src": "bulbapedia-ja-name"
+},
+"SM8b": {
+"en": "GX Ultra Shiny",
+"ja": "GXウルトラシャイニー",
+"src": "bulbapedia-ja-name"
+}
+}
+}
