@@ -25,8 +25,11 @@ async function rate(cur){cur=(cur||'EUR').toUpperCase();if(cur==='EUR')return{ra
  return{rate:FX_FALLBACK[cur]??null,fallback:true};}
 async function toEUR(amount,cur){if(amount==null)return null;const r=await rate(cur);return r.rate==null?null:{eur:+(amount*r.rate).toFixed(2),rate:r.rate,fallback:r.fallback,umgerechnet:cur.toUpperCase()!=='EUR'}}
 
-async function getCard(id,lang){lang=normLang(lang);const k=`card:${lang}:${id}`;const c=cget(k,TTL);if(c!==undefined)return c;
- const d=await getJSON(`${BASE}/${lang}/cards/${encodeURIComponent(id)}`);cset(k,d?slim(d):null);return d?slim(d):null}
+// v82: JP-Set-IDs (Großbuchstaben, z.B. SV4a, S8b, SM9) gibt es nur in /ja, internationale (klein, z.B. swsh4, dp7) nicht in /ja -> keine sinnlosen 404
+const idLangOk=(id,lang)=>{id=String(id||'');if(id.startsWith('jp:'))return false;const set=id.replace(/-[^-]+$/,'');const up=/[A-Z]/.test(set);if(lang==='ja')return up||/^(neo[1-4]|web1|sm2\+)$/.test(set);return !up||/^(P-A|A\d|B\d)/.test(set)};
+const NEG=new Map();
+async function getCard(id,lang){lang=normLang(lang);const k=`card:${lang}:${id}`;if(!idLangOk(id,lang))return null;if(NEG.has(k)&&Date.now()-NEG.get(k)<6*3600e3)return null;const c=cget(k,TTL);if(c!==undefined)return c;
+ let d=null;try{d=await getJSON(`${BASE}/${lang}/cards/${encodeURIComponent(id)}`)}catch(e){d=null}if(!d)NEG.set(k,Date.now());cset(k,d?slim(d):null);return d?slim(d):null}
 const slim=d=>({id:d.id,localId:d.localId,name:d.name,image:d.image||null,rarity:d.rarity||null,set:d.set?{id:d.set.id,name:d.set.name}:null,pricing:d.pricing||null});
 async function search(name,lang){lang=normLang(lang);const k=`s:${lang}:${name.toLowerCase()}`;const c=cget(k,TTL);if(c!==undefined)return c;
  const d=await getJSON(`${BASE}/${lang}/cards?name=${encodeURIComponent(name)}`)||[];cset(k,d);return d}
