@@ -261,3 +261,7 @@ html.ui-hc{--bg:#000;--card:#0d0d0d;--card2:#1a1a1a;--tx:#fff;--mu:#e2e2e2;--bd:
 .livehint{position:absolute;left:50%;top:12px;transform:translateX(-50%);padding:.5rem 1rem;border-radius:999px;font-size:1.1rem;font-weight:800;background:rgba(0,0,0,.6);color:#fff;white-space:nowrap;pointer-events:none;z-index:3}
 .livehint:empty{display:none}.livehint.ok{background:rgba(22,140,60,.9)}.livehint.dark{background:rgba(200,120,0,.9)}
 .bigbtn[hidden],.scantray[hidden]{display:none!important}
+
+/* v61 */
+html.ui-big{font-size:120%}html.ui-big body{font-size:18px}html.ui-big .small{font-size:1.05rem}html.ui-big .tile .n{font-size:1.1rem}html.ui-big .tile .s{font-size:1rem}html.ui-big .tile .p b{font-size:1.2rem}html.ui-big nav button{font-size:1rem}
+#qNum{min-width:4.2rem;width:4.6rem}.imgnote{font-size:.72rem;color:var(--mu);margin:2px 0 0}
