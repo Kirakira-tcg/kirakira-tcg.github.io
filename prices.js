@@ -61,6 +61,9 @@ async function normalize(card,lang){const p=BADP[card?.id]?{}:(card?.pricing||{}
    idProduct:cm.idProduct,url:cm.idProduct?`https://www.cardmarket.com/de/Pokemon/Products?idProduct=${cm.idProduct}`:null,updated:cm.updated});}
  const tp=p.tcgplayer;if(tp){const cur=(tp.unit||'USD').toUpperCase();for(const [v,o] of Object.entries(tp)){if(!o||typeof o!=='object')continue;const val=o.marketPrice??o.midPrice??o.lowPrice??null;const conv=await toEUR(val,cur);
   out.prices.push({source:'TCGplayer (TCGdex)',variant:v,currency:cur,value:val,eur:conv?.eur??null,umgerechnet:!!conv?.umgerechnet,fxFallback:!!conv?.fallback,low:o.lowPrice,mid:o.midPrice,high:o.highPrice,market:o.marketPrice,updated:tp.updated})}}
+ // v114: TCGdex ohne Preis -> Cardmarket-Werte derselben Karte aus pokemontcg.io (mit Datum, da teils alt)
+ if(!out.prices.length&&lang!=='ja'&&!String(card.id).startsWith('jp:')){try{const cm=await ptcgCM(card.id);if(cm){const v=cm.prices.trendPrice||cm.prices.avg30||cm.prices.averageSellPrice||null;if(v){const d=String(cm.updatedAt||'').split('/').reverse().join('.');
+  out.prices.push({source:`Cardmarket (pokemontcg.io${d?', Stand '+d:''})`,currency:'EUR',value:v,eur:v,umgerechnet:false,fxFallback:false,trend:cm.prices.trendPrice,avg:cm.prices.averageSellPrice,low:cm.prices.lowPrice,avg1:cm.prices.avg1,avg7:cm.prices.avg7,avg30:cm.prices.avg30,url:`https://www.cardmarket.com/de/Pokemon/Products/Search?searchString=${encodeURIComponent(card.name)}`,updated:cm.updatedAt})}}}catch(e){}}
  out.best=out.prices.find(x=>x.eur!=null)||null;
  if(out.best)out.label=`${out.best.eur.toFixed(2).replace('.',',')} € · ${out.best.source}${out.best.umgerechnet?` · umgerechnet aus ${out.best.currency}${out.best.fxFallback?' (Schätzkurs)':''}`:''}`;
  else out.label='kein Preis bei TCGdex';
@@ -145,6 +148,8 @@ async function jpImgFallback(url){return null;try{const d=await jppLoad(),L=awai
 // TCGdex-Set-ID -> pokemontcg.io-Set-ID (nur für Bild-Fallback)
 const PT_REV=Object.fromEntries(Object.entries(TDX_SET).map(([k,v])=>[v,k]));
 const ptcgSet=t=>{t=String(t||'');if(PT_REV[t])return PT_REV[t];if(/[A-Z]/.test(t)||/^(30th|cel25cc)/.test(t))return null;let m;if((m=t.match(/^(sv|me)0?(\d+)(\.5)?$/)))return m[1]+m[2]+(m[3]?'pt5':'');if((m=t.match(/^(swsh|sm|xy|bw)(\d+)\.5$/)))return m[1]+m[2]+'pt5';return t};
+async function ptcgCM(tid){const m=String(tid||'').match(/^(.*)-([^-]+)$/);if(!m)return null;const ps=ptcgSet(m[1]);if(!ps)return null;const id=ps+'-'+(/^\d+$/.test(m[2])?String(+m[2]):m[2]);const k='ptcm:'+id;const c=cget(k,TTL);if(c!==undefined)return c;
+ let v=null;try{const r=await fetch(`https://api.pokemontcg.io/v2/cards/${encodeURIComponent(id)}?select=id,name,cardmarket`,{signal:AbortSignal.timeout(8000)});if(r.status===404){cset(k,null);return null}if(!r.ok)return null;const j=await r.json();v=j&&j.data&&j.data.cardmarket&&j.data.cardmarket.prices?j.data.cardmarket:null}catch(e){return null}cset(k,v);return v}
 root.Prices={tdxSet,tdxId,ptcgSet,clsNum,clsFix,jpImgFallback,jpSets,jpSetCards,lookup,suggest,byId:async(id,lang)=>{lang=normLang(lang);if(String(id).startsWith('jp:')){const L=await jpLoad();const c=L.find(x=>x.id===id);return c?jpm(jpNorm(c)):null}const c=await getCard(id,lang);return c?normalize(c,lang):null},search,toEUR,rate,
  clearCache(){mem.clear();store={c:{}};save()},CACHE_KEY:KEY,LANGS};
 })(typeof window!=='undefined'?window:globalThis);
