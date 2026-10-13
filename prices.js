@@ -59,7 +59,7 @@ async function jpm(out){if(!out||out.best)return out;try{const d=await jppLoad()
 let jpP=null,jpLogos={};
 function jpLoad(){if(jpP)return jpP;const u=(typeof document!=='undefined'&&document.baseURI)?new URL('jpcards.json',document.baseURI).href:'jpcards.json';
  jpP=fetch(u).then(r=>r.ok?r.json():null).then(d=>{if(!d||!Array.isArray(d.c))return[];if(d.covers)for(const[k,v]of Object.entries(d.covers))jpLogos[k]=/assets\.tcgdex\.net/.test(v)&&!/\.\w{3,4}$/.test(v)?v+'/low.webp':v;return d.c.map(([set,localId,total,name,img])=>({id:'jp:'+set+'-'+(localId||img.replace(/^.*\/|\.\w+$/g,'')),set,localId,total,name,image:/^https?:\/\//.test(img||'')?img:(d.base&&img?d.base+img:''),setName:(d.sets||{})[set]||set}))}).catch(()=>{jpP=null;return[]});return jpP}
-const jpNorm=c=>({id:c.id,name:c.name,lang:'ja',set:{id:c.set,name:c.setName},localId:c.localId,total:c.total,image:c.image,prices:[],best:null,label:'kein Preis – siehe Cardmarket',source:'pokemon-card.com'});
+const jpNorm=c=>({id:c.id,name:c.name,lang:'ja',set:{id:c.set,name:c.setName&&c.setName!==c.set&&!c.setName.includes(c.set)?`${c.setName} (${c.set})`:c.setName},localId:c.localId,total:c.total,image:c.image,prices:[],best:null,label:'kein Preis – siehe Cardmarket',source:'pokemon-card.com'});
 const nz=x=>String(x??'').split('/')[0].trim().replace(/^0+(?=\d)/,'');
 const numN=n=>{if(n==null)return null;const v=String(n).split('/')[0].trim();return v||null};
 const snrm=x=>String(x||'').toLowerCase().replace(/[\s・_\-:'’.&]/g,'');
