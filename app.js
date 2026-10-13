@@ -929,3 +929,26 @@ async function setListFix(tdx,lang,txt,num,name){const lg=(lang||'DE').toLowerCa
 (function idleWarm(n=0){const go2=()=>{if(window.Tesseract){try{warmOCR()}catch(e){}try{scanWarmSets()}catch(e){}}else if(n<40)setTimeout(()=>idleWarm(n+1),500)};if(document.readyState!=='complete')return addEventListener('load',()=>setTimeout(()=>idleWarm(n),300),{once:true});(window.requestIdleCallback||(f=>setTimeout(f,800)))(go2,{timeout:2500})})();
 
 function retakePrompt(msg){const P=$('#scanPick'),st=$('#scanStatus2');if(st)st.textContent='⚠️ '+msg;const b=document.createElement('div');b.className='retake';b.innerHTML=`<p><b>⚠️ ${esc(msg)}</b></p><button type="button" class="primary bigbtn" id="retakeBtn">📸 Neu aufnehmen</button>`;if(P){P.hidden=false;P.prepend(b)}else $('#scanbox').append(b);$('#retakeBtn').onclick=()=>{b.remove();if(P)P.hidden=true;$('#scanbox')?.classList.remove('hasres');startLive()};b.scrollIntoView({block:'center'})}
+// v78: Sammlung teilen – Bild (1080x1350) per Canvas, Web Share mit Datei, sonst PNG-Download
+async function shareImgLoad(u){for(const c of (u&&/assets\.tcgdex\.net\//.test(u)?tdxCands(u).filter(x=>/assets\.tcgdex\.net\//.test(x)):[]))try{const r=await fetch(imgFull(c).replace('/high.webp','/low.webp'),{mode:'cors',signal:AbortSignal.timeout(6000)});if(!r.ok)continue;return await createImageBitmap(await r.blob())}catch(e){}return null}
+async function shareRender(){const W=1080,H=1350,cv=document.createElement('canvas');cv.width=W;cv.height=H;const g=cv.getContext('2d');const F='system-ui,-apple-system,Segoe UI,Roboto,sans-serif';
+ const bg=g.createLinearGradient(0,0,W,H);bg.addColorStop(0,'#2a1766');bg.addColorStop(1,'#0f1530');g.fillStyle=bg;g.fillRect(0,0,W,H);
+ const t=totals(),cards=S.collection.filter(c=>c.type!=='sealed');const txt=(s,x,y,sz,col,w='700',al='left')=>{g.font=`${w} ${sz}px ${F}`;g.fillStyle=col;g.textAlign=al;g.fillText(s,x,y)};
+ txt('Meine Sammlung',80,140,56,'#ffffff','800');
+ txt(money(t.v),80,270,112,'#ffd84d','900');txt('Gesamtwert',80,320,34,'#c9c3e6','600');
+ let y=400;if(t.b>0){const pc=t.g/t.b*100,sg=t.g>=0?'+':'−';txt(`${sg}${money(Math.abs(t.g))} (${sg}${Math.abs(pc).toFixed(1).replace('.',',')} %) seit Kauf`,80,y,44,t.g>=0?'#7ee2a8':'#e6e1f5','700');txt(`bezogen auf Karten mit Kaufpreis (Einstand ${money(t.b)})`,80,y+44,28,'#a49dc6','500');y+=110}
+ txt(`${t.n} ${t.n===1?'Karte':'Karten'}`,80,y,44,'#ffffff','700');y+=70;
+ const top=[...S.collection].filter(c=>c.price!=null).sort((a,b)=>b.price-a.price).slice(0,3);
+ if(top.length){txt('Top '+top.length,80,y,36,'#c9c3e6','700');y+=30;const cw=280,ch=390,gap=(W-160-3*cw)/2;
+  for(let i=0;i<top.length;i++){const c=top[i],x=80+i*(cw+gap);g.fillStyle='rgba(255,255,255,.08)';g.beginPath();g.roundRect(x,y,cw,ch,18);g.fill();
+   const bm=await shareImgLoad(safeImg(c.img));if(bm){const r=Math.min(cw/bm.width,ch/bm.height),w=bm.width*r,h=bm.height*r;g.save();g.beginPath();g.roundRect(x,y,cw,ch,18);g.clip();g.drawImage(bm,x+(cw-w)/2,y+(ch-h)/2,w,h);g.restore()}
+   else{g.font=`800 34px ${F}`;g.fillStyle='#fff';g.textAlign='center';const words=String(c.name).split(/\s+/);let line='',ly=y+ch/2-30;for(const wd of words){if(g.measureText(line+' '+wd).width>cw-30&&line){g.fillText(line,x+cw/2,ly);ly+=42;line=wd}else line=(line?line+' ':'')+wd}g.fillText(line,x+cw/2,ly);g.font=`500 26px ${F}`;g.fillStyle='#c9c3e6';g.fillText(`${c.set||''} ${c.number||''}`.trim().slice(0,22),x+cw/2,ly+44)}
+   txt(String(c.name).slice(0,20),x+cw/2,y+ch+44,30,'#ffffff','700','center');txt(money(c.price),x+cw/2,y+ch+86,34,'#ffd84d','800','center')}}
+ txt('Kartenapp',80,H-150,44,'#ffffff','900');txt('jayezhdtwitch.github.io/kartenapp',80,H-108,28,'#c9c3e6','500');
+ txt('Inoffizielles Fanprojekt, keine Verbindung zu Nintendo/The Pokémon Company · Preise ohne Gewähr',W/2,H-44,22,'#8f88b5','500','center');txt('Pokémon und zugehörige Namen/Bilder © Nintendo, Creatures, GAME FREAK, The Pokémon Company',W/2,H-16,22,'#8f88b5','500','center');
+ return await new Promise(r=>cv.toBlob(r,'image/png'))}
+window.shareRender=shareRender;
+{const b=$('#shareBtn');if(b){const upd=()=>{b.hidden=!S.collection.length};upd();const r0=render;render=function(){const x=r0.apply(this,arguments);upd();return x};
+ b.onclick=async()=>{const old=b.textContent;b.textContent='Bild wird erstellt…';b.disabled=true;try{const blob=await shareRender();const file=new File([blob],'kartenapp-sammlung.png',{type:'image/png'});
+  if(navigator.canShare&&navigator.canShare({files:[file]})){try{await navigator.share({files:[file],title:'Meine Sammlung',text:'Meine Pokémon-Sammlung – Kartenapp'})}catch(e){}}
+  else{const a=document.createElement('a');a.href=URL.createObjectURL(blob);a.download=file.name;document.body.append(a);a.click();setTimeout(()=>{URL.revokeObjectURL(a.href);a.remove()},2000)}}catch(e){console.warn(e);alert('Bild konnte nicht erstellt werden.')}finally{b.textContent=old;b.disabled=false}}}}
