@@ -982,7 +982,7 @@ function scanPick(r){const P=$('#scanPick');P.hidden=false;const noNum=r.name&&!
  $('#spName').addEventListener('input',()=>{clearTimeout(gT);gT=setTimeout(()=>grid(true),400)});$('#spSet').addEventListener('input',()=>{clearTimeout(gT);gT=setTimeout(()=>grid(true),400)});
  $('#spNoNum').onclick=()=>{const x=v();P.hidden=true;applyScan({name:x.name,jp:r.jp,number:'',set:x.set},x.lang);window.pendingScan.number=x.number};
  $('#spMan').onclick=()=>{const x=v();manualAdd({...x,name:r.jp&&x.name===r.name?`${x.name} (${r.jp})`:x.name,img:r.hit?imgU(r.hit.image,'high'):''})};
- $('#spX').onclick=()=>P.hidden=true;
+ $('#spX').onclick=()=>{P.hidden=true;$('#nmSheet')?.remove();document.body.classList.remove('hassb');window.lastScan=null;$('#scanbox')?.classList.remove('hasres');const s2=$('#scanStatus2');if(s2)s2.textContent='Verworfen.'};// v120: wie „Verwerfen“ im Blatt – kein halber Zustand
  if(noNum)setTimeout(()=>{const n=$('#spNum');n.focus();n.scrollIntoView({block:'center'})},50)}
 const imgU=(u,sz='low')=>!u?'':/\.(jpe?g|png|webp|gif)(\?.*)?$/i.test(u)?u:u+'/'+sz+'.webp';const sidOf=id=>{const s=String(id||'').replace(/^jp:/,'');return s.slice(0,s.lastIndexOf('-'))};
 async function jpHit(r){if(!window.Prices||r.lang!=='JP')return null;const num=String(r.number||'').replace(/^0+/,'')||null;
