@@ -89,12 +89,35 @@ async function tdxResults(R,name,num,lang,append){const box=document.createEleme
    window.tdxPick={id:c.id,setId:c.set.id,price:pe,tdx:x&&x.best?{label:x.label,id:x.id,src:x.best.source,conv:x.best.umgerechnet,url:x.best.url}:{label:'kein Preis bei TCGdex',id:c.id}}};
   R.append(el)})}
 // Sets
-let SETS=[];async function loadSets(){try{const d=await api(`${API}/sets?orderBy=-releaseDate&pageSize=250&select=id,name,series,releaseDate,images,total,printedTotal,ptcgoCode`);SETS=d.data;renderSets()}catch(e){$('#setList').innerHTML='<p class="muted small">Sets nicht ladbar.</p>'}}
+let SETS=[];async function loadSets(){try{const d=await api(`${API}/sets?orderBy=-releaseDate&pageSize=250&select=id,name,series,releaseDate,images,total,printedTotal,ptcgoCode`);SETS=d.data;if(SETTAB!=='ja')renderSets()}catch(e){$('#setList').innerHTML='<p class="muted small">Sets nicht ladbar.</p>'}}
 function renderSets(){const f=$('#setFilter').value.toLowerCase();$('#setList').innerHTML='';
  for(const s of SETS.filter(s=>!f||(s.name+s.series).toLowerCase().includes(f)).slice(0,60)){const d=document.createElement('div');d.className='set';
   d.innerHTML=`<img loading="lazy" src="${s.images.logo}" alt=""><b>${esc(s.name)}</b><br><span class="muted">${esc(s.series)} · ${s.total} Karten · ${(s.releaseDate||'').slice(0,4)}</span>`;
   d.onclick=()=>{window.pendingScan=null;$('#qName').value='';$('#qNum').value='';search('','','',s.id);window.scrollTo(0,0)};$('#setList').append(d)}}
-$('#setFilter').oninput=renderSets;
+let SETTAB='en',JPSETL=null;
+async function renderJpSets(){const L=$('#setList');if(!window.Prices||!Prices.jpSets){L.innerHTML='<p class="muted small">Nicht verfügbar.</p>';return}
+ if(!JPSETL){L.innerHTML='<p class="muted small">Lade japanische Sets…</p>';try{JPSETL=await Prices.jpSets()}catch(e){JPSETL=[]}if(SETTAB!=='ja')return}
+ const f=$('#setFilter').value.toLowerCase();L.innerHTML='';const fl=JPSETL.filter(s=>!f||(s.id+' '+s.name).toLowerCase().includes(f));
+ if(!fl.length){L.innerHTML='<p class="muted small">Keine Sets gefunden.</p>';return}
+ for(const s of fl.slice(0,80)){const d=document.createElement('div');d.className='set';
+  d.innerHTML=`${s.logo?`<img loading="lazy" src="${esc(s.logo)}.webp" alt="">`:''}<b>${esc(s.id)}</b> ${esc(s.name)}<br><span class="muted">${s.count} Karten${s.src==='jp'?' · neu (pokemon-card.com)':''}</span>`;
+  d.onclick=()=>jpSetCardsView(s);L.append(d)}}
+async function jpSetCardsView(s){window.pendingScan=null;const R=$('#results');R.classList.remove('binder-src');R.innerHTML='<p class="muted">Lade Karten…</p>';window.scrollTo(0,0);
+ let cs=[];try{cs=await Prices.jpSetCards(s.id)}catch(e){}
+ if(!cs.length){R.innerHTML='<p class="muted">Keine Karten gefunden.</p>';return}
+ cs.sort((a,b)=>(parseInt(a.localId)||9999)-(parseInt(b.localId)||9999));
+ R.innerHTML=`<h3 class="small" style="grid-column:1/-1">🇯🇵 ${esc(s.id)} · ${esc(s.name)} · ${cs.length} Karten</h3>`;
+ cs.forEach((c,i)=>{const el=tile({img:c.img,name:c.name,sub:`${s.id} · ${c.localId}`,price:null});const pb=el.querySelector('.p b');if(pb)pb.textContent=c.id.startsWith('jp:')?'–':'';
+  let pr=null;const ld=()=>pr||(pr=Prices.byId(c.id,'ja').catch(()=>null));
+  if(!c.id.startsWith('jp:')&&i<24)ld().then(x=>{if(pb)pb.textContent=x&&x.best?x.best.eur.toFixed(2).replace('.',',')+' €':'–'});
+  el.onclick=async()=>{const x=await ld();manualAdd({name:c.name,number:c.localId,set:c.set.name||s.name,lang:'JP'});const f=$('#dlgForm');
+   if(f.img)f.img.value=(x&&x.image)||(c.img||'').replace(/\/low\.webp$/,'/high.webp');
+   const pe=x&&x.best?x.best.eur:null;if(f.price&&pe!=null){f.price.value=pe;f.price.required=false}
+   window.tdxPick={id:c.id,setId:s.id,price:pe,tdx:x&&x.best?{label:x.label,id:x.id,src:x.best.source,conv:x.best.umgerechnet,url:x.best.url}:{label:(x&&x.label)||'kein Preis bei TCGdex',id:c.id}}};
+  R.append(el)})}
+function setTab(t){SETTAB=t;document.querySelectorAll('#setTabs button').forEach(b=>b.classList.toggle('on',b.dataset.t===t));t==='ja'?renderJpSets():renderSets()}
+document.querySelectorAll('#setTabs button').forEach(b=>b.onclick=()=>setTab(b.dataset.t));
+$('#setFilter').oninput=()=>SETTAB==='ja'?renderJpSets():renderSets();
 
 // Zweite Preisquelle (prices.js / TCGdex): Fallback bei fehlendem Preis oder nicht-englischer Karte
 const tdxNeed=x=>x.ownPrice==null&&(x.price==null||(x.lang&&x.lang!=='EN'));

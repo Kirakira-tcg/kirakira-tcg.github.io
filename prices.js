@@ -91,6 +91,15 @@ async function suggest(query,lang='de',limit=24){const q=String(query||'').trim(
  for(let i=0;r.length<limit&&per.some(a=>i<a.length);i++)for(const a of per){const c=a[i];if(c&&!seen.has(c.lang+c.id)&&r.length<limit){seen.add(c.lang+c.id);r.push(c)}}
  return r}
 
-root.Prices={lookup,suggest,byId:async(id,lang)=>{lang=normLang(lang);if(String(id).startsWith('jp:')){const L=await jpLoad();const c=L.find(x=>x.id===id);return c?jpNorm(c):null}const c=await getCard(id,lang);return c?normalize(c,lang):null},search,toEUR,rate,
+// Set-Browser JP: jpSets() -> [{id,name,count,src,logo}], neueste zuerst; jpSetCards(id) -> [{id,localId,name,img,set,lang}]
+async function jpSets(){let t=cget('jpsets:ja',SET_TTL);if(!t){try{const d=await getJSON(`${BASE}/ja/sets`)||[];t=d.map(s=>({id:s.id,name:s.name,count:s.cardCount?.total||0,logo:s.logo||s.symbol||null,src:'tcgdex'}));if(t.length)cset('jpsets:ja',t)}catch(e){t=[]}}
+ const L=await jpLoad(),m=new Map();for(const c of L){const e=m.get(c.set)||{id:c.set,name:c.setName,count:0,logo:null,src:'jp'};e.count++;m.set(c.set,e)}
+ const have=new Set(t.map(s=>s.id));const jn=[...m.values()].filter(s=>!have.has(s.id)).sort((a,b)=>(a.id==='ENE')-(b.id==='ENE')||(b.id==='M6a')-(a.id==='M6a'));return[...jn.filter(s=>s.id!=='ENE'),...t.slice().reverse(),...jn.filter(s=>s.id==='ENE')]}
+async function jpSetCards(id){if(String(id).startsWith('jp:'))id=id.slice(3);const L=await jpLoad(),j=L.filter(c=>c.set===id);
+ if(j.length)return j.map(c=>({id:c.id,localId:c.localId||'',name:c.name,img:c.image,set:{id:c.set,name:c.setName},lang:'ja'}));
+ const k='jpset:'+id;let d=cget(k,SET_TTL);if(d===undefined){d=await getJSON(`${BASE}/ja/sets/${encodeURIComponent(id)}`);d=d?{name:d.name,cards:(d.cards||[]).map(c=>({id:c.id,localId:c.localId,name:c.name,image:c.image||null}))}:null;cset(k,d)}
+ if(!d)return[];return d.cards.map(c=>({id:c.id,localId:c.localId,name:c.name,img:c.image?c.image+'/low.webp':null,set:{id,name:d.name},lang:'ja'}))}
+
+root.Prices={jpSets,jpSetCards,lookup,suggest,byId:async(id,lang)=>{lang=normLang(lang);if(String(id).startsWith('jp:')){const L=await jpLoad();const c=L.find(x=>x.id===id);return c?jpNorm(c):null}const c=await getCard(id,lang);return c?normalize(c,lang):null},search,toEUR,rate,
  clearCache(){mem.clear();store={c:{}};save()},CACHE_KEY:KEY,LANGS};
 })(typeof window!=='undefined'?window:globalThis);
