@@ -1303,7 +1303,7 @@ async function liveVoteHit(id,sc,M,img){const lg=(window.scanLang||'DE').toLower
  if(!d||!d.name)return false;const sid=String(id).replace(/-[^-]+$/,''),li=String(id).split('-').pop(),nmb=String(+li||li);let tot='';try{const s=(await tdxSetList('en')).find(x=>x.id===sid);if(s&&s.total)tot=String(s.total)}catch(e){}
  const r={imgMatch:M,imgHit:{cardId:id,score:sc},imgSrc:img,name:d.name,en:null,jp:null,weak:false,number:nmb,full:tot?nmb+'/'+tot:nmb,lang:lg==='ja'?'JP':lg.toUpperCase(),confident:true,energy:false,setId:sid,set:sid,raw:'',conf:Math.round(sc*100),live:true,ms:LV.ms};
  window.lastScan=r;navigator.vibrate?.(200);if(batchOn()){scanResult(r);lStat('✓ '+d.name+' · Nr. '+r.full+' – nächste Karte');return true}stopLive();scanResult(r);return true}
-window.LIVEVOTE=window.LIVEVOTE??false;
+window.LIVEVOTE=window.LIVEVOTE??true;
 setInterval(async()=>{const v=$('#liveVideo');if(!window.LIVEVOTE||LV.busy||!live.stream||!v||!v.videoWidth||live.shooting||!autoOn()||document.hidden)return;LV.busy=true;const t0=performance.now();
  try{if(!LV.t0)LV.t0=t0;const W=Math.min(960,v.videoWidth),H=Math.round(W*v.videoHeight/v.videoWidth),c=document.createElement('canvas');c.width=W;c.height=H;c.getContext('2d').drawImage(v,0,0,W,H);
   let s=null,M=[];for(const f of [()=>warpStd(c),()=>cardCrop2(c),()=>c]){let x=null;try{x=f()}catch(e){}if(!x||x===s)continue;const m=await wto(CardMatcher.match(x,{limit:3}),1500,'t').catch(()=>[]);if(m&&m[0]&&(!M[0]||m[0].score>M[0].score)){M=m;s=x}if(M[0]&&M[0].score>=.6)break}const b=M&&M[0];LV.n++;
@@ -1311,5 +1311,5 @@ setInterval(async()=>{const v=$('#liveVideo');if(!window.LIVEVOTE||LV.busy||!liv
   const same=id&&LV.hist.length===3&&LV.hist.every(x=>x===id);const h=$('#liveHint');
   if(id&&!same&&h){const k=LV.hist.filter(x=>x===id).length;h.textContent='🔍 Karte wird erkannt… ('+k+'/3)';h.className='livehint ok'}
   if(same&&!(id===LV.last&&Date.now()-LV.lastT<8000)){LV.last=id;LV.lastT=Date.now();LV.hist=[];LV.ms=Math.round(performance.now()-LV.t0);live.shooting=true;
-   try{const ok=await liveVoteHit(id,b.score,M,s);if(!ok){LV.last='';lStat('Karte erkannt, Daten laden nicht – 📸 Foto drücken')}}finally{live.shooting=false}LV.t0=0}}
+   try{let amb=false;try{const Mj=await wto(CardMatcher.match(s,{lang:'ja',limit:2}),1500,'t');amb=!!(Mj&&Mj[0]&&Mj[0].score>=b.score-.06)}catch(e){}if(amb){lStat('Karte erkannt, Sprache unklar – 📸 Foto drücken');return}const ok=await liveVoteHit(id,b.score,M,s);if(!ok){LV.last='';lStat('Karte erkannt, Daten laden nicht – 📸 Foto drücken')}}finally{live.shooting=false}LV.t0=0}}
  catch(e){console.warn('liveVote',e)}finally{LV.busy=false}},250);
