@@ -9,6 +9,7 @@
   <div class="muted small">Portfolio · <span id="tfLbl">30T</span></div>
   <div class="big" id="sumVal">–</div>
   <div id="sumChg" class="chg">–</div>
+  <div id="emptyStart" class="emptyStart" hidden><p>Noch keine eigenen Karten – so geht's los:</p><button type="button" data-go="v-scan">📷 Karte scannen</button><button type="button" data-go="v-search">🔍 Karte suchen</button><button type="button" data-go="sets">📦 Sets ansehen</button></div>
   <canvas id="chart"></canvas>
   <div class="tf" id="tf"><button data-d="1">1T</button><button data-d="7">7T</button><button data-d="30" class="on">30T</button><button data-d="90">3M</button><button data-d="365">1J</button><button data-d="0">Alle</button></div>
  </div>
@@ -20,7 +21,7 @@
  <div id="collGrid" class="cgrid"></div>
 </section>
 <section id="v-search" class="view">
- <form id="searchForm" class="sbar"><input id="qName" placeholder="Karte suchen (z.B. Glurak, Mew ex)"><input id="qNum" placeholder="Nr." size="4"><button>🔍</button></form>
+ <form id="searchForm" class="sbar"><input id="qName" placeholder="z.B. Glurak 4/102, Pikachu 44" aria-label="Kartenname und optional Nummer"><input id="qNum" placeholder="Nr. (optional)" size="6" aria-label="Kartennummer (optional)"><button class="sbtn">🔍 Suchen</button></form>
  <input id="qSet" type="hidden">
  <div class="chips"><button id="manualBtn" class="chip">✍️ Manuell (JP/DE)</button><button id="sealedBtn" class="chip">📦 Sealed hinzufügen</button></div>
  <div id="scanStatus" class="muted small"></div>
@@ -43,6 +44,7 @@
 </section>
 <section id="v-more" class="view">
  <h2>Einstellungen</h2>
+ <div class="menu a11y"><label class="tgl"><input type="checkbox" id="uiBig"> Große Schrift</label><label class="tgl"><input type="checkbox" id="uiHc"> Hoher Kontrast</label></div>
  <div class="menu"><button id="exportBtn">⬇️ Export (JSON)</button><label class="btn">⬆️ Import<input type="file" id="importFile" accept="application/json" hidden></label><button id="resetBtn" class="danger">Alles löschen</button></div>
  <p class="muted small">Preise: Cardmarket-Trend (EUR) über die kostenlose Pokémon TCG API – kann verzögert sein oder bei neuen Sets/JP-Karten fehlen. Graded-Werte sind grobe Schätzungen (Faktoren), keine echten Verkäufe. Daten liegen nur auf diesem Gerät.</p>
 </section>

@@ -232,3 +232,16 @@ html{background:var(--bg)}body{min-height:100vh;min-height:100dvh;background-att
 .scantips{max-width:420px;margin:18px auto 0;padding:14px 16px;border-radius:18px;background:rgba(255,255,255,.05);border:1px solid rgba(167,139,250,.3);text-align:left}.scantips ul{margin:8px 0 0;padding-left:0;list-style:none}.scantips li{margin:6px 0;font-size:.9rem;color:var(--tx)}
 .scanbox.live .scantips,#scanPick:not([hidden]):not(:empty)~.scantips,.scanbox.hasres .scantips{display:none}
 .sbprice{color:var(--ac2,#ffd84d);font-weight:900;white-space:nowrap}
+
+/* v56 UX: Preisquelle, Start-Buttons, Barrierefreiheit */
+.small{font-size:.9rem}.tile .s{font-size:.8rem}.tile .n{font-size:.92rem}.tile .p b{font-size:1rem;font-weight:800}
+button,.btn,.chip,select,input:not([type=checkbox]){min-height:44px}
+.tsrc{font-size:.72rem;color:var(--mu);margin-top:1px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.psrcw{text-align:center;margin:.1rem 0 .3rem}.psrc{display:inline-flex;align-items:center;gap:.35rem;font-size:.9rem;color:var(--mu)}
+.qhelp{min-height:30px!important;min-width:30px;height:30px;padding:0;border-radius:50%;font-weight:800;font-size:.85rem;background:rgba(167,139,250,.2);border:1px solid rgba(167,139,250,.5);color:#e9e3ff;line-height:1}
+.phelp{display:block;margin:.35rem auto 0;max-width:30em;font-size:.9rem;background:rgba(255,255,255,.07);border-radius:10px;padding:.45rem .6rem;color:var(--tx)}
+.emptyStart{display:grid;gap:.6rem;margin:.8rem 0}.emptyStart p{margin:0;font-size:1rem}.emptyStart button{min-height:56px;font-size:1.1rem;font-weight:800;border-radius:16px;border:0;background:rgba(255,255,255,.14);color:#fff}
+.sbar .sbtn{white-space:nowrap;font-weight:800;padding:0 .9rem}
+.a11y{display:flex;gap:.6rem;flex-wrap:wrap;margin-bottom:.6rem}.tgl{display:inline-flex;align-items:center;gap:.5rem;min-height:44px;padding:0 .9rem;border-radius:14px;background:var(--card2);font-weight:700;cursor:pointer}.tgl input{width:22px;height:22px;accent-color:var(--ac)}
+html.ui-big body{font-size:18px}html.ui-big .small{font-size:1rem}html.ui-big .tile .n{font-size:1.05rem}html.ui-big .tile .s{font-size:.92rem}html.ui-big .tile .p b{font-size:1.15rem}
+html.ui-hc{--bg:#000;--card:#0d0d0d;--card2:#1a1a1a;--tx:#fff;--mu:#e2e2e2;--bd:#fff}html.ui-hc .tile,html.ui-hc .pcmp>div{border:1px solid #fff}html.ui-hc a.plink{color:#fff;border-color:#fff}html.ui-hc .hero .muted{color:#fff}
