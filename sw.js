@@ -1,5 +1,5 @@
-const C='kartenapp-v80',A=['./','index.html','style.css','app.js','fx.js','prices.js','jpcards.json','names.js','trainers.js','manifest.json','icon-192.png','icon-512.png'];
-self.addEventListener('install',e=>{e.waitUntil(caches.open(C).then(c=>c.addAll(A.map(u=>new Request(u,{cache:'reload'})))).catch(()=>{}).then(()=>caches.keys()).then(ks=>{/* Alte Clients (< v78) kennen das Update-Banner nicht → sofort aktivieren */if(ks.some(k=>{const m=k.match(/^kartenapp-v(\d+)$/);return m&&+m[1]<78}))self.skipWaiting()}).catch(()=>{}))});
+const C='kartenapp-v81',A=['./','index.html','style.css','app.js','fx.js','prices.js','jpcards.json','names.js','trainers.js','manifest.json','icon-192.png','icon-512.png'];
+self.addEventListener('install',e=>{e.waitUntil(caches.open(C).then(c=>c.addAll(A.map(u=>new Request(u,{cache:'reload'})))).catch(()=>{}).then(()=>caches.keys()).then(ks=>{/* Alte Clients (< v81) kennen das Update-Banner nicht → sofort aktivieren */if(ks.some(k=>{const m=k.match(/^kartenapp-v(\d+)$/);return m&&+m[1]<81}))self.skipWaiting()}).catch(()=>{}))});
 self.addEventListener('message',e=>{if(e.data&&(e.data==='SKIP_WAITING'||e.data.type==='SKIP_WAITING'))self.skipWaiting()});
 self.addEventListener('activate',e=>e.waitUntil(caches.keys().then(ks=>Promise.all(ks.filter(k=>/^kartenapp-v\d+$/.test(k)&&k!==C).map(k=>caches.delete(k)))).then(()=>self.clients.claim())));
 self.addEventListener('fetch',e=>{const u=new URL(e.request.url);
