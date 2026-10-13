@@ -188,3 +188,4 @@ nav .scanNav i{background:linear-gradient(135deg,var(--ac),#ff8a5c);color:#fff;b
 .binder-page .tile .im img{width:100%;height:100%;object-fit:contain;display:block}
 .binder-page .tile .n,.binder-page .tile .p{min-width:0;overflow:hidden}
 html,body{max-width:100%;overflow-x:clip}
+.jphit{display:flex;gap:12px;align-items:center;margin:8px 0;text-align:left}.jphit img{width:110px;aspect-ratio:63/88;object-fit:contain;border-radius:8px;box-shadow:0 4px 14px rgba(0,0,0,.4)}
