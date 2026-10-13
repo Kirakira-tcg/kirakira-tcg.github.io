@@ -222,3 +222,7 @@ a.plink:hover{background:rgba(167,139,250,.28);color:#fff}
 
 /* v48: Sucher ohne Kamera komplett weg */
 #v-scan .scanbox:not(.live) .camwrap,#v-scan .scanbox:not(.live) .frame{display:none!important}
+
+/* v50: keine leeren Bänder im Scan-Tab (Hintergrund nicht kacheln), leere Scan-Container weg */
+html{background:var(--bg)}body{min-height:100vh;min-height:100dvh;background-attachment:fixed!important;background-repeat:no-repeat!important}
+#scanStatus2:empty,#liveText:empty,#scanPick:empty{display:none}
