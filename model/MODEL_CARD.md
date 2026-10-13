@@ -22,3 +22,6 @@ als **Vorschlagsliste** an. Das Modell übernimmt Karten nie selbst automatisch.
 ## Hinweise
 - Die Kartenbilder selbst sind urheberrechtlich geschützt (laut TCGdex lizenziert von The Pokémon Company); sie werden hier nicht verbreitet.
 - Eine rechtliche Prüfung vor einem kommerziellen Start steht noch aus.
+
+## Hinweis zu den vortrainierten Gewichten
+Ausgangspunkt: timm `mobilenetv3_large_100.ra_in1k`, vortrainiert auf ImageNet-1k. Der Code steht unter Apache-2.0. Die ImageNet-Bedingungen sehen nicht-kommerzielle Forschung vor, deshalb ist eine kommerzielle Nutzung offen und wird vor dem Launch anwaltlich geprüft. Falls nötig, wird das Modell auf Basis von Gewichten neu trainiert, die ohne ImageNet entstanden sind.
