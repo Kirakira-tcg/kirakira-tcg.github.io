@@ -402,3 +402,46 @@ body:has(#addToast:not([hidden])) .scantray .trayall{bottom:calc(var(--navh,72px
 .tile .tsrc{white-space:nowrap;overflow:hidden;text-overflow:ellipsis;max-width:100%}
 .hero .oldnote{color:rgba(255,255,255,.88)}
 .tile.oldp .tsrc{white-space:normal;overflow:visible}
+/* v118: Set-Browser Karten-Raster */
+#results.cgset{display:grid!important;grid-template-columns:repeat(2,minmax(0,1fr));gap:.6rem}
+@media(min-width:600px){#results.cgset{grid-template-columns:repeat(3,minmax(0,1fr))}}
+@media(min-width:900px){#results.cgset{grid-template-columns:repeat(auto-fill,minmax(190px,1fr))}}
+.tile.cg{position:relative;display:flex;flex-direction:column;padding:.4rem .4rem 2.6rem;border-radius:14px;min-width:0}
+.tile.cg .cgim{position:relative;aspect-ratio:.716;border-radius:9px;overflow:hidden;background:rgba(255,255,255,.04);display:flex;align-items:center;justify-content:center}
+.tile.cg .cgim img{width:100%;height:100%;object-fit:cover;display:block}
+.tile.cg .cgim svg{width:100%;height:100%}
+.tile.cg .cgb{padding:.35rem .15rem 0;min-width:0}
+.cgn{font-weight:800;font-size:.95rem;line-height:1.2;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.cgsl{display:block;font-size:.78rem;color:#9ec5ff;text-decoration:underline;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.cgr,.cgv{font-size:.74rem;color:var(--mu);white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.cgp{display:flex;gap:.4rem;align-items:baseline;margin-top:.2rem;flex-wrap:wrap}.cgp b{font-size:1.05rem}.cgp .pos{color:#4ade80;font-size:.78rem}.cgp .neg{color:#f87171;font-size:.78rem}
+.tile.cg.oldp .cgp b{color:#8b8aa0;opacity:.75}
+.cgadd{position:absolute;right:.45rem;bottom:.45rem;width:2.1rem;height:2.1rem;min-height:0;border-radius:50%;padding:0;font-size:1.35rem;line-height:1;font-weight:800;background:#ff5fa2;color:#fff;border:0;box-shadow:0 2px 8px rgba(0,0,0,.35)}
+.tile.cg.owned{outline:2px solid rgba(74,222,128,.55)}
+.cghead{display:flex;align-items:center;gap:.4rem}
+.navback{min-height:0;width:2.4rem;height:2.4rem;border-radius:50%;padding:0;font-size:1.3rem;line-height:1;flex:0 0 auto}
+.navback-d{position:sticky;top:0;z-index:3;float:left;margin:0 .4rem .2rem 0}
+.ownph{position:absolute;left:.3rem;bottom:.3rem;background:rgba(0,0,0,.68);color:#fff;font-size:.66rem;font-weight:700;padding:.1rem .35rem;border-radius:6px;pointer-events:none}
+.ownphimg{width:100%;height:100%;object-fit:cover;display:block}
+.bslot{position:relative}.ownphd{position:relative;margin:.6rem 0;text-align:center}.ownphd img{max-width:60%;border-radius:10px;display:block;margin:0 auto .4rem}.ownphd .ownph{position:static;display:inline-block;margin-bottom:.3rem}
+.sortbar{display:flex;flex-wrap:wrap;gap:.4rem .7rem;align-items:center;font-size:.8rem;margin:.2rem 0 .4rem}.sortbar select{min-height:2.2rem;font-size:.8rem;padding:.2rem .4rem;width:auto}.sortbar .sbc{display:flex;gap:.25rem;align-items:center}.sortbar .sbc input{width:auto}
+.tile[hidden]{display:none!important}
+/* v118: Ordner wie ein Buch – neutral, ohne Marken-Look */
+#binderView .bpage,.bview .bpage{position:relative;perspective:1400px;padding:10px 10px 10px 30px;border-radius:6px 14px 14px 6px;background:linear-gradient(90deg,rgba(0,0,0,.28),rgba(255,255,255,.03) 26px,rgba(255,255,255,.05));box-shadow:inset 0 0 0 1px rgba(255,255,255,.08),3px 3px 0 -1px rgba(255,255,255,.07),6px 6px 0 -2px rgba(255,255,255,.05),0 8px 22px rgba(0,0,0,.35)}
+.bpage::before{content:"";position:absolute;left:8px;top:8%;bottom:8%;width:12px;background:radial-gradient(circle at 6px 6px,rgba(0,0,0,.55) 0 4px,rgba(255,255,255,.18) 4.5px 5.5px,transparent 6px) 0 0/12px 33.3% repeat-y;pointer-events:none}
+.bslot{background:linear-gradient(160deg,rgba(255,255,255,.10),rgba(255,255,255,.03) 45%,rgba(255,255,255,.07));box-shadow:inset 0 2px 6px rgba(0,0,0,.35),inset 0 0 0 1px rgba(255,255,255,.06)}
+.bslot::after{content:"";position:absolute;inset:0;border-radius:inherit;background:linear-gradient(115deg,transparent 30%,rgba(255,255,255,.13) 42%,transparent 52%);pointer-events:none}
+@media(min-width:900px){.bpage{padding-left:10px!important}.bpage::before{left:50%;margin-left:-7px;width:14px;top:0;bottom:0;background:linear-gradient(90deg,rgba(0,0,0,.45),rgba(255,255,255,.08) 50%,rgba(0,0,0,.45));border-radius:3px}.bpage{column-gap:22px!important}}
+.bflipwrap{position:absolute;z-index:6;perspective:1400px;pointer-events:none}
+.bflip-old{width:100%;height:100%;margin:0!important;transform-origin:left center;backface-visibility:hidden;animation:bTurnNext .3s cubic-bezier(.35,.1,.25,1) forwards;background:var(--card2,#2a2350)}
+.bflip-old::after{content:"";position:absolute;inset:0;background:linear-gradient(90deg,rgba(0,0,0,0),rgba(0,0,0,.45));animation:bShade .3s forwards;pointer-events:none}
+.bin-prev{transform-origin:left center;animation:bTurnPrev .3s cubic-bezier(.35,.1,.25,1);backface-visibility:hidden}
+@keyframes bTurnNext{0%{transform:rotateY(0);box-shadow:0 0 0 rgba(0,0,0,0)}60%{box-shadow:-18px 10px 30px rgba(0,0,0,.5)}100%{transform:rotateY(-180deg)}}
+@keyframes bTurnPrev{0%{transform:rotateY(-180deg)}100%{transform:rotateY(0)}}
+@keyframes bShade{0%{opacity:0}100%{opacity:1}}
+/* Set-Browser-Ordner (fx.js): Richtung wie ein Buch – weiter klappt nach links */
+@keyframes flipL{0%{transform-origin:left center;transform:perspective(1400px) rotateY(80deg);opacity:.3}100%{transform-origin:left center;transform:none}}
+@keyframes flipR{0%{transform-origin:left center;transform:perspective(1400px) rotateY(-80deg);opacity:.3}100%{transform-origin:left center;transform:none}}
+.flipL,.flipR{animation-duration:.3s!important}
+@media(prefers-reduced-motion:reduce){.bflipwrap{display:none}.bin-prev,.flipL,.flipR{animation:none!important}}
+@media(min-width:900px){.bpage{grid-template-columns:repeat(6,minmax(0,1fr))!important}}

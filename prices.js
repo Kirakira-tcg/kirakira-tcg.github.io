@@ -74,7 +74,7 @@ let jppP=null;function jppLoad(){if(jppP)return jppP;const u=(typeof document!==
 async function jpm(out){if(!out||out.best)return out;try{const d=await jppLoad(),sid=out.set&&out.set.id||String(out.id).replace(/^jp:/,'').replace(/-[^-]*$/,''),e=d.p[sid+'-'+nz(out.localId)];
  if(!e||!e.y)return out;const c=await toEUR(e.y,'JPY');if(!c)return out;
  out.jpMarket={source:'pokeca-souba (JP-Markt)',currency:'JPY',value:e.y,eur:c.eur,umgerechnet:true,fxFallback:!!c.fallback,updated:d.date,url:d.url};out.best=out.jpMarket;
- out.label=`${c.eur.toFixed(2).replace('.',',')} € · pokeca-souba (JP-Markt) · ¥${e.y.toLocaleString('de-DE')}${c.fallback?' (Schätzkurs)':''}`}catch(e){}return out}
+ out.label=`${c.eur.toFixed(2).replace('.',',')} € · JP-Marktpreis (pokeca-souba, umgerechnet) · ¥${e.y.toLocaleString('de-DE')}${c.fallback?' (Schätzkurs)':''}`}catch(e){}return out}
 
 
 // Japanische Sets, die TCGdex fehlen: statische jpcards.json (tools/build_jp.py)
@@ -151,6 +151,7 @@ const ptcgSet=t=>{t=String(t||'');if(PT_REV[t])return PT_REV[t];if(/[A-Z]/.test(
 async function ptcgCM(tid){const m=String(tid||'').match(/^(.*)-([^-]+)$/);if(!m)return null;const ps=ptcgSet(m[1]);if(!ps)return null;const id=ps+'-'+(/^\d+$/.test(m[2])?String(+m[2]):m[2]);const k='ptcm:'+id;const c=cget(k,TTL);if(c!==undefined)return c;
  // pokemontcg.io antwortet oft mit 5xx (ohne CORS-Header -> 'Failed to fetch') -> bis zu 4 Versuche mit Backoff
  let v=null,okR=false;for(let i=0;i<4&&!okR;i++){if(i)await new Promise(z=>setTimeout(z,700*i));try{const r=await fetch(`https://api.pokemontcg.io/v2/cards/${encodeURIComponent(id)}?select=id,name,cardmarket`,{signal:AbortSignal.timeout(10000)});if(r.status===404){cset(k,null);return null}if(!r.ok)continue;const j=await r.json();v=j&&j.data&&j.data.cardmarket&&j.data.cardmarket.prices?j.data.cardmarket:null;okR=true}catch(e){}}if(!okR)return null;cset(k,v);return v}
-root.Prices={tdxSet,tdxId,ptcgSet,clsNum,clsFix,jpImgFallback,jpSets,jpSetCards,lookup,suggest,byId:async(id,lang)=>{lang=normLang(lang);if(String(id).startsWith('jp:')){const L=await jpLoad();const c=L.find(x=>x.id===id);return c?jpm(jpNorm(c)):null}const c=await getCard(id,lang);return c?normalize(c,lang):null},search,toEUR,rate,
+root.Prices={tdxSet,tdxId,ptcgSet,clsNum,clsFix,jpImgFallback,jpSets,jpSetCards,lookup,suggest,byId:async(id,lang)=>{lang=normLang(lang);if(String(id).startsWith('jp:')){const L=await jpLoad();const c=L.find(x=>x.id===id);return c?jpm(jpNorm(c)):null}const c=await getCard(id,lang);if(c)return normalize(c,lang);// v118: JP-Sets ohne TCGdex (z.B. M6a 30th) -> jpcards.json (Name/Nummer als Fakten, kein Bild)
+ if(lang==='ja'){const L=await jpLoad(),k=String(id).toLowerCase(),j=L.find(x=>x.id.toLowerCase()==='jp:'+k)||L.find(x=>(x.set+'-'+nz(x.localId)).toLowerCase()===String(id).replace(/-0*(\d)/,'-$1').toLowerCase());if(j)return jpm(jpNorm(j))}return null},search,toEUR,rate,
  clearCache(){mem.clear();store={c:{}};save()},CACHE_KEY:KEY,LANGS};
 })(typeof window!=='undefined'?window:globalThis);
