@@ -325,3 +325,5 @@ a.plink{position:relative}a.plink::after{content:'';position:absolute;left:-6px;
 .scantray .trayall{position:fixed;left:max(12px,env(safe-area-inset-left));right:max(12px,env(safe-area-inset-right));bottom:calc(var(--navh) + 18px);width:auto;max-width:520px;margin:0 auto;z-index:40}
 .scantray:not([hidden]){margin-bottom:96px}
 .scanbox.live~* .trayall,.scanbox.live .trayall{display:none}
+/* v71 CM-Chip sichtbar größer */
+.tile a.plink,a.plink{font-size:.8rem!important;padding:.3rem .7rem!important;min-height:28px;display:inline-flex!important;align-items:center;gap:.2rem}

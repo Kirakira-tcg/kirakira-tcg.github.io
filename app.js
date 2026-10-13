@@ -8,6 +8,8 @@ const K='kartenapp_v1';
 const $=s=>document.querySelector(s), $$=s=>[...document.querySelectorAll(s)];
 const USD=1.08; // grober Umrechnungskurs EUR->USD
 let S=load(); S.snapshots??=[];S.wishlist??=[];S.settings??={cur:'EUR',tf:30};S.trade??={give:[],get:[]};
+// v71: alte manuelle Überschreibungen -> nur noch „eigene Schätzung“ (Fallback), Marktwert kommt aus den Quellen
+for(const x of [...(S.collection||[]),...(S.wishlist||[])])if(x.ownPrice!=null){x.ownPriceOld??=x.ownPrice;x.price=x.ownPrice;x.estimate=true;x.ownPrice=null}
 const money=n=>{if(n==null||isNaN(n))return'–';const u=S.settings.cur==='USD';return (u?n*USD:n).toLocaleString('de-DE',{style:'currency',currency:u?'USD':'EUR'})};
 const pct=n=>n==null||!isFinite(n)?'':(n>=0?'▲ +':'▼ ')+n.toFixed(1).replace('.',',')+' %';
 const cls=n=>n==null?'muted':n>=0?'pos':'neg';
@@ -134,7 +136,7 @@ const setOrd=lg=>SETORD[lg]||(SETORD[lg]=(async()=>{const m={};try{const L=await
  if(lg==='ja'&&window.Prices&&Prices.jpSets){try{const J=await Prices.jpSets();J.forEach((x,i)=>{const k=String(x.id).toLowerCase();if(m[k]==null){const nb=J.slice(0,i).reverse().find(y=>m[String(y.id).toLowerCase()]!=null);m[k]=nb?m[String(nb.id).toLowerCase()]-5:2e4-i}})}catch(e){}}return m})());
 const isPromo=id=>/(^|[^a-z])(svp|swshp|smp|xyp|bwp|dpp|np|hgssp|mep|basep|wp)$|promo|-p$/i.test(String(id||''));
 // Preisquelle -> kurzes Label + Erklärung
-function priceInfo(src){src=String(src||'');if(/eigen|own/i.test(src))return['Eigener Preis','Von dir eingetragener Wert.'];
+function priceInfo(src){src=String(src||'');if(/sch[äa]tz/i.test(src))return['eigene Schätzung','Von dir geschätzt, weil keine Quelle einen Preis hat. Wird automatisch durch den Marktpreis ersetzt, sobald einer verfügbar ist.'];if(/eigen|own/i.test(src))return['Eigener Preis','Von dir eingetragener Wert.'];
  if(/JP-Markt|pokeca/i.test(src))return['JP-Markt','Preis vom japanischen Markt (pokeca-souba, Mittelwert der Angebote), in Euro umgerechnet.'];
  if(/TCGplayer/i.test(src))return['TCGplayer-Markt','Marktpreis aus den USA (TCGplayer), in Euro umgerechnet – Cardmarket hatte keinen Wert.'];
  if(/1st/i.test(src))return['1st Edition','Preis für die 1st-Edition-Variante (TCGplayer, umgerechnet).'];
@@ -265,10 +267,21 @@ async function fedInit(f,c){try{const id=String(c.id).replace(/^jp:.*/,'');if(!i
 // 1st Edition: TCGdex-Variantenpreis (TCGplayer 1st-edition*) wenn vorhanden, sonst Hinweis
 async function firstEd(it){if(!window.Prices)return;try{const nm=(it.name||'').replace(/\s*\(.*\)\s*$/,'').trim(),num=String(it.number||'').split('/')[0]||null;let r=it.tdxId?await Prices.byId(it.tdxId,'en'):null;if(!r)r=await Prices.lookup(deName(nm),'en',null,num);
  const v=r&&r.prices&&r.prices.find(x=>/1st/i.test(x.variant||'')&&x.eur!=null);if(v&&it.ownPrice==null){it.price=v.eur;it.priceNote='';it.tdx={label:`${v.eur.toFixed(2).replace('.',',')} € · ${v.source} · 1st Edition`,id:r.id,src:v.source+' 1st',url:null};trackPrice(it);save();snapshot();render()}}catch(e){}}
-const tdxNeed=x=>x.ownPrice==null&&(x.price==null||(x.lang&&x.lang!=='EN'));
+const tdxNeed=x=>x.ownPrice==null&&(x.price==null||x.estimate||(x.lang&&x.lang!=='EN'));
 async function tdxFill(x){if(!window.Prices||x.ownPrice!=null||(x.variant==='1st'&&x.tdx&&/1st/.test(x.tdx.src||'')))return false;const lang=(x.lang||'DE').toLowerCase(),name=(x.name||'').replace(/\s*\(.*\)\s*$/,'').trim(),num=String(x.number||'').split('/')[0]||null;
  let r=null;try{const same=n=>{const p=nrm(n),q=nrm(name);if(!p||!q)return true;let d=q;try{d=nrm(deName(name))}catch(e){}return p===q||p===d||p.startsWith(q)||q.startsWith(p)||p.startsWith(d)||d.startsWith(p)};r=await Prices.lookup(name,lang,x.setId||null,num);if(r&&!same(r.name))r=await Prices.lookup(name,lang,null,num);if(r&&!same(r.name))r=null;if(!(r&&r.best)&&lang!=='en'&&lang!=='jp'&&lang!=='ja'){r=await Prices.lookup(name,'en',null,num);if(r&&!same(r.name))r=null}}catch(e){console.warn(e)}
- if(!(r&&r.best))return false;x.price=r.best.eur;delete x.noPrice;x.tdx={label:r.label,id:r.id,src:r.best.source,conv:r.best.umgerechnet,url:r.best.url};return true}
+ if(!(r&&r.best))return false;x.price=r.best.eur;delete x.noPrice;delete x.estimate;x.tdx={label:r.label,id:r.id,src:r.best.source,conv:r.best.umgerechnet,url:r.best.url};return true}
+// v71: Kaufpreis / Schätzung als In-App-Sheet (kein prompt), Komma erlaubt
+function numSheet(it,kind){const f=$('#dlgForm'),buy=kind==='buy',cur=buy?it.buy:(it.estimate?it.price:null);
+ f.innerHTML=`<h3>${buy?'Kaufpreis':'Wert schätzen'} · ${esc(it.name)}</h3><p class="muted small">${buy?'Was hast du pro Stück bezahlt? Fließt in Einstand und Gewinn/Verlust.':'Keine Quelle hat einen Preis für diese Karte. Deine Schätzung wird als „eigene Schätzung“ markiert und automatisch ersetzt, sobald ein Marktpreis da ist.'}</p>
+ <label>${buy?'Kaufpreis pro Stück (€)':'Geschätzter Wert (€)'}<input name="nv" type="text" inputmode="decimal" autocomplete="off" enterkeyhint="done" placeholder="z.B. 4,50" value="${cur!=null?String(cur).replace('.',','):''}" style="font-size:1.4rem;min-height:52px"></label><p class="small" id="nvErr" style="color:#f87171;margin:.2rem 0" hidden>Bitte eine Zahl eingeben, z.B. 4,50</p>
+ <div class="row"><button value="ok">Speichern</button>${cur!=null?'<button value="clr" formnovalidate class="danger">Löschen</button>':''}<button value="cancel" formnovalidate>Abbrechen</button></div>`;
+ const dlg=$('#dlg');dlg.returnValue='';dlg.showModal();const inp=f.nv;setTimeout(()=>{inp.focus();inp.select()},50);
+ const parse=v=>{v=String(v||'').trim().replace(/\s|€/g,'');if(!v)return null;if(/,/.test(v))v=v.replace(/\./g,'').replace(',','.');const n=parseFloat(v);return isFinite(n)&&n>=0?Math.round(n*100)/100:NaN};
+ f.onsubmit=e=>{if(e.submitter&&e.submitter.value==='ok'&&Number.isNaN(parse(inp.value))){e.preventDefault();$('#nvErr').hidden=false}};
+ dlg.onclose=()=>{f.onsubmit=null;const r=dlg.returnValue;if(r!=='ok'&&r!=='clr')return;const n=r==='clr'?null:parse(inp.value);if(Number.isNaN(n))return;
+  if(buy)it.buy=n;else if(n==null){if(it.estimate){it.price=null;delete it.estimate;it.noPrice=true}}else if(it.price==null||it.estimate){it.price=n;it.estimate=true;delete it.noPrice}
+  trackPrice(it);save();snapshot();render()}}
 // Type-ahead mit Bildvorschlägen (Prices.suggest / TCGdex)
 function attachSuggest(inp,onPick,getLang,anchor){if(!inp||!window.Prices||!Prices.suggest)return;const box=document.createElement('div');box.className='sugBox';box.hidden=true;(anchor||inp).insertAdjacentElement('afterend',box);
  let t=0,seq=0;const hide=()=>{clearTimeout(t);seq++;box.hidden=true;box.innerHTML=''};
@@ -288,7 +301,7 @@ function addDialog(c,mode,sealed){const manual=!c;window.tdxPick=null;const f=$(
  ${mode==='wish'?`<label>Zielpreis (€)<input name="target" type="number" step="0.01" required></label>`:
  `${sealed?'<input type="hidden" name="cond" value="Sealed">':`<label>Zustand<select name="cond"><option>NM</option><option>EX</option><option>GD</option><option>LP</option><option>PL</option><option>PSA 10</option><option>PSA 9</option><option>CGC 10</option><option>BGS 9.5</option><option>PSA/Graded</option></select></label>`}
  ${sealed?'':'<label class="row" style="gap:.4rem;align-items:center"><input type="checkbox" name="first" style="width:auto"'+(window._first?' checked':'')+'> 1st Edition</label>'}<label>Anzahl<input name="qty" type="number" value="1" min="1"></label><label>Kaufpreis pro Stück (€, optional)<input name="buy" type="number" step="0.01" placeholder="leer = nicht in Gewinn/Verlust"></label>`}
- <label>${manual?'Aktueller Wert (€, optional)':'Eigener Preis (€, leer = Cardmarket)'}<input name="price" type="number" step="0.01" placeholder="leer = automatisch aus Datenbanken"></label>
+ <input type="hidden" name="price">
  <div class="row"><button value="ok">Speichern</button><button value="cancel" formnovalidate>Abbrechen</button></div>`;
  if(manual&&!sealed&&f.name)attachSuggest(f.name,c=>{f.name.value=c.name;if(f.set)f.set.value=c.set.name;if(f.number)f.number.value=c.localId;if(f.img&&c.img)f.img.value=c.img.replace(/\/low\.webp$/,'/high.webp')},()=>(f.lang&&f.lang.value||'DE').toLowerCase(),f.name.closest('label'));
  if(manual&&f.setSel)setSelInit(f);
@@ -327,7 +340,7 @@ function detail({api:c,item,list}){if(c&&!c._tdx&&!c._syd&&window.Prices){c._syd
  const rows=ci?[['Trend',ci.trend],['Ø 1 Tag',ci.avg1],['Ø 7 Tage',ci.avg7],['Ø 30 Tage',ci.avg30],['Ab-Preis',ci.low],['Ø Verkauf',ci.sell]].filter(r=>r[1]!=null):[];
  const raw=price||0;
  const ty=((c?c.types:it.types)||[])[0];f.innerHTML=`<div class="detail" data-type="${esc((ty||'none').toLowerCase())}">${img?`<div class="dcard tiltable"><img src="${esc(img)}" alt=""><i class="holo"></i></div><div class="langFlags" id="lfl" style="display:flex;gap:.4rem;justify-content:center;margin:.35rem 0"></div><p class="muted small" id="lflP" style="text-align:center;margin:0"></p>${c&&c._tdx&&c._tdx._imgEn?'<p class="imgnote" style="text-align:center">Bild: englische Version (kein deutsches Bild verfügbar)</p>':''}<button type="button" class="chip gyroBtn" onclick="FX.gyro()" title="Karte neigt sich mit deinem Handy">📱 Bewegungssensor</button><p class="muted small" style="text-align:center;margin:.2rem 0 0">Karte neigt sich mit deinem Handy</p>`:`<div class="dph">${phCard(name,c?c.number:it.number)}</div>`}<h3>${esc(name)}</h3><p class="muted small">${esc(c?c.set.name:it.set)} ${esc(c?c.number:it.number)}${item?` · ${esc(it.lang)} · ${esc(it.cond)} · ${it.qty}×`:''}</p>
- ${price!=null&&!isNaN(price)?`<div class="big" style="font-size:1.8rem">${money(price)}</div><div class="psrcw">${pSrc(item?(it.ownPrice!=null?'eigen':(it.tdx&&it.tdx.src)||''):(c&&c._tdx&&c._tdx.best&&!cmPrice(c)?c._tdx.best.source:(c&&cmFix(c).fixed?'Ø 7':'')))}</div>${c&&cmFix(c).fixed?`<p class="small" style="color:#fbbf24;margin:.1rem 0">⚠️ Trend (${money(c.cardmarket.prices.trendPrice)}) unplausibel – zeige ${cmFix(c).fixed}</p>`:''}`:`<div class="big" style="font-size:1.8rem">–</div><p class="muted small" style="margin:.2rem 0">Noch kein Preis · <a class="plink" href="https://www.cardmarket.com/de/Pokemon/Products/Search?searchString=${encodeURIComponent(name)}" target="_blank" rel="noopener">auf Cardmarket ansehen ↗</a></p>`}${(()=>{const n=String((c?c.number:it.number)||'');const tot=c&&c.set&&c.set.printedTotal;const nn=n.includes('/')||!tot?n:n+'/'+tot;const q=['Pokemon',name,nn,c?c.set.name:it.set].filter(Boolean).join(' ');
+ ${price!=null&&!isNaN(price)?`<div class="big" style="font-size:1.8rem">${money(price)}</div><div class="psrcw">${pSrc(item?(it.estimate?'Schätzung':it.ownPrice!=null?'eigen':(it.tdx&&it.tdx.src)||''):(c&&c._tdx&&c._tdx.best&&!cmPrice(c)?c._tdx.best.source:(c&&cmFix(c).fixed?'Ø 7':'')))}</div>${c&&cmFix(c).fixed?`<p class="small" style="color:#fbbf24;margin:.1rem 0">⚠️ Trend (${money(c.cardmarket.prices.trendPrice)}) unplausibel – zeige ${cmFix(c).fixed}</p>`:''}`:`<div class="big" style="font-size:1.8rem">–</div><p class="muted small" style="margin:.2rem 0">Noch kein Preis · <a class="plink" href="https://www.cardmarket.com/de/Pokemon/Products/Search?searchString=${encodeURIComponent(name)}" target="_blank" rel="noopener">auf Cardmarket ansehen ↗</a></p>`}${(()=>{const n=String((c?c.number:it.number)||'');const tot=c&&c.set&&c.set.printedTotal;const nn=n.includes('/')||!tot?n:n+'/'+tot;const q=['Pokemon',name,nn,c?c.set.name:it.set].filter(Boolean).join(' ');
  const cmu=(ci&&ci.url)||(it.tdx&&it.tdx.url&&/cardmarket/.test(it.tdx.url)?it.tdx.url:null)||`https://www.cardmarket.com/de/Pokemon/Products/Search?searchString=${encodeURIComponent(name.replace(/\s*\(.*\)\s*$/,''))}`;
  const cmv=(ci&&ci.trend)||(item&&it.tdx&&/Cardmarket/.test(it.tdx.src||'')?it.price:null),jpv=(c&&c._tdx&&c._tdx.jpMarket)||(item&&it.tdx&&/JP-Markt/.test(it.tdx.src||'')?{eur:it.price,value:null}:null);
  return `<div class="pcmp"><div><span class="muted small">Cardmarket</span><b>${cmv!=null?money(cmv):'–'}</b><a class="plink" href="${esc(cmu)}" target="_blank" rel="noopener">Cardmarket ↗</a></div><div><span class="muted small">eBay (verkauft)</span><b>–</b><span class="muted small">kein eBay-Preis verfügbar</span><a class="plink" href="https://www.ebay.de/sch/i.html?_nkw=${encodeURIComponent(q)}&LH_Sold=1&LH_Complete=1" target="_blank" rel="noopener">eBay ↗</a></div>${jpv?`<div><span class="muted small">JP-Markt</span><b>${money(jpv.eur)}</b><span class="muted small">${jpv.value?'¥'+jpv.value.toLocaleString('de-DE')+' · ':''}pokeca-souba</span></div>`:''}</div>`})()}${item?`<div class="${cls(itemChange(it,S.settings.tf))}">${pct(itemChange(it,S.settings.tf))||'Noch keine Änderung'}</div>`:''}
@@ -335,13 +348,13 @@ function detail({api:c,item,list}){if(c&&!c._tdx&&!c._syd&&window.Prices){c._syd
  ${raw?`<h3>Graded (Schätzung)</h3><table class="ptable">${Object.entries(GRADE).map(([g,[k]])=>`<tr><td>${g}</td><td>≈ ${money(raw*k)}</td></tr>`).join('')}</table><p class="muted small">Faktor-Schätzung auf Raw-Preis, keine echten Graded-Verkäufe/Pop-Reports.</p>`:''}
  ${item&&it.buy?`<p>Einstand ${money(it.buy*it.qty)} · <span class="${cls(raw-it.buy)}">${raw-it.buy>=0?'+':''}${money((raw-it.buy)*it.qty)}</span></p>`:''}
  ${it.tdx?`<p class="muted small">Preis: ${esc(it.tdx.label)}${it.tdx.url?` · <a href="${esc(it.tdx.url)}" target="_blank" rel="noopener" class="plink">Cardmarket ↗</a>`:''}</p>`:''}<p class="muted small" id="tdxDet"></p>${it.note?`<p class="muted small">${esc(it.note)}</p>`:''}${it.priceNote?`<p class="small" style="color:#fbbf24">⚠️ ${esc(it.priceNote)}</p>`:''}${ci&&ci.url?`<p><a href="${ci.url}" target="_blank" rel="noopener" class="plink">Auf Cardmarket ansehen ↗</a></p>`:''}</div>
- <div class="row">${item?'<button value="edit">Preis ändern</button><button value="del" class="danger">Entfernen</button>':`<button value="add">+ Sammlung</button><button value="wish">☆ Wunsch</button>`}<button value="cancel">Schließen</button></div>`;
+ <div class="row">${item?(list!=='wishlist'?'<button value="buy">Kaufpreis</button>':'')+(it.price==null||it.estimate?'<button value="est">Wert schätzen</button>':'')+'<button value="del" class="danger">Entfernen</button>':`<button value="add">+ Sammlung</button><button value="wish">☆ Wunsch</button>`}<button value="cancel">Schließen</button></div>`;
  const dlg=$('#dlg');dlg.returnValue='';dlg.showModal();
  langFlags(f,{name,number:c?c.number:it.number,lang:item?it.lang:(window.scanLang||''),tid:it.tdx&&it.tdx.id});window._first=false;if(c)fedInit(f,c);
  if(window.Prices&&!it.tdx&&(price==null||(item&&it.lang&&it.lang!=='EN'))){const q=item?{...it,ownPrice:null,price:null}:{name:c.name,number:c.number,lang:window.scanLang||'EN'};tdxFill(q).then(ok=>{const l=$('#tdxDet');if(ok&&l)l.textContent='TCGdex: '+q.tdx.label})}
  dlg.onclose=()=>{const r=dlg.returnValue;
   if(r==='add')setTimeout(()=>addDialog(c,'coll'));if(r==='wish')setTimeout(()=>addDialog(c,'wish'));
-  if(r==='edit'){const p=prompt(`Neuer Preis (€) für ${it.name}:`,it.price??'');if(p&&p.trim()){it.price=parseFloat(p.replace(',','.'));it.ownPrice=it.price;trackPrice(it);save();snapshot();render()}}
+  if(r==='buy')setTimeout(()=>numSheet(it,'buy'));if(r==='est')setTimeout(()=>numSheet(it,'est'));
   if(r==='del'&&confirm('Wirklich entfernen?')){S[list]=S[list].filter(x=>x.uid!==it.uid);save();snapshot();render()}}}
 
 // Preise aktualisieren
@@ -349,8 +362,8 @@ async function refreshPrices(){const btn=$('#refresh');btn.textContent='…';con
  const ids=[...new Set(items.map(x=>x.apiId))];
  for(let i=0;i<ids.length;i+=20){const chunk=ids.slice(i,i+20);
   try{const d=await api(`${API}/cards?q=${encodeURIComponent(chunk.map(id=>'id:'+id).join(' OR '))}&select=id,cardmarket,types`);
-   for(const c of d.data){const p=cmPrice(c);items.filter(x=>x.apiId===c.id).forEach(x=>{x.cm=cmInfo(c);if(c.types)x.types=c.types;if(p!=null&&x.ownPrice==null)x.price=p})}}catch(e){console.warn(e)}}
- await Promise.all(items.map(async x=>{const c={id:x.apiId};if(await cmSync(c)){x.cm=cmInfo(c);const p=cmPrice(c);if(p!=null&&x.ownPrice==null)x.price=p}}));
+   for(const c of d.data){const p=cmPrice(c);items.filter(x=>x.apiId===c.id).forEach(x=>{x.cm=cmInfo(c);if(c.types)x.types=c.types;if(p!=null&&x.ownPrice==null){x.price=p;delete x.estimate}})}}catch(e){console.warn(e)}}
+ await Promise.all(items.map(async x=>{const c={id:x.apiId};if(await cmSync(c)){x.cm=cmInfo(c);const p=cmPrice(c);if(p!=null&&x.ownPrice==null){x.price=p;delete x.estimate}}}));
  for(const x of [...S.collection,...S.wishlist])if(x.type!=='sealed'&&tdxNeed(x))await tdxFill(x);
  S.collection.forEach(trackPrice);btn.textContent='⟳';save();snapshot();render()}
 $('#refresh').onclick=refreshPrices;
@@ -371,7 +384,7 @@ function render(){{const real=S.collection,es=$('#emptyStart');if(es){es.hidden=
  const pts=series(tf);const ch=pts.length>=2?pts.at(-1).v-pts[0].v:0;const chp=pts.length>=2&&pts[0].v?ch/pts[0].v*100:0;
  const sc=$('#sumChg');sc.className='chg '+cls(ch);sc.textContent=`${ch>=0?'▲ +':'▼ '}${money(Math.abs(ch))} (${chp.toFixed(1).replace('.',',')} %)`;
  const C=S.collection.map(c=>({c,ch:itemChange(c,tf)}));
- const mk=(x,list)=>{const c=x.c;const el=tile({src:c.ownPrice!=null?'eigen':(c.tdx&&c.tdx.src)||'',type:c.types&&c.types[0],img:c.img,name:c.name,sub:`${c.set||''} ${c.number||''} · ${c.lang}`,price:c.price,chg:x.ch,badge:c.type==='sealed'?'SEALED':/PSA|CGC|BGS|Graded/.test(c.cond)?c.cond:c.lang==='JP'?'JP':'',qty:c.qty});el.onclick=()=>detail({item:c,list});if(!c.img&&(c.tdxId||c.apiId)&&!c._imgTry){c._imgTry=1;Prices.byId(c.tdxId||c.apiId,String(c.lang||'de').toLowerCase()).then(x=>{if(x&&x.image){c.img=x.image;delete c._imgTry;save();const im=el.querySelector('.im');if(im){im.style.backgroundImage=`url('${x.image}')`;const sv=im.querySelector('svg');sv&&sv.remove()}}}).catch(()=>{})}return el};
+ const mk=(x,list)=>{const c=x.c;const el=tile({src:c.estimate?'Schätzung':c.ownPrice!=null?'eigen':(c.tdx&&c.tdx.src)||'',type:c.types&&c.types[0],img:c.img,name:c.name,sub:`${c.set||''} ${c.number||''} · ${c.lang}`,price:c.price,chg:x.ch,badge:c.type==='sealed'?'SEALED':/PSA|CGC|BGS|Graded/.test(c.cond)?c.cond:c.lang==='JP'?'JP':'',qty:c.qty});el.onclick=()=>detail({item:c,list});if(!c.img&&(c.tdxId||c.apiId)&&!c._imgTry){c._imgTry=1;Prices.byId(c.tdxId||c.apiId,String(c.lang||'de').toLowerCase()).then(x=>{if(x&&x.image){c.img=x.image;delete c._imgTry;save();const im=el.querySelector('.im');if(im){im.style.backgroundImage=`url('${x.image}')`;const sv=im.querySelector('svg');sv&&sv.remove()}}}).catch(()=>{})}return el};
  const top=$('#topList');top.innerHTML='';[...C].sort((a,b)=>(b.c.price||0)-(a.c.price||0)).slice(0,8).forEach(x=>top.append(mk(x,'collection')));
  const tr=$('#trendList');tr.innerHTML='';const T=C.filter(x=>x.ch!=null).sort((a,b)=>Math.abs(b.ch)-Math.abs(a.ch)).slice(0,8);
  if(!T.length)tr.innerHTML='<p class="muted small">Noch keine Preisbewegungen – ab dem nächsten Preis-Update sichtbar.</p>';T.forEach(x=>tr.append(mk(x,'collection')));
