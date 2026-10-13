@@ -764,7 +764,7 @@ async function liveShoot(){const btn=$('#livePhoto');if(!live.stream||live.shoot
   if(!needOCR()){lStat('⏳ Texterkennung lädt…');for(let i=0;i<60&&!window.Tesseract;i++)await new Promise(r=>setTimeout(r,500));if(!window.Tesseract)throw new Error('Texterkennung lädt nicht (Internet?)')}
   lStat('🔍 Foto aufgenommen – lese Karte…');msArm();
   const r=await wto(analyze(c,m=>{if(!window.scanAbandon)$('#scanStatus2').textContent='⏳ '+m}),60000,'Erkennung dauert zu lange');msOff();if(my!==live.shotId||window.scanAbandon)return;
-  if(batchOn()&&r.confident&&r.name&&r.number&&r.lang!=='JP'){scanResult(r);live.shooting=false;lStat($('#scanStatus2').textContent);return}stopLive();window.lastScan=r;
+  if(batchOn()&&r.confident&&r.name&&r.number&&r.lang!=='JP'){scanResult(r);live.shooting=false;lStat($('#scanStatus2').textContent);return}stopLive();if(!r.number&&!r.energy){navigator.vibrate?.([80,60,80]);scanResult(r);retakePrompt('Nummer unten links nicht lesbar – bitte ganze Karte in den Rahmen und neu aufnehmen.');return}window.lastScan=r;
   if(r.confident&&r.name&&(r.number||r.energy)){navigator.vibrate?.(200);scanResult(r)}
   else{navigator.vibrate?.([80,60,80]);scanResult(r)}}
  catch(e){console.warn('shoot',e);lStat('❌ '+(e&&e.message||e)+' – näher ran / mehr Licht, dann erneut 📸 Foto');if(btn)btn.classList.add('pulse');if(/Texterkennung/.test(e&&e.message||'')){delete ocrW['deu+eng'];delete ocrW.num}}
@@ -825,9 +825,11 @@ $('#exportBtn').onclick=()=>{const a=document.createElement('a');a.href=URL.crea
 $('#importFile').onchange=async e=>{try{const d=JSON.parse(await e.target.files[0].text());if(!d.collection)throw 0;S=d;S.snapshots??=[];S.wishlist??=[];S.settings??={cur:'EUR',tf:30};S.trade??={give:[],get:[]};save();render();alert('Import erfolgreich')}catch(x){alert('Ungültige Datei')}};
 $('#resetBtn').onclick=()=>{if(confirm('Wirklich alle Daten löschen?')){localStorage.removeItem(K);S=load();S.settings={cur:'EUR',tf:30};S.trade={give:[],get:[]};save();render()}};
 
-if('serviceWorker' in navigator){const had=!!navigator.serviceWorker.controller;let rl=false;
- navigator.serviceWorker.register('sw.js',{updateViaCache:'none'}).then(r=>{r.update().catch(()=>{});document.addEventListener('visibilitychange',()=>{if(!document.hidden)r.update().catch(()=>{})})}).catch(()=>{});
- navigator.serviceWorker.addEventListener('controllerchange',()=>{if(had&&!rl&&!sessionStorage.getItem('swrl')){rl=true;sessionStorage.setItem('swrl','1');location.reload()}})}
+if('serviceWorker' in navigator){let rl=false,want=false;
+ const upd=w=>{if(!w||!navigator.serviceWorker.controller)return;let b=$('#updBanner');if(!b){b=document.createElement('button');b.type='button';b.id='updBanner';b.textContent='🔄 Neue Version verfügbar – tippen zum Aktualisieren';document.body.append(b)}b.hidden=false;b.onclick=()=>{want=true;b.textContent='⏳ Aktualisiere…';try{w.postMessage({type:'SKIP_WAITING'})}catch(e){location.reload()}setTimeout(()=>{if(!rl)location.reload()},4000)}};
+ navigator.serviceWorker.register('sw.js',{updateViaCache:'none'}).then(r=>{window.swReg=r;if(r.waiting)upd(r.waiting);r.addEventListener('updatefound',()=>{const w=r.installing;w&&w.addEventListener('statechange',()=>{if(w.state==='installed')upd(r.waiting||w)})});
+  const chk=()=>r.update().catch(()=>{});chk();document.addEventListener('visibilitychange',()=>{if(!document.hidden)chk()});addEventListener('focus',chk);setInterval(chk,30*60*1000)}).catch(()=>{});
+ navigator.serviceWorker.addEventListener('controllerchange',()=>{if(want&&!rl){rl=true;location.reload()}})}
 // Version sichtbar (aus sw.js gelesen)
 (async()=>{let v='';try{const t=await (await fetch('sw.js',{cache:'no-store'})).text();v=(t.match(/kartenapp-(v\d+)/)||[])[1]||''}catch(e){}
  if(!v&&window.caches){try{v=((await caches.keys()).find(k=>/^kartenapp-v\d+$/.test(k))||'').replace('kartenapp-','')}catch(e){}}
@@ -874,14 +876,22 @@ function trayCommit(){const n=TRAY.length;for(const x of TRAY){const b=x.best;co
 let _msT=0;function msArm(){msOff();window.scanAbandon=false;window.scanPart=null;_msT=setTimeout(()=>{const b=$('#scanManual');if(b)b.hidden=false},3000)}
 function msOff(){clearTimeout(_msT);const b=$('#scanManual');if(b)b.hidden=true}
 $('#scanManual')?.addEventListener('click',()=>{const p=window.scanPart||{};window.scanAbandon=true;msOff();stopLive();$('#scanbox')?.classList.remove('busy');$('#scanStatus2').textContent='';$('#qName').value=p.name||'';$('#qNum').value=p.number||'';go('v-search');setTimeout(()=>$('#qName').focus(),50);if(p.name)search(p.name,p.number||'','')});
-// Live-Hinweis im Kamerabild
+// Live-Hinweis im Kamerabild + Auto-Foto nur bei ganzer Karte im Rahmen
+function frameInCanvas(v,W,H){const f=$('.frame')?.getBoundingClientRect(),r=v.getBoundingClientRect();if(!f||!r.width||!f.width)return{x:0,y:0,w:W,h:H};const vw=v.videoWidth,vh=v.videoHeight,s=Math.max(r.width/vw,r.height/vh),ox=(r.width-vw*s)/2,oy=(r.height-vh*s)/2,k=W/vw;
+ const x=(f.left-r.left-ox)/s*k,y=(f.top-r.top-oy)/s*k,w=f.width/s*k,h=f.height/s*k;const x0=Math.max(0,x),y0=Math.max(0,y);return{x:x0,y:y0,w:Math.min(W,x+w)-x0,h:Math.min(H,y+h)-y0}}
+function liveAssess(c,F){const W=c.width,H=c.height;F=F||{x:0,y:0,w:W,h:H};const g=c.getContext('2d',{willReadFrequently:true});const d=g.getImageData(0,0,W,H).data;let s=0;for(let i=0;i<d.length;i+=16)s+=d[i]+d[i+1]+d[i+2];const br=s/(d.length/16)/3;
+ if(br<55)return{k:'dark',t:'💡 Mehr Licht'};const far={k:'far',t:'↔️ Weiter weg – ganze Karte in den Rahmen'},near={k:'near',t:'🔍 Näher ran'};
+ let q=null;try{window.cropDbg=null;const o=cardCropQuad(c);const cd=String(window.cropDbg||'').split(',');if(o&&cd[0]==='quad'){const P=[[+cd[3],+cd[4]],[+cd[5],+cd[6]],[+cd[7],+cd[8]],[+cd[9],+cd[10]]];const L=(a,b)=>Math.hypot(a[0]-b[0],a[1]-b[1]);const wd=(L(P[0],P[1])+L(P[3],P[2]))/2,ht=(L(P[0],P[3])+L(P[1],P[2]))/2;q={P,ar:Math.min(wd,ht)/Math.max(wd,ht),sc:+cd[1],area:wd*ht}}}catch(e){}
+ if(!q){let o=null;try{window.cropDbg=null;o=cardCropA(c);if(o===c)o=null}catch(e){}if(o){const cd=String(window.cropDbg||'').split(',').map(Number);if(cd.length>=4&&!isNaN(cd[0])){const [x,y,w,h]=cd;const m=W*.02;if(x<=m||y<=m||x+w>=W-m||y+h>=H-m||w*h>F.w*F.h*.8)return far}}return near}
+ if(Math.abs(q.ar-.716)>.07)return far;
+ const mg=Math.min(F.w,F.h)*.02,inF=q.P.every(([x,y])=>x>=F.x-mg*3&&y>=F.y-mg*3&&x<=F.x+F.w+mg*3&&y<=F.y+F.h+mg*3),inImg=q.P.every(([x,y])=>x>W*.015&&y>H*.015&&x<W*.985&&y<H*.985);
+ if(!inImg||!inF)return far;if(q.area<F.w*F.h*.45)return near;return{k:'ok',t:'✓ Karte erkannt',P:q.P}}
 setInterval(()=>{const h=$('#liveHint'),v=$('#liveVideo');if(!h)return;if(!live.stream||!v.videoWidth||live.shooting){h.textContent='';h.className='livehint';return}
- const W=240,H=Math.round(240*v.videoHeight/v.videoWidth),c=document.createElement('canvas');c.width=W;c.height=H;const g=c.getContext('2d',{willReadFrequently:true});g.drawImage(v,0,0,W,H);
- const d=g.getImageData(0,0,W,H).data;let s=0;for(let i=0;i<d.length;i+=16)s+=d[i]+d[i+1]+d[i+2];const br=s/(d.length/16)/3;
- let k='near',t='🔍 Näher ran';if(br<55){k='dark';t='💡 Mehr Licht'}else{try{window.cropDbg=null;const o=cardCrop(c);const ok=o!==c;let a=0;const cd=String(window.cropDbg||'').split(',');if(cd[0]==='quad'){const xs=[3,5,7,9].map(i=>+cd[i]),ys=[4,6,8,10].map(i=>+cd[i]);a=(Math.max(...xs)-Math.min(...xs))*(Math.max(...ys)-Math.min(...ys))/(W*H)}else if(o!==c)a=o.width*o.height/(W*H);if(ok&&a>.22){k='ok';t='✓ Karte erkannt – 📸 Foto drücken'}}catch(e){}}
- const now=Date.now();if(k==='ok'){live.okSince=live.okSince||now}else{live.okSince=0;live.autoArm=true}
- if(k==='ok'&&autoOn()&&live.autoArm!==false&&!live.shooting){const left=1000-(now-live.okSince);if(left<=0){live.autoArm=false;live.okSince=0;t='📸 Auto-Foto…';liveShoot()}else t='✓ Karte erkannt – ruhig halten…'}
- h.textContent=t;h.className='livehint '+k},350);
+ const W=240,H=Math.round(240*v.videoHeight/v.videoWidth),c=document.createElement('canvas');c.width=W;c.height=H;c.getContext('2d',{willReadFrequently:true}).drawImage(v,0,0,W,H);
+ const A=liveAssess(c,frameInCanvas(v,W,H));let k=A.k,t=A.t;const now=Date.now();
+ if(k==='ok'){const pp=live.lastP;const mv=pp?Math.max(...A.P.map((p,i)=>Math.hypot(p[0]-pp[i][0],p[1]-pp[i][1])))/W:1;live.lastP=A.P;if(mv>.035){live.okSince=now;t='✋ Ruhig halten…'}else live.okSince=live.okSince||now}else{live.okSince=0;live.lastP=null;live.autoArm=true}
+ if(k==='ok'&&t!=='✋ Ruhig halten…'){if(autoOn()&&live.autoArm!==false&&!live.shooting){const left=1000-(now-live.okSince);if(left<=0){live.autoArm=false;live.okSince=0;t='📸 Auto-Foto…';liveShoot()}else t='✓ Karte erkannt – ruhig halten…'}else t='✓ Karte erkannt – 📸 Foto drücken'}
+ h.textContent=t;h.className='livehint '+(k==='far'?'dark':k)},350);
 
 // Karten-/Preisabfrage schon während der Erkennung anstoßen (gleiche URLs wie die Suche → Cache-Treffer)
 const _pf=new Set();function scanPrefetch(p,lang){try{if(!p||!p.name||String(p.name).length<3||/[\u3040-\u30ff\u4e00-\u9fff]/.test(p.name))return;const num=String(p.number||'').split('/')[0].replace(/^0+(?=\d)/,'');const lg=String(lang||'').toLowerCase();
@@ -917,3 +927,5 @@ async function setListFix(tdx,lang,txt,num,name){const lg=(lang||'DE').toLowerCa
 
 // OCR + Set-Listen im Leerlauf nach dem Laden vorwärmen (erster Scan nicht langsamer)
 (function idleWarm(n=0){const go2=()=>{if(window.Tesseract){try{warmOCR()}catch(e){}try{scanWarmSets()}catch(e){}}else if(n<40)setTimeout(()=>idleWarm(n+1),500)};if(document.readyState!=='complete')return addEventListener('load',()=>setTimeout(()=>idleWarm(n),300),{once:true});(window.requestIdleCallback||(f=>setTimeout(f,800)))(go2,{timeout:2500})})();
+
+function retakePrompt(msg){const P=$('#scanPick'),st=$('#scanStatus2');if(st)st.textContent='⚠️ '+msg;const b=document.createElement('div');b.className='retake';b.innerHTML=`<p><b>⚠️ ${esc(msg)}</b></p><button type="button" class="primary bigbtn" id="retakeBtn">📸 Neu aufnehmen</button>`;if(P){P.hidden=false;P.prepend(b)}else $('#scanbox').append(b);$('#retakeBtn').onclick=()=>{b.remove();if(P)P.hidden=true;$('#scanbox')?.classList.remove('hasres');startLive()};b.scrollIntoView({block:'center'})}
