@@ -1495,3 +1495,19 @@ function sortBar(R,v){if(!R)return;R.querySelector('.sortbar')?.remove();const o
 
 // v121: Erkennungsmodell im Hintergrund vorladen (nach dem ersten Bild, im Leerlauf), nicht erst beim Öffnen des Scans; nicht bei Datensparmodus
 addEventListener('load',()=>{const c=navigator.connection;if(c&&(c.saveData||/2g/.test(c.effectiveType||'')))return;const run=()=>{try{const p=window.cardModelReady&&cardModelReady();p&&p.catch&&p.catch(()=>{})}catch(e){}};requestAnimationFrame(()=>setTimeout(()=>('requestIdleCallback' in window)?requestIdleCallback(run,{timeout:8000}):setTimeout(run,2500),1500))});
+
+// v124: horizontale Reihen am Desktop bedienbar (Pfeile bei Maus, Mausrad -> quer, Ziehen ohne Fehlklick, Tastatur, Rand-Hinweis); Touch-Wischen bleibt unverändert
+(()=>{const SEL='.hscroll,.binderbar,.langChips',fine=matchMedia('(pointer:fine)');
+ const upd=r=>{const w=r._hw;if(!w)return;const m=r.scrollWidth-r.clientWidth;w.classList.toggle('canL',r.scrollLeft>2);w.classList.toggle('canR',r.scrollLeft<m-2)};
+ const step=r=>Math.max(160,r.clientWidth*.8);
+ function wrap(r){if(r._hw||!r.classList.contains('hscroll')||!r.parentNode)return;const w=document.createElement('div');w.className='hsw';r.before(w);w.append(r);r._hw=w;
+  for(const [c,d,l] of [['hsl',-1,'Nach links scrollen'],['hsr',1,'Nach rechts scrollen']]){const b=document.createElement('button');b.type='button';b.className='hsbtn '+c;b.setAttribute('aria-label',l);b.tabIndex=-1;b.textContent=d<0?'‹':'›';b.onclick=e=>{e.stopPropagation();r.scrollBy({left:d*step(r),behavior:'smooth'})};w.append(b)}
+  r.addEventListener('scroll',()=>upd(r),{passive:true});new ResizeObserver(()=>upd(r)).observe(r);new MutationObserver(()=>upd(r)).observe(r,{childList:true});upd(r)}
+ function enh(r){if(r._hsE)return;r._hsE=1;wrap(r);if(!r.hasAttribute('tabindex'))r.tabIndex=0;r.setAttribute('role',r.getAttribute('role')||'region');if(!r.getAttribute('aria-label'))r.setAttribute('aria-label','Horizontale Liste – mit Pfeiltasten scrollen');
+  r.addEventListener('keydown',e=>{if(e.target!==r)return;if(e.key==='ArrowRight'||e.key==='ArrowLeft'){e.preventDefault();r.scrollBy({left:(e.key==='ArrowRight'?1:-1)*step(r)*.5,behavior:'smooth'})}});
+  r.addEventListener('wheel',e=>{if(e.ctrlKey||Math.abs(e.deltaX)>=Math.abs(e.deltaY))return;const m=r.scrollWidth-r.clientWidth;if(m<=1)return;const d=e.deltaY*(e.deltaMode===1?16:1);if((d>0&&r.scrollLeft>=m-1)||(d<0&&r.scrollLeft<=0))return;e.preventDefault();r.scrollLeft+=d},{passive:false});
+  let st=null;r.addEventListener('pointerdown',e=>{if(e.pointerType!=='mouse'||e.button!==0)return;st={x:e.clientX,l:r.scrollLeft,mv:false,id:e.pointerId}});
+  r.addEventListener('pointermove',e=>{if(!st||e.pointerId!==st.id)return;const dx=e.clientX-st.x;if(!st.mv&&Math.abs(dx)>5){st.mv=true;r.classList.add('hsdrag');try{r.setPointerCapture(e.pointerId)}catch(_){}}if(st.mv){r.scrollLeft=st.l-dx;e.preventDefault()}});
+  const end=e=>{if(!st)return;const mv=st.mv;st=null;r.classList.remove('hsdrag');if(mv){const k=ev=>{ev.stopPropagation();ev.preventDefault()};r.addEventListener('click',k,{capture:true,once:true});setTimeout(()=>r.removeEventListener('click',k,true),50)}};
+  r.addEventListener('pointerup',end);r.addEventListener('pointercancel',end);r.addEventListener('dragstart',e=>{if(st)e.preventDefault()})}
+ const scan=()=>document.querySelectorAll(SEL).forEach(enh);scan();new MutationObserver(scan).observe(document.body,{childList:true,subtree:true})})();
