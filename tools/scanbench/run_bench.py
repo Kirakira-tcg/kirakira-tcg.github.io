@@ -28,7 +28,9 @@ async def worker(wid, br, url, q, out, args):
     page = await ctx.new_page()
     async def boot():
         await page.goto(url, wait_until='load', timeout=90000)
-        await page.wait_for_function("typeof analyze==='function'&&!!window.Tesseract", timeout=90000)
+        await page.wait_for_function("typeof analyze==='function'", timeout=90000)
+        await page.evaluate("window.tessLoad?window.tessLoad():0")
+        await page.wait_for_function("!!window.Tesseract", timeout=90000)
         await page.evaluate(HOOK)
     await boot(); n = 0
     while True:
