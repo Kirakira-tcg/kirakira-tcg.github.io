@@ -4,10 +4,12 @@ var OwnPhoto=(()=>{const DB='kartenapp_photos',ST='photos';let dbp=null;const U=
  const tx=async(m,f)=>{const d=await db();return new Promise((ok,no)=>{const t=d.transaction(ST,m),r=f(t.objectStore(ST));t.oncomplete=()=>ok(r&&r.result);t.onerror=()=>no(t.error)})};
  const key=(id,lang)=>String(id)+'|'+String(lang||'DE').toUpperCase();
  function snap(){const c=window.mSrcBest;if(!c||!c.width)return null;const k=Math.min(1,600/Math.max(c.width,c.height)),o=document.createElement('canvas');o.width=Math.round(c.width*k);o.height=Math.round(c.height*k);o.getContext('2d').drawImage(c,0,0,o.width,o.height);return o}
- async function put(id,lang,cv){if(!id||!cv)return false;const blob=await new Promise(r=>cv.toBlob(r,'image/jpeg',.8));if(!blob)return false;const k=key(id,lang);await tx('readwrite',s=>s.put({blob,w:cv.width,h:cv.height,t:Date.now(),cardId:String(id),lang:String(lang||'DE').toUpperCase(),src:'scan'},k));const u=U.get(k);if(u)URL.revokeObjectURL(u);U.delete(k);return true}
+ async function put(id,lang,cv){if(!id||!cv)return false;const blob=await new Promise(r=>cv.toBlob(r,'image/jpeg',.8));if(!blob)return false;const k=key(id,lang);await tx('readwrite',s=>s.put({blob,w:cv.width,h:cv.height,t:Date.now(),cardId:String(id),lang:String(lang||'DE').toUpperCase(),src:'scan'},k));const u=U.get(k);if(u)URL.revokeObjectURL(u);U.delete(k);try{window.fpOwnAdd&&window.fpOwnAdd(k,id,lang,cv)}catch(e){}return true}
  async function url(id,lang){if(!id)return null;const k=key(id,lang);if(U.has(k))return U.get(k);let v=null;try{v=await tx('readonly',s=>s.get(k))}catch(e){}const u=v&&v.blob?URL.createObjectURL(v.blob):null;U.set(k,u);return u}
- async function del(id,lang){const k=key(id,lang);await tx('readwrite',s=>s.delete(k));const u=U.get(k);if(u)URL.revokeObjectURL(u);U.delete(k)}
- return{DB,ST,key,snap,put,url,del}})();window.OwnPhoto=OwnPhoto;
+ async function del(id,lang){const k=key(id,lang);try{window.fpOwnDel&&window.fpOwnDel(k)}catch(e){}await tx('readwrite',s=>s.delete(k));const u=U.get(k);if(u)URL.revokeObjectURL(u);U.delete(k)}
+  // v120: gespeicherte eigene Fotos beim Start als persönliche Abgleich-Vorlagen laden (nur auf dem Gerät)
+ async function templates(){let L=[];try{L=await tx('readonly',s=>s.getAll())||[]}catch(e){return 0}let K=[];try{K=await tx('readonly',s=>s.getAllKeys())||[]}catch(e){}let n=0;for(let i=0;i<L.length;i++){const v=L[i];if(!v||!v.blob||!v.cardId)continue;try{const b=await createImageBitmap(v.blob),c=document.createElement('canvas');c.width=b.width;c.height=b.height;c.getContext('2d').drawImage(b,0,0);if(window.fpOwnAdd&&window.fpOwnAdd(K[i]||key(v.cardId,v.lang),v.cardId,v.lang,c))n++}catch(e){}}return n}
+ return{DB,ST,key,snap,put,url,del,templates}})();window.OwnPhoto=OwnPhoto;setTimeout(()=>{OwnPhoto.templates().then(n=>{window.ownTplN=n}).catch(()=>{})},1500);
 let NAVIGN=0;const navSt=()=>history.state||{};
 const SORTK=v=>'kartenapp_sort_'+v;
 const RAR=['common','uncommon','rare','holo','reverse','double','ultra','illustration','special','hyper','secret','shiny','amazing','radiant','promo'];
@@ -1411,6 +1413,11 @@ if(window.FX&&FX.reveal){const _rv=FX.reveal;FX.reveal=function(it){const now=Da
  const SAME={};const sameLoad=f=>{const k='same-'+f;if(!LS[k])LS[k]=fetch(fpBase()+k+'.json?v='+FPV).then(r=>r.ok?r.json():[]).then(L=>{for(const g of L)for(const i of g)SAME[i]=g;return 1}).catch(()=>{delete LS[k];return 0});return LS[k]};
  async function shard(f,sid){const k=f+'/'+sid;if(!LS[k])LS[k]=fetch(fpBase()+f+'/'+encodeURIComponent(sid)+'.json?v='+FPV).then(r=>r.ok?r.json():null).then(d=>d?d.c.map(([l,h])=>({id:sid+'-'+l,...parse(h)})):[]).catch(()=>{delete LS[k];return[]});return LS[k]}
  async function all(f){const k='*'+f;if(!LS[k])LS[k]=fetch(fpBase()+'all-'+f+'.txt?v='+FPV).then(r=>r.ok?r.text():'').then(t=>t.split('\n').filter(Boolean).map(x=>{const i=x.indexOf(' ');return{id:x.slice(0,i),...parse(x.slice(i+1))}})).catch(()=>{delete LS[k];return[]});return LS[k]}
+ // v119: persönliche Vorlagen aus eigenen Scan-Fotos (nur lokal, IndexedDB → Abdruck im Speicher; nie hochgeladen)
+ const PT=new Map();const ptFor=(f,S)=>{const L=[];for(const t of PT.values()){if(t.f!==f)continue;if(S&&S.length){const sid=t.id.slice(0,t.id.lastIndexOf('-')).toLowerCase();if(!S.some(x=>String(x).toLowerCase()===sid))continue}L.push(t)}return L};
+ window.fpOwnAdd=(key,id,lang,cv)=>{if(!key||!id||!cv||!cv.width)return false;let c=cv;if(Math.abs(cv.width/cv.height-.716)>.04){try{const w=typeof warpStd==='function'&&warpStd(cv);if(w)c=w}catch(e){}}const t={id:String(id),f:fam(lang),own:1,...fpOf(c,CROP)};const q=fpOf(c,WCROP).a;t.w=[q[0],q[1],q[2],q[3]];PT.set(key,t);return true};
+ window.fpOwnDel=key=>PT.delete(key);window.fpOwnCount=()=>PT.size;
+ async function cands0(o){const f=fam(o.lang);const S=(o.setIds||[]).filter(Boolean);const B=await cands(o);const P=ptFor(f,S);return P.length?B.concat(P):B}
  async function cands(o){const f=fam(o.lang);sameLoad(f);const S=(o.setIds||[]).filter(Boolean);if(!S.length)return all(f);
   // Set-IDs ohne Groß/Klein-Gefahr: intl-Shards sind klein geschrieben wie TCGdex de/en
   return (await Promise.all(S.map(s=>shard(f,String(s))))).flat()}
@@ -1440,7 +1447,7 @@ if(window.FX&&FX.reveal){const _rv=FX.reveal;FX.reveal=function(it){const now=Da
  // window.matchCardImage v2 – Ergebnisfelder: {cardId, score, art, card, sameArt:[cardIds mit gleichem Artwork], gap}
  //   score = 0,65·art + 0,35·card (ohne Ganzkarten-Abdruck: art). gap = score − bester Score einer Karte mit ANDEREM Artwork (Reprints zählen nicht als Konkurrenz).
  //   Empfehlung Übernahme: score ≥ 0,62 und gap ≥ 0,12; bei sameArt.length>0 Set/Nummer zum Entscheiden nutzen.
- window.matchCardImage=async function(canvas,o={}){const limit=o.limit||5;const C=await cands(o);if(!C.length||!canvas||!canvas.width)return[];await sameLoad(fam(o.lang));
+ window.matchCardImage=async function(canvas,o={}){const limit=o.limit||5;const C=await cands0(o);if(!C.length||!canvas||!canvas.width)return[];await sameLoad(fam(o.lang));
   const Q=SH.map(([dx,dy])=>fpOf(canvas,[CROP[0]+dx,CROP[1]+dy,CROP[2]+dx,CROP[3]+dy])),wq=fpOf(canvas,WCROP).a;
   const K=Math.max(limit,5)+8,top=[];for(const t of C){let ar=0;for(const q of Q){const s=artScore(q,t);if(s>ar)ar=s}const cs=cardScore(wq,t),s=cs==null?ar:0.65*ar+0.35*cs;
    if(top.length<K||s>top[top.length-1].score){top.push({cardId:t.id,score:s,art:ar,card:cs});top.sort((x,y)=>y.score-x.score);if(top.length>K)top.pop()}}
