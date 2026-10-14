@@ -27,7 +27,7 @@ let S=load(); S.snapshots??=[];S.wishlist??=[];S.settings??={cur:'EUR',tf:30};S.
 // v71: alte manuelle Überschreibungen -> nur noch „eigene Schätzung“ (Fallback), Marktwert kommt aus den Quellen
 for(const x of [...(S.collection||[]),...(S.wishlist||[])])if(x.ownPrice!=null){x.ownPriceOld??=x.ownPrice;x.price=x.ownPrice;x.estimate=true;x.ownPrice=null}
 const money=n=>{if(n==null||isNaN(n))return'–';const u=S.settings.cur==='USD';return (u?n*USD:n).toLocaleString('de-DE',{style:'currency',currency:u?'USD':'EUR'})};
-const pct=n=>n==null||!isFinite(n)||Math.abs(n)<.05?'':(n>=0?'▲ +':'▼ ')+n.toFixed(1).replace('.',',')+' %';
+const pct=n=>n==null||!isFinite(n)||Math.abs(n)<.05||Math.abs(n)>300?'':(n>=0?'▲ +':'▼ ')+n.toFixed(1).replace('.',',')+' %';
 const cls=n=>n==null?'muted':n>=0?'pos':'neg';
 const esc=s=>String(s??'').replace(/[&<>"]/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;'}[c]));
 // v105: pokemontcg.io-IDs ohne ptcg-Daten (me*, z.B. me55-152) auf TCGdex-IDs umstellen (30th-152), sonst 404 bei TCGdex
@@ -317,7 +317,7 @@ async function fedInit(f,c){try{let id=String(c.id).replace(/^jp:.*/,'');if(!id)
   if(eur!=null){if(big)big.innerHTML=money(eur);P.innerHTML=`<span class="muted">1st Edition · TCGplayer (TCGdex), umgerechnet</span>`;window._firstPrice=eur}
   else{window._firstPrice=null;P.innerHTML='<span style="color:#fbbf24">⚠️ Kein 1st-Edition-Preis in den Datenbanken – angezeigter Preis gilt nicht für 1st Edition</span>'}}}catch(e){}}
 // 1st Edition: TCGdex-Variantenpreis (TCGplayer 1st-edition*) wenn vorhanden, sonst Hinweis
-async function firstEd(it){if(!window.Prices)return;try{const nm=(it.name||'').replace(/\s*\(.*\)\s*$/,'').trim(),num=String(it.number||'').split('/')[0]||null;let r=it.tdxId?await Prices.byId(it.tdxId,'en'):null;if(!r)r=await Prices.lookup(deName(nm),'en',null,num);
+async function firstEd(it){if(!window.Prices)return;try{const nm=(it.name||'').replace(/\s*\(.*\)\s*$/,'').trim(),num=String(it.number||'').split('/')[0]||null;let r=it.tdxId?await Prices.byId(it.tdxId,'en'):null;if(!r&&!it.tdxId&&!it.apiId)r=await Prices.lookup(deName(nm),'en',null,num);
  const v=r&&r.prices&&r.prices.find(x=>/1st/i.test(x.variant||'')&&x.eur!=null);if(v&&it.ownPrice==null){it.price=v.eur;it.priceNote='';it.tdx={label:`${v.eur.toFixed(2).replace('.',',')} € · ${v.source} · 1st Edition`,id:r.id,src:v.source+' 1st',url:null};trackPrice(it);save();snapshot();render()}}catch(e){}}
 const tdxNeed=x=>x.ownPrice==null&&(x.price==null||x.estimate||(x.lang&&x.lang!=='EN'));
 async function tdxFill(x){if(!window.Prices||x.ownPrice!=null||(x.variant==='1st'&&x.tdx&&/1st/.test(x.tdx.src||'')))return false;const lang=(x.lang||'DE').toLowerCase(),name=(x.name||'').replace(/\s*\(.*\)\s*$/,'').trim(),num=String(x.number||'').split('/')[0]||null;
@@ -373,7 +373,7 @@ function addDialog(c,mode,sealed){const manual=!c,scPh=window.pendingScan&&c?Own
   else{const it={uid:uid(),...base,lang:v.lang,cond:v.cond,qty:parseInt(v.qty)||1,buy:(n=>Number.isNaN(n)?null:n)(parseEur(v.buy)),price:own??tpp??p,ownPrice:own,added:today()};if(v.first){it.variant='1st';if(window._first&&window._firstPrice!=null&&own==null){it.price=window._firstPrice;it.priceNote='';it.tdx={label:money(window._firstPrice)+' · TCGplayer (TCGdex) · 1st Edition',id:c&&c.id,src:'TCGplayer 1st',url:null}}else it.priceNote='Preis gilt nicht für 1st Edition';}window._first=false;if(it.price==null)it.noPrice=true;{const key=x=>[x.tdxId||x.apiId||'',x.lang,x.cond||'',x.variant||''].join('|'),k=key(it),ex=it.type!=='sealed'&&(it.tdxId||it.apiId)?S.collection.find(x=>key(x)===k):null;if(ex&&f.dataset.dup==='merge'){ex.qty=(ex.qty||1)+it.qty;window._mergedInto=ex;save();snapshot();render();return}}trackPrice(it);S.collection.push(it);setTimeout(()=>showAddedToast(it.uid),50);if(v.first&&!(it.tdx&&/1st/.test(it.tdx.src||'')))firstEd(it);window.FX&&FX.reveal(it)}
   save();snapshot();render();const nw=mode==='wish'?S.wishlist[S.wishlist.length-1]:S.collection[S.collection.length-1];
   if(scPh&&nw&&mode!=='wish'&&phId(nw))OwnPhoto.put(phId(nw),nw.lang,scPh).then(()=>render()).catch(()=>{});if(nw&&tdxNeed(nw))tdxFill(nw).then(ok=>{if(ok){trackPrice(nw);save();snapshot();render()}})};
- if(c&&window.Prices&&!/^(cel25c|me55c)-/.test(c.id||'')){const l=$('#tdxLbl');Prices.lookup(c.name,(window.scanLang||'DE').toLowerCase(),null,c.number).then(r=>{if(l&&r&&r.best)l.textContent='TCGdex: '+r.label}).catch(()=>{})}}
+ if(c&&window.Prices&&!/^(cel25c|me55c)-/.test(c.id||'')){const l=$('#tdxLbl');Prices.byId(Prices.tdxId(c.id),(window.scanLang||'DE').toLowerCase()).then(r=>{if(l&&r&&r.best)l.textContent='TCGdex: '+r.label}).catch(()=>{})}}
 $('#manualBtn').onclick=()=>addDialog(null,'coll');$('#sealedBtn').onclick=()=>addDialog(null,'coll',true);
 
 // Detail / Preisguide
@@ -383,9 +383,9 @@ async function langFlags(f,{name,number,lang,tid}){const box=f.querySelector('#l
  const L=[['de','🇩🇪'],['en','🇬🇧'],['ja','🇯🇵']],own=({DE:'de',EN:'en',JP:'ja',JA:'ja'})[(lang||'').toUpperCase()]||null;
  box.innerHTML=L.map(([l,e])=>`<button type="button" class="chip" data-l="${l}" disabled style="opacity:.3;font-size:1.2rem;padding:.15rem .5rem">${e}</button>`).join('');
  const num=String(number||'').split('/')[0]||null;let id=tid;
- if(!id){const nm=(name||'').replace(/\s*\(.*\)\s*$/,'').trim();for(const lg of [...new Set([own||'en','en','de','ja'])]){try{const r=await Prices.lookup(nm,lg,null,num);id=r&&r.id}catch(e){}if(id)break}}
+ // v127: nur exakte Karten-ID (gleiches Set); keine Suche per Name+Nummer (fand z.B. XY Flashfire 27 statt 30th Celebration 27)
  if(!id||!box.isConnected)return;const imgs={},recs={};
- await Promise.all(L.map(async([l])=>{try{const r=await Prices.byId(id,l);if(r&&r.image){imgs[l]=r.image;recs[l]=r}}catch(e){}}));
+ await Promise.all(L.map(async([l])=>{try{const r=await Prices.byId(id,l);const sid=String(id).replace(/^jp:/,'').replace(/-[^-]*$/,'').toLowerCase();if(r&&r.image&&(!r.set||!r.set.id||String(r.set.id).toLowerCase()===sid||String(r.id||'').toLowerCase()===String(id).toLowerCase())){imgs[l]=r.image;recs[l]=r}}catch(e){}}));
  const mark=a=>box.querySelectorAll('button').forEach(b=>{const ok=!!imgs[b.dataset.l];b.disabled=!ok;b.style.opacity=ok?(b.dataset.l===a?'1':'.55'):'.2';b.style.outline=b.dataset.l===a?'2px solid #a78bfa':'none'});
  const CML={de:3,en:1},cmOf=r=>r&&r.prices&&r.prices.find(p=>/^Cardmarket \(TCGdex/.test(p.source));
  const showP=l=>{const pe=f.querySelector('#lflP');if(!pe)return;const r=recs[l],cm=cmOf(r),cd=cmOf(recs.de),ce=cmOf(recs.en);
@@ -411,7 +411,7 @@ function detail({api:c,item,list}){if(c&&!c._tdx&&!c._syd&&window.Prices){c._syd
  ${itStale(it)?`<p class="small oldp-t">⚠️ ${esc(oldLbl(itStale(it)))} – zählt nicht im Portfolio- und Binderwert</p>`:''}${it.tdx?`<p class="muted small">Preis: ${esc(it.tdx.label)}${it.tdx.url?` · <a href="${esc(it.tdx.url)}" target="_blank" rel="noopener" class="plink">Cardmarket ↗</a>`:''}</p>`:''}<p class="muted small" id="tdxDet"></p>${it.note?`<p class="muted small">${esc(it.note)}</p>`:''}${it.priceNote?`<p class="small" style="color:#fbbf24">⚠️ ${esc(it.priceNote)}</p>`:''}${ci&&ci.url?`<p><a href="${ci.url}" target="_blank" rel="noopener" class="plink">Auf Cardmarket ansehen ↗</a></p>`:''}</div>
  <div class="row">${item?(list!=='wishlist'?'<button value="buy">Kaufpreis</button>':'')+(it.price==null||it.estimate?'<button value="est">Wert schätzen</button>':'')+'<button value="del" class="danger">Entfernen</button>':`<button value="add">+ Sammlung</button><button value="wish">☆ Wunsch</button>`}<button value="cancel">Schließen</button></div>`;
  const dlg=$('#dlg');dlg.returnValue='';dlg.showModal();
- langFlags(f,{name,number:c?c.number:it.number,lang:item?it.lang:(window.scanLang||''),tid:it.tdx&&it.tdx.id});window._first=false;if(c)fedInit(f,c);
+ langFlags(f,{name,number:c?c.number:it.number,lang:item?it.lang:(window.scanLang||''),tid:(c&&c.id&&!c._tdx?Prices.tdxId(c.id):c&&c.id)||it.tdxId||(it.apiId&&Prices.tdxId(it.apiId))||(it.tdx&&it.tdx.id)});window._first=false;if(c)fedInit(f,c);
  if(window.Prices&&!it.tdx&&(price==null||(item&&it.lang&&it.lang!=='EN'))){const q=item?{...it,ownPrice:null,price:null}:{apiId:c.id,name:c.name,number:c.number,lang:window.scanLang||'EN'};tdxFill(q).then(ok=>{const l=$('#tdxDet');if(ok&&l)l.textContent='TCGdex: '+q.tdx.label})}
  dlg.onclose=()=>{const r=dlg.returnValue;
   if(r==='add')setTimeout(()=>addDialog(c,'coll'));if(r==='wish')setTimeout(()=>addDialog(c,'wish'));
