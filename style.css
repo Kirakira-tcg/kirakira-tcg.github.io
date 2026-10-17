@@ -502,3 +502,22 @@ body.hasupd main{padding-top:0!important}
 .livehint.steady{background:rgba(255,216,77,.95);color:#1a1200}
 #scanConfirm .sctx .scjp{font-size:.78em;opacity:.7;margin-top:-3px}#scanConfirm .sctx .scflag{opacity:1;font-size:1em}#scanConfirm .sctx .scset{font-style:normal}#scanConfirm .sctx .scprice{opacity:1;font-weight:800;color:#ffd84d;font-size:.95em}#scanConfirm .sctx .scprice:empty{display:none}
 .spThumb .jpsub{display:block;font-size:.72em;opacity:.65;line-height:1.2}
+
+/* v134: Desktop-Feinschliff */
+@media(min-width:900px){
+ nav{top:0;bottom:0;right:auto;width:92px;flex-direction:column;justify-content:flex-start;gap:6px;padding:80px 6px 12px;border-top:0!important;border-right:2px solid var(--bd);border-radius:0 22px 22px 0!important}nav button{flex:none!important;min-height:64px}
+ body{padding-left:92px}main{max-width:1500px;padding-bottom:40px}.appfoot{padding-left:92px}
+ .cgrid{grid-template-columns:repeat(auto-fill,minmax(160px,1fr))}
+ .hsw.canL .hsl,.hsw.canR .hsr{opacity:1!important}
+ #chart{height:260px}
+ dialog:has(.detail){width:min(96vw,1000px)}#dlgForm .detail{grid-template-columns:320px minmax(0,1fr)}
+ #dlgForm .dcard{transform:none!important}#dlgForm .dcard .holo,#dlgForm .gyroBtn,#dlgForm .gyroBtn+p{display:none!important}#dlgForm .dcard img{cursor:zoom-in}
+ #binderView .bnav{position:relative}#binderView .bpage{cursor:default}
+}
+.dacts{display:flex;gap:8px;justify-content:center;margin:.4rem 0 .6rem}.dacts button{min-height:44px;padding:0 16px;border-radius:12px;font-weight:700}
+.lightbox{position:fixed;inset:0;z-index:100;background:rgba(0,0,0,.88);display:flex;align-items:center;justify-content:center;cursor:zoom-out}.lightbox img{max-width:92vw;max-height:92vh;border-radius:16px}.lightbox button{position:absolute;top:14px;right:14px;width:44px;height:44px;border-radius:50%;border:0;background:rgba(255,255,255,.15);color:#fff;font-size:1.2rem}
+.shareprev{width:min(94vw,520px)}.shareprev img{width:100%;border-radius:12px;display:block;margin:.4rem 0}.shareprev .row{display:flex;flex-wrap:wrap;gap:8px}.shareprev .row button{flex:1 1 140px;min-height:44px}
+.tosets{justify-self:start;margin-bottom:4px}
+.msec{border:1px solid rgba(255,255,255,.1);border-radius:14px;padding:4px 12px;margin:10px 0;background:rgba(255,255,255,.03)}.msec>summary{cursor:pointer;font-weight:800;font-size:1.05rem;padding:8px 0;list-style-position:inside}
+.dangerzone{margin:24px 0 10px;padding:12px;border:1px solid rgba(239,68,68,.5);border-radius:14px;background:rgba(239,68,68,.06)}.dangerzone h3{margin:0 0 4px;color:#f87171}
+.pcmp.cmdup>div:first-child>b{display:none}#dlgForm .detail>.dacts{margin-bottom:14px}
