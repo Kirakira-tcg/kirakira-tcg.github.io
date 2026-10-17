@@ -484,3 +484,14 @@ body.hasupd main{padding-top:0!important}
  .cgrid{grid-template-columns:repeat(auto-fill,minmax(170px,1fr));gap:14px}.hscroll .tile{min-width:150px;max-width:150px}
  #setList{display:grid;grid-template-columns:repeat(auto-fill,minmax(260px,1fr));gap:10px}.setstats .ssrow{grid-template-columns:repeat(3,1fr)}}
 .tile .p{flex-wrap:nowrap;white-space:nowrap;overflow:hidden}.tile .p span:empty{display:none}
+
+/* v130: Produktseiten-Detail, Set-Reiter, Bottom-Sheet */
+.dtable{width:100%;border-collapse:collapse;margin:.5rem 0;font-size:.88rem}.dtable th,.dtable td{padding:.42rem .2rem;border-bottom:1px solid rgba(255,255,255,.08);text-align:left;vertical-align:top}.dtable th{color:var(--mu);font-weight:600;width:42%}.dtable td{font-weight:600}.dtable .dsec th{color:var(--tx);font-size:.78rem;padding-top:.8rem;width:auto}.dtable a{color:var(--ac2)}
+@media(min-width:900px){dialog:has(.detail){width:min(94vw,920px)}#dlgForm .detail{display:grid;grid-template-columns:320px minmax(0,1fr);column-gap:28px;grid-auto-flow:row dense;align-items:start}#dlgForm .detail>*{grid-column:2}#dlgForm .detail>.dcard,#dlgForm .detail>.dph,#dlgForm .detail>#lfl,#dlgForm .detail>#lflP,#dlgForm .detail>.gyroBtn,#dlgForm .detail>.imgnote,#dlgForm .detail>.gyroBtn+p,#dlgForm .detail>.ownadd,#dlgForm .detail>.ownphd{grid-column:1}}
+.settabs{display:flex;gap:4px;margin:2px 0 6px}.settabs button{flex:1;min-height:40px;border-radius:12px;border:1px solid rgba(255,255,255,.14);background:transparent;color:var(--tx);font:inherit;font-weight:600}.settabs button.on{background:var(--ac);border-color:var(--ac)}.settabs small{opacity:.75;margin-left:.2rem}
+.condchips{display:flex;gap:6px;flex-wrap:wrap;margin:.3rem 0}.condchips .chip{min-height:40px;min-width:48px}.condchips .chip.on{background:var(--ac);color:#fff}
+.qstep{display:inline-flex;align-items:center;gap:10px;margin:.3rem 0}.qstep button{width:44px;height:44px;border-radius:12px;border:1px solid rgba(255,255,255,.2);background:var(--card2);color:var(--tx);font-size:1.3rem}.qstep span{min-width:2ch;text-align:center;font-weight:800;font-size:1.1rem}
+@media(max-width:899px){dialog.qsheet{margin:auto 0 0;width:100%;max-width:100%;border-radius:22px 22px 0 0!important;max-height:88vh;overflow:auto;padding-bottom:calc(16px + env(safe-area-inset-bottom))}dialog.qsheet[open]{animation:qup .22s ease-out}}
+@keyframes qup{from{transform:translateY(40px);opacity:.6}to{transform:none;opacity:1}}@media(prefers-reduced-motion:reduce){dialog.qsheet[open]{animation:none}}
+.ploading .tile .p b,.ploading .tile .cgp b{color:transparent;background:rgba(255,255,255,.1);border-radius:4px}
+@media(min-width:900px){#dlgForm .detail>.dcard,#dlgForm .detail>.dph{grid-row:1 / span 12}}

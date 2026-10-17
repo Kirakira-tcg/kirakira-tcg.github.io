@@ -5,7 +5,7 @@ abgeglichen mit https://api.tcgdex.net/v2/ja/sets. Ein Set kommt nur rein, wenn
 (a) der japanische Name bei Bulbapedia == TCGdex-JA-Name ist (eindeutig), oder
 (b) Bulbapedia das Logo mit genau dieser Set-ID benennt ("File:<ID> <English> Logo.png").
 (b) gewinnt und korrigiert falsche TCGdex-Namen (z.B. SV4a, bei TCGdex 'レイジングサーフ').
-Nur IDs aus WANT werden übernommen (beliebte Sets). Nichts wird geraten."""
+v130: alle TCGdex-JA-Sets + jpcards.json-Sets; Sets ohne TCGdex nur per Logo-ID (b). Nichts wird geraten."""
 import json,re,sys,unicodedata,urllib.request,datetime
 BP='https://bulbapedia.bulbagarden.net/w/index.php?title=List_of_Japanese_Pok%C3%A9mon_Trading_Card_Game_expansions&action=raw'
 WANT='''SV1S SV1V SV1a SV2P SV2D SV2a SV3 SV3a SV4K SV4M SV4a SV5K SV5M SV5a SV6 SV6a SV7 SV7a SV8 SV8a SV9 SV9a SV10 SV11B SV11W
@@ -23,10 +23,12 @@ for i,l in enumerate(raw):
   for k in (i-1,i-2):
     c=re.match(r"\|\s*\[\[File:(\S+) (.+?) Logo\.png",raw[k]) if k>=0 else None
     if c and len(en)==1:byCode[c.group(1)]=(ja[0],en[0])
+WANT=list(dict.fromkeys(list(tdx)+list(json.load(open('jpcards.json')).get('sets',{}))))
 out={};skip=[]
 for sid in WANT:
   s=tdx.get(sid)
-  if not s:skip.append((sid,'nicht bei TCGdex JA'));continue
+  if not s and sid not in byCode:skip.append((sid,'nicht bei TCGdex JA, keine Logo-ID'));continue
+  s=s or {'name':byCode[sid][0]}
   if sid in byCode:ja,en=byCode[sid];src='bulbapedia-logo-id'
   else:
     c=byJa.get(n(s['name']),set())
