@@ -480,7 +480,7 @@ body.hasupd main{padding-top:0!important}
 @media(prefers-reduced-motion:reduce){.cgp b.skel{animation:none}}
 /* v125: Desktop nutzt die Breite */
 @media(min-width:900px){main{max-width:1200px;padding:0 24px}
- #v-port{display:grid;grid-template-columns:minmax(0,1.3fr) minmax(0,1fr);column-gap:24px;align-items:start}#v-port>*{grid-column:1/-1}#v-port>.hero{grid-column:1}#v-port>.stats{grid-column:2;grid-row:1;align-self:center;display:grid;grid-template-columns:1fr;gap:10px}
+ #v-port.active{display:grid;grid-template-columns:minmax(0,1.3fr) minmax(0,1fr);column-gap:24px;align-items:start}#v-port>*{grid-column:1/-1}#v-port>.hero{grid-column:1}#v-port>.stats{grid-column:2;grid-row:1;align-self:center;display:grid;grid-template-columns:1fr;gap:10px}
  .cgrid{grid-template-columns:repeat(auto-fill,minmax(170px,1fr));gap:14px}.hscroll .tile{min-width:150px;max-width:150px}
  #setList{display:grid;grid-template-columns:repeat(auto-fill,minmax(260px,1fr));gap:10px}.setstats .ssrow{grid-template-columns:repeat(3,1fr)}}
 .tile .p{flex-wrap:nowrap;white-space:nowrap;overflow:hidden}.tile .p span:empty{display:none}
