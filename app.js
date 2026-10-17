@@ -1215,7 +1215,9 @@ function lqDraw(){LQ.raf=0;const c=lqEl(),v=$('#liveVideo');if(!c||!v)return;con
  if(LQ.mode==='steady'&&LQ.prog>0){const cx=Q.reduce((s,p)=>s+p[0],0)/4,cy=Q.reduce((s,p)=>s+p[1],0)/4,R=18*dpr;g.lineWidth=5*dpr;g.strokeStyle='rgba(0,0,0,.35)';g.beginPath();g.arc(cx,cy,R,0,Math.PI*2);g.stroke();g.strokeStyle='#ffd84d';g.beginPath();g.arc(cx,cy,R,-Math.PI/2,-Math.PI/2+Math.PI*2*Math.min(1,LQ.prog));g.stroke()}
  if(mv>.5)LQ.raf=requestAnimationFrame(lqDraw)}
 window.liveQuadDbg=LQ;
-setInterval(()=>{const h=$('#liveHint'),v=$('#liveVideo');if(!h)return;if(!live.stream||!v.videoWidth||live.shooting){h.textContent='';h.className='livehint';if(!live.shooting)lqSet(null);return}
+// v133: Führungsrahmen immer im Kartenformat 63:88 (PC-Webcam/Querformat: Höhe begrenzt, vorher wurde der Rahmen breit und die Karte nie „ok“)
+function frameFit(){const w=$('#scanbox .camwrap'),f=w&&w.querySelector('.frame');if(!f)return;if(!live.stream){if(f.style.width){f.style.width='';f.style.height='';f.style.maxHeight=''}return}const r=w.getBoundingClientRect();if(!r.width||!r.height)return;const fw=Math.round(Math.min(r.width*(innerWidth<700?.72:.62),r.height*.88*63/88));if(f.style.width!==fw+'px'){f.style.width=fw+'px';f.style.height=Math.round(fw*88/63)+'px';f.style.maxHeight='none'}}
+setInterval(()=>{const h=$('#liveHint'),v=$('#liveVideo');try{frameFit()}catch(e){}if(!h)return;if(!live.stream||!v.videoWidth||live.shooting){h.textContent='';h.className='livehint';if(!live.shooting)lqSet(null);return}
  const W=240,H=Math.round(240*v.videoHeight/v.videoWidth),c=document.createElement('canvas');c.width=W;c.height=H;c.getContext('2d',{willReadFrequently:true}).drawImage(v,0,0,W,H);
  const A=liveAssess(c,frameInCanvas(v,W,H));let k=A.k,t=A.t;const now=Date.now();let mode=A.P?'seen':'',prog=0;window.liveAutoDbg={k,ms:0};
  if(k==='ok'){const pp=live.lastP;const mv=pp?Math.max(...A.P.map((p,i)=>Math.hypot(p[0]-pp[i][0],p[1]-pp[i][1])))/W:1;live.lastP=A.P;if(mv>AUTO_MOVE){live.okSince=0;t='✋ Ruhig halten…';mode='ok'}else{live.okSince=live.okSince||now;mode='steady'}}else{live.okSince=0;live.lastP=null;live.autoArm=true}
