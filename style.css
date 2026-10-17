@@ -495,3 +495,4 @@ body.hasupd main{padding-top:0!important}
 @keyframes qup{from{transform:translateY(40px);opacity:.6}to{transform:none;opacity:1}}@media(prefers-reduced-motion:reduce){dialog.qsheet[open]{animation:none}}
 .ploading .tile .p b,.ploading .tile .cgp b{color:transparent;background:rgba(255,255,255,.1);border-radius:4px}
 @media(min-width:900px){#dlgForm .detail>.dcard,#dlgForm .detail>.dph{grid-row:1 / span 12}}
+.charttip{position:absolute;z-index:5;pointer-events:none;background:rgba(10,12,20,.88);border:1px solid rgba(255,255,255,.2);border-radius:10px;padding:4px 8px;display:flex;flex-direction:column;align-items:center;line-height:1.2;white-space:nowrap}.charttip b{font-size:.95rem;color:#fff}.charttip span{font-size:.7rem;color:var(--mu)}
