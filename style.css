@@ -521,3 +521,34 @@ body.hasupd main{padding-top:0!important}
 .msec{border:1px solid rgba(255,255,255,.1);border-radius:14px;padding:4px 12px;margin:10px 0;background:rgba(255,255,255,.03)}.msec>summary{cursor:pointer;font-weight:800;font-size:1.05rem;padding:8px 0;list-style-position:inside}
 .dangerzone{margin:24px 0 10px;padding:12px;border:1px solid rgba(239,68,68,.5);border-radius:14px;background:rgba(239,68,68,.06)}.dangerzone h3{margin:0 0 4px;color:#f87171}
 .pcmp.cmdup>div:first-child>b{display:none}#dlgForm .detail>.dacts{margin-bottom:14px}
+/* v137: Desktop volle Breite, kein Leerraum unter dem Footer, Detail ~1000px */
+@media(min-width:900px){
+html body{padding-bottom:24px!important}
+html body main{max-width:1500px!important;width:auto;margin:0 auto;padding:0 24px;box-sizing:border-box}
+html body .appfoot{max-width:1500px;width:auto;margin:24px auto 0}
+#v-port.active{grid-template-columns:minmax(0,2fr) minmax(280px,1fr)!important;align-items:stretch;column-gap:24px}
+#v-port.active>.hero{grid-column:1;margin:0}
+#v-port.active>.stats{grid-column:2;align-self:stretch;display:grid!important;grid-template-columns:1fr!important;grid-auto-rows:1fr;margin:0}
+#v-port.active>:not(.hero):not(.stats){grid-column:1/-1}
+#collGrid,#results:not(.cgset),#results.cgset{grid-template-columns:repeat(auto-fill,minmax(150px,1fr))!important}
+#setList{grid-template-columns:repeat(auto-fill,minmax(240px,1fr))!important}
+html body dialog#dlg:has(.detail){width:min(94vw,1040px)!important;max-width:none!important}
+html body #dlgForm .detail{grid-template-columns:minmax(360px,400px) minmax(0,1fr)!important;align-items:start}
+html body #dlgForm .detail>.dcard,html body #dlgForm .detail>.dph{width:100%!important;max-width:400px;position:sticky;top:0;align-self:start}
+html body #dlgForm .detail>.dcard img{width:100%;height:auto}
+}
+@media(min-width:1700px){#collGrid,#results:not(.cgset),#results.cgset{grid-template-columns:repeat(auto-fill,minmax(160px,1fr))!important}}
+.big .yen{font-size:.5em;font-weight:600;color:var(--mut,#a49dc6);margin-left:6px;vertical-align:middle}
+/* v137: Binder am PC: Doppelseite + Kopf + Navigation passen in die Höhe, Pfeile links/rechts mittig, kurze Blätter-Animation */
+@media(min-width:900px){
+#binderView{--sh:calc((100vh - 250px) / 3);position:relative;scroll-margin-top:76px}
+#binderView .bpage{width:min(100%,calc(var(--sh) * 5 / 9 * 6 + 5 * 10px + 54px))!important;margin:0 auto!important;row-gap:10px!important;column-gap:10px;box-sizing:border-box;animation:bflip .28s ease-out;transform-origin:center;perspective:1200px}
+#binderView .bslot{aspect-ratio:5/9;max-height:var(--sh)}
+#binderView .bnav{position:static}
+#binderView .bnav .bprev2,#binderView .bnav .bnext2{position:absolute;top:calc(50% - 26px);width:48px;height:64px;border-radius:14px;font-size:1.8rem;z-index:3}
+#binderView .bnav .bprev2{left:max(4px,calc(50% - var(--sh) * 5 / 9 * 3 - 25px - 27px - 60px))}
+#binderView .bnav .bnext2{right:max(4px,calc(50% - var(--sh) * 5 / 9 * 3 - 25px - 27px - 60px))}
+#binderView .bnav .bprev2:disabled,#binderView .bnav .bnext2:disabled{opacity:.3}
+}
+@keyframes bflip{from{opacity:.25;transform:rotateY(10deg) scale(.985)}to{opacity:1;transform:none}}
+@media(prefers-reduced-motion:reduce){#binderView .bpage{animation:none}}
