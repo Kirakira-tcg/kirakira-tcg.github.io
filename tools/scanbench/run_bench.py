@@ -24,7 +24,8 @@ return {r:b.r?sl(r):null,r0:b.r0?sl(r0):null,tR:b.tR,tR0:b.tR0,sheet:!!f,nmst:f?
 ID_RE = re.compile(r'assets\.tcgdex\.net/(\w+)/[^/"]+/([^/"]+)/([^/"]+)/')
 
 async def worker(wid, br, url, q, out, args):
-    ctx = await br.new_context(viewport={'width': 400, 'height': 860}, device_scale_factor=2, is_mobile=True, has_touch=True, locale='de-DE')
+    W = int(os.environ.get('BENCH_WIDTH', '400'))
+    ctx = await br.new_context(viewport={'width': W, 'height': 860 if W < 700 else 900}, device_scale_factor=2 if W < 700 else 1, is_mobile=W < 700, has_touch=W < 700, locale='de-DE')
     page = await ctx.new_page()
     async def boot():
         await page.goto(url, wait_until='load', timeout=90000)
