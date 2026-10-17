@@ -726,12 +726,18 @@ function twinGuard(r){try{if(!r||!r.confident)return r;const M=window.imgM||[];i
  if(n&&numOf(acc)===n&&!tw.some(m=>numOf(m.cardId)===n))return r;r.confident=false;r.guard=11;r.ocrUnsure=true;r.conflict=true;r.twins=tw.map(m=>m.cardId);return r}catch(e){return r}}
 // v108: Bestätigungskarte nach Auto-Übernahme (Bild + 'Falsch? Ändern' → Kandidaten-Sheet)
 async function showConfirm(r){let el=$('#scanConfirm');if(el)el.remove();el=document.createElement('div');el.id='scanConfirm';el.setAttribute('role','status');
- let img=r.image||(r.hit&&r.hit.image)||'';const id=r.imgHit&&r.imgHit.cardId;
- el.innerHTML=`<div class="scimg">${img?`<img alt="" src="${esc(imgU(img))}">`:''}</div><div class="sctx"><b>✓ ${esc(r.name)}</b><span>${esc(r.set||r.setId||'')} · ${esc(r.full||r.number||'')}${r.lang?' · '+esc(r.lang):''}</span><button type="button" class="bigbtn scfix">Falsch? Ändern</button></div><button type="button" class="chip scx" aria-label="Schließen">✕</button>`;
+ let img=r.image||(r.hit&&r.hit.image)||'';const id=r.imgHit&&r.imgHit.cardId;const L=String(r.lang||'').toUpperCase(),fl={DE:'🇩🇪',EN:'🇬🇧',JP:'🇯🇵',FR:'🇫🇷',IT:'🇮🇹',ES:'🇪🇸'}[L]||'';
+ // v130: JP-Karten mit deutschem/englischem Namen vorn (App-Namensliste PNAMES), JP-Name klein darunter
+ const nm=String(r.name||''),de=(L==='JP'||HASJA.test(nm))?jpDe(nm):'',jn=de?nm:(r.jp&&r.jp!==nm?r.jp:'');
+ el.innerHTML=`<div class="scimg">${img?`<img alt="" src="${esc(imgU(img))}">`:''}</div><div class="sctx"><b>✓ ${esc(de||nm)}</b>${jn&&HASJA.test(jn)?`<small class="scjp" lang="ja">${esc(jn)}</small>`:''}<span><i class="scset">${esc(r.set||r.setId||'')}</i> · ${esc(r.full||r.number||'')}${L?` · <span class="scflag" title="${esc(L)}">${fl} ${esc(L)}</span>`:''}</span><span class="scprice"></span><button type="button" class="bigbtn scfix">Falsch? Ändern</button></div><button type="button" class="chip scx" aria-label="Schließen">✕</button>`;
  document.body.append(el);const close=()=>{el.remove();clearTimeout(el._t)};el.querySelector('.scx').onclick=close;
  el.querySelector('.scfix').onclick=()=>{close();let ti=null;try{if(batchOn()&&window.TRAY&&TRAY.length){const L=TRAY.length-1;if(TRAY[L]&&TRAY[L].name===r.name)ti=L}}catch(e){}noMatchSheet(Object.assign({},r,{imgMatch:r.imgMatch||window.imgM||[],confident:false,replace:true,trayIdx:ti,full:'',number:''}))};
  el._t=setTimeout(close,7000);
- if(!img){try{const lg=r.lang==='JP'?'ja':String(r.lang||'de').toLowerCase();const d=id?await wto(Prices.byId(id,lg),5000,'t'):null;if(d&&d.image&&el.isConnected){el.querySelector('.scimg').innerHTML=`<img alt="" src="${esc(imgU(d.image))}">`}}catch(e){}}}
+ // Bild, Setname und Preis aus demselben (bereits geladenen, zwischengespeicherten) Karten-Datensatz
+ try{const lg=L==='JP'?'ja':String(r.lang||'de').toLowerCase();const d=r.hit&&r.hit.best!==undefined?r.hit:(id?await wto(Prices.byId(id,lg),5000,'t'):null);if(!d||!el.isConnected)return;
+  if(!img&&d.image)el.querySelector('.scimg').innerHTML=`<img alt="" src="${esc(imgU(d.image))}">`;
+  const sn=d.set&&(d.set.name||d.set.nameEn);if(sn)el.querySelector('.scset').textContent=sn;
+  const b=d.best||(d.prices||[]).find(x=>x&&x.eur!=null);if(b&&b.eur!=null)el.querySelector('.scprice').textContent='≈ '+money(+b.eur)}catch(e){}}
 window.showConfirm=showConfirm;
 // v111: Annahmeregel (alle Pfade): score ≥0,62 und gap ≥0,12 (gap = Abstand zum besten anderen Artwork); Reprint-Zwillinge nah dran → nur mit passender Nummer
 const numOf=id=>{const l=String(id).split('-').pop();return String(+l||l).toUpperCase()};
@@ -1016,7 +1022,7 @@ async function jpHit(r){if(!window.Prices||r.lang!=='JP')return null;const num=S
  for(const n of [r.jp,r.name,r.en].filter(Boolean)){try{const c=await Prices.lookup(n,'ja',r.set||null,num);if(c&&c.id&&(!num||String(c.localId||'').replace(/^0+/,'')===num))return c}catch(e){}}
  try{const L=await Prices.suggest(r.jp||r.name,'ja',60)||[];const c=L.find(c=>String(c.id).startsWith('jp:')&&(!r.set||sidOf(c.id).toLowerCase()===String(r.set).toLowerCase())&&(!num||String(c.localId||'').replace(/^0+/,'')===num));if(c)return{id:c.id,name:c.name,localId:c.localId,set:c.set,image:c.img}}catch(e){}return null}
 function scanResult(r){if(window.scanAbandon)return;try{if(r&&r.confident&&!r.conflict&&r.name&&(r.number||r.energy))showConfirm(r)}catch(e){}scanPrefetch({name:r.name,number:r.energy?'':r.number},r.lang);msOff();window.lastScan=r;if(batchOn()&&r.confident&&r.name&&r.number&&r.lang!=='JP'&&!r.energy){$('#scanPick').hidden=true;$('#scanbox')?.classList.add('hasres');trayAdd(r,r.lang);return}$('#scanbox')?.classList.add('hasres');const st=$('#scanStatus2');
- st.textContent=`Erkannt: ${r.name||'?'}${r.jp?' ('+r.jp+')':''} · Nr. ${r.full||r.number||'?'}${r.lang?' · '+r.lang:''}`;
+ const shN=(HASJA.test(String(r.name||''))&&jpDe(r.name))||r.name||'?';st.textContent=`Erkannt: ${shN}${r.jp&&r.jp!==shN?' ('+r.jp+')':''} · Nr. ${r.full||r.number||'?'}${r.lang?' · '+r.lang:''}`;
  if(r.conflict||(!r.number&&!r.energy&&!(r.lang==='JP'&&r.name&&r.jp))){scanPick(r);noMatchSheet(r);return}if(r.confident&&(r.number||r.energy)&&r.lang!=='JP'){$('#scanPick').hidden=true;applyScan(r,r.lang)}else if(r.lang==='JP'&&r.name){const t=st.textContent;st.textContent='⏳ Suche japanische Karte…';jpHit(r).then(h=>{r.hit=h;st.textContent=t;scanPick(r)})}else scanPick(r)}
 function clearScanUI(){try{['#qName','#qNum'].forEach(s=>{const i=$(s);if(i)i.value=''});$('#nmSheet')?.remove();document.querySelectorAll('.retake,.nextscan').forEach(x=>x.remove());const R=$('#results');if(R&&R.querySelector('.scanpick'))R.innerHTML='';window.pendingScan=null;window.lastScan=null;window.scanPart=null;document.body.classList.remove('hassb');clearInterval(window._sbp)}catch(e){}}
 async function handleFile(f){clearScanUI();$('#scanbox')?.classList.remove('hasres');window.scanLang='';window.pendingScan=null;window.lastScan=null;const st=$('#scanStatus2');$('#scanPick').hidden=true;$('#scanPick').innerHTML='';st.textContent='';const lt=$('#liveText');if(lt)lt.textContent='';const ss=$('#scanStatus');if(ss)ss.textContent='';
@@ -1045,18 +1051,18 @@ function startLive(){fpWarm();const st=$('#scanStatus2');const sp=$('#scanPick')
   .catch(e=>{if(e&&(e.name==='NotAllowedError'||e.name==='SecurityError'))throw e;return gum({video:true,audio:false})});
  return p.then(s=>{live.starting=false;live.stream=s;return startLive2()},e=>{live.starting=false;console.warn('getUserMedia',e);camErr(camMsg(e))})}
 async function startLive2(){const st=$('#scanStatus2');
- const v=$('#liveVideo');v.muted=true;v.setAttribute('playsinline','');v.setAttribute('autoplay','');v.srcObject=live.stream;$('#scanbox').classList.add('live');try{await v.play()}catch(e){console.warn('play',e)}$('#scanbox').classList.add('live');$('#liveText').textContent='';st.textContent=window.Tesseract?'Kamera läuft, Texterkennung wird geladen…':'Kamera läuft – Texterkennung lädt noch (Internet?)…';
+ const v=$('#liveVideo');v.muted=true;v.setAttribute('playsinline','');v.setAttribute('autoplay','');v.srcObject=live.stream;$('#scanbox').classList.add('live');try{await v.play()}catch(e){console.warn('play',e)}$('#scanbox').classList.add('live');try{const cw=$('#scanbox .camwrap'),rc=cw&&cw.getBoundingClientRect();if(rc&&(rc.top>innerHeight*.6||rc.bottom<0))cw.scrollIntoView({block:'center',behavior:'smooth'})}catch(e){}$('#liveText').textContent='';st.textContent=window.Tesseract?'Kamera läuft, Texterkennung wird geladen…':'Kamera läuft – Texterkennung lädt noch (Internet?)…';
  const tr=live.stream.getVideoTracks()[0];let caps={};try{caps=tr.getCapabilities?.()||{}}catch(e){}$('#torchBtn').hidden=!caps.torch;
  if(await camSetup(tr,caps))return startLive2();
  try{live.ic=window.ImageCapture?new ImageCapture(tr):null}catch(e){live.ic=null}live.icBad=false;
  $('.frame span').textContent='Näher ran – Karte füllt den Rahmen · Tippen = scharfstellen';
- window.scanLang='';window.pendingScan=null;live.last=null;live.nameOnly=0;live.nameKey='';live.tries=0;live.best=null;live.nm=null;live.nb=null;tessWarm();lStat('Karte in den Rahmen legen und 📸 Foto drücken');live.shooting=false;const pb=$('#livePhoto');if(pb)pb.disabled=false}
+ window.scanLang='';window.pendingScan=null;live.last=null;live.nameOnly=0;live.nameKey='';live.tries=0;live.best=null;live.nm=null;live.nb=null;tessWarm();lStat(autoOn()?'Karte in den Rahmen legen – Aufnahme erfolgt automatisch (oder 📸 Foto)':'Karte in den Rahmen legen und 📸 Foto drücken');live.shooting=false;const pb=$('#livePhoto');if(pb)pb.disabled=false}
 function stopLive(){live.switched=false;try{LV.hist=[];LV.t0=0}catch(e){}clearInterval(live.timer);live.timer=null;if(live.stream){live.stream.getTracks().forEach(t=>t.stop());live.stream=null}
  const v=$('#liveVideo');if(v)v.srcObject=null;$('#scanbox')?.classList.remove('live');live.torch=false;live.ic=null;const fs=$('.frame span');if(fs)fs.textContent='Karte im Rahmen platzieren'}
 const wto=(p,ms,m)=>Promise.race([p,new Promise((_,j)=>setTimeout(()=>j(new Error(m||'Zeitüberschreitung')),ms))]);
 function lStat(t){$('#scanStatus2').textContent=t}
 function needOCR(){if(window.Tesseract)return true;if(!window._tLoad){window._tLoad=1;const s=document.createElement('script');s.src='https://cdn.jsdelivr.net/npm/tesseract.js@5/dist/tesseract.min.js';s.onload=()=>{window._tLoad=0};s.onerror=()=>{window._tLoad=0};document.head.append(s)}return false}
-// Kamera = nur Sucher; nur '📸 Foto' löst aus
+// Kamera = Sucher; '📸 Foto' oder Auto-Scan (Rahmen rastet ein, ~0,7 s ruhig) löst aus
 async function liveTick(){return liveShoot()}
 async function liveShoot(){clearScanUI();const btn=$('#livePhoto');if(!live.stream||live.shooting)return;const v=$('#liveVideo');live.shooting=true;const my=live.shotId=(live.shotId||0)+1;
  if(btn){btn.disabled=true;btn.classList.remove('pulse')}camFlash();navigator.vibrate?.(30);lStat('📸 Foto aufgenommen – lese Karte…');
@@ -1190,15 +1196,30 @@ function liveAssess(c,F){const W=c.width,H=c.height;F=F||{x:0,y:0,w:W,h:H};const
  if(br<55)return{k:'dark',t:'💡 Mehr Licht'};const far={k:'far',t:'↔️ Weiter weg – ganze Karte in den Rahmen'},near={k:'near',t:'🔍 Näher ran'};
  let q=null;try{window.cropDbg=null;const o=cardCropQuad(c);const cd=String(window.cropDbg||'').split(',');if(o&&cd[0]==='quad'){const P=[[+cd[3],+cd[4]],[+cd[5],+cd[6]],[+cd[7],+cd[8]],[+cd[9],+cd[10]]];const L=(a,b)=>Math.hypot(a[0]-b[0],a[1]-b[1]);const wd=(L(P[0],P[1])+L(P[3],P[2]))/2,ht=(L(P[0],P[3])+L(P[1],P[2]))/2;q={P,ar:Math.min(wd,ht)/Math.max(wd,ht),sc:+cd[1],area:wd*ht}}}catch(e){}
  if(!q){let o=null;try{window.cropDbg=null;o=cardCropA(c);if(o===c)o=null}catch(e){}if(o){const cd=String(window.cropDbg||'').split(',').map(Number);if(cd.length>=4&&!isNaN(cd[0])){const [x,y,w,h]=cd;const m=W*.02;if(x<=m||y<=m||x+w>=W-m||y+h>=H-m||w*h>F.w*F.h*.8)return far}}return near}
- if(Math.abs(q.ar-.716)>.07)return far;
+ const farQ={...far,P:q.P},nearQ={...near,P:q.P};if(Math.abs(q.ar-.716)>.07)return farQ;
  const mg=Math.min(F.w,F.h)*.02,inF=q.P.every(([x,y])=>x>=F.x-mg*3&&y>=F.y-mg*3&&x<=F.x+F.w+mg*3&&y<=F.y+F.h+mg*3),inImg=q.P.every(([x,y])=>x>W*.015&&y>H*.015&&x<W*.985&&y<H*.985);
- if(!inImg||!inF)return far;if(q.area<F.w*F.h*.45)return near;return{k:'ok',t:'✓ Karte erkannt',P:q.P}}
-setInterval(()=>{const h=$('#liveHint'),v=$('#liveVideo');if(!h)return;if(!live.stream||!v.videoWidth||live.shooting){h.textContent='';h.className='livehint';return}
+ if(!inImg||!inF)return farQ;if(q.area<F.w*F.h*.45)return nearQ;return{k:'ok',t:'✓ Karte erkannt',P:q.P}}
+// v130: Auto-Scan wie PokéItem – Rahmen rastet auf die erkannten Kartenkanten ein (gelb), „Nicht bewegen…“, nach ~0,7 s ruhig → automatische Aufnahme (alles auf dem Gerät, keine Netzabfrage pro Bild)
+const AUTO_STEADY=700,AUTO_MOVE=.03;const LQ={cur:null,tgt:null,mode:'',W:240,raf:0,prog:0};
+function lqEl(){let c=$('#liveQuad');if(!c){const w=$('#scanbox .camwrap');if(!w)return null;c=document.createElement('canvas');c.id='liveQuad';c.className='livequad';c.setAttribute('aria-hidden','true');w.append(c)}return c}
+function lqSet(P,mode,W,prog){LQ.tgt=P?P.map(p=>p.slice()):null;LQ.mode=mode||'';LQ.W=W||240;LQ.prog=prog||0;if(!LQ.tgt)LQ.cur=null;else if(!LQ.cur)LQ.cur=LQ.tgt.map(p=>p.slice());if(!LQ.raf)LQ.raf=requestAnimationFrame(lqDraw)}
+function lqDraw(){LQ.raf=0;const c=lqEl(),v=$('#liveVideo');if(!c||!v)return;const r=c.getBoundingClientRect(),dpr=window.devicePixelRatio||1;const cw=Math.round(r.width*dpr),ch=Math.round(r.height*dpr);if(c.width!==cw||c.height!==ch){c.width=cw;c.height=ch}const g=c.getContext('2d');g.clearRect(0,0,cw,ch);
+ if(!LQ.tgt||!live.stream||!v.videoWidth)return;let mv=0;LQ.cur=LQ.cur.map((p,i)=>{const t=LQ.tgt[i],nx=p[0]+(t[0]-p[0])*.45,ny=p[1]+(t[1]-p[1])*.45;mv=Math.max(mv,Math.abs(t[0]-nx)+Math.abs(t[1]-ny));return[nx,ny]});
+ const vr=v.getBoundingClientRect(),vw=v.videoWidth,vh=v.videoHeight,sc=Math.max(vr.width/vw,vr.height/vh),ox=(vr.width-vw*sc)/2+(vr.left-r.left),oy=(vr.height-vh*sc)/2+(vr.top-r.top),k=vw/LQ.W;
+ const Q=LQ.cur.map(([x,y])=>[(x*k*sc+ox)*dpr,(y*k*sc+oy)*dpr]);const ok=LQ.mode==='ok'||LQ.mode==='steady';
+ g.lineJoin='round';g.beginPath();Q.forEach((p,i)=>i?g.lineTo(p[0],p[1]):g.moveTo(p[0],p[1]));g.closePath();
+ if(ok){g.fillStyle=LQ.mode==='steady'?'rgba(255,216,77,.18)':'rgba(255,216,77,.08)';g.fill();g.shadowColor='rgba(255,216,77,.9)';g.shadowBlur=14*dpr}
+ g.strokeStyle=ok?'#ffd84d':'rgba(255,255,255,.75)';g.lineWidth=(ok?4:2)*dpr;g.setLineDash(ok?[]:[8*dpr,6*dpr]);g.stroke();g.shadowBlur=0;g.setLineDash([]);
+ if(ok){const L=Math.min(Math.hypot(Q[1][0]-Q[0][0],Q[1][1]-Q[0][1]),Math.hypot(Q[3][0]-Q[0][0],Q[3][1]-Q[0][1]))*.18;g.lineWidth=7*dpr;g.strokeStyle='#ffd84d';g.lineCap='round';for(let i=0;i<4;i++){const a=Q[i],b=Q[(i+1)%4],d=Q[(i+3)%4],u=(p,q)=>{const n=Math.hypot(q[0]-p[0],q[1]-p[1])||1;return[(q[0]-p[0])/n*L,(q[1]-p[1])/n*L]},ub=u(a,b),ud=u(a,d);g.beginPath();g.moveTo(a[0]+ub[0],a[1]+ub[1]);g.lineTo(a[0],a[1]);g.lineTo(a[0]+ud[0],a[1]+ud[1]);g.stroke()}g.lineCap='butt'}
+ if(LQ.mode==='steady'&&LQ.prog>0){const cx=Q.reduce((s,p)=>s+p[0],0)/4,cy=Q.reduce((s,p)=>s+p[1],0)/4,R=18*dpr;g.lineWidth=5*dpr;g.strokeStyle='rgba(0,0,0,.35)';g.beginPath();g.arc(cx,cy,R,0,Math.PI*2);g.stroke();g.strokeStyle='#ffd84d';g.beginPath();g.arc(cx,cy,R,-Math.PI/2,-Math.PI/2+Math.PI*2*Math.min(1,LQ.prog));g.stroke()}
+ if(mv>.5)LQ.raf=requestAnimationFrame(lqDraw)}
+window.liveQuadDbg=LQ;
+setInterval(()=>{const h=$('#liveHint'),v=$('#liveVideo');if(!h)return;if(!live.stream||!v.videoWidth||live.shooting){h.textContent='';h.className='livehint';if(!live.shooting)lqSet(null);return}
  const W=240,H=Math.round(240*v.videoHeight/v.videoWidth),c=document.createElement('canvas');c.width=W;c.height=H;c.getContext('2d',{willReadFrequently:true}).drawImage(v,0,0,W,H);
- const A=liveAssess(c,frameInCanvas(v,W,H));let k=A.k,t=A.t;const now=Date.now();
- if(k==='ok'){const pp=live.lastP;const mv=pp?Math.max(...A.P.map((p,i)=>Math.hypot(p[0]-pp[i][0],p[1]-pp[i][1])))/W:1;live.lastP=A.P;if(mv>.035){live.okSince=now;t='✋ Ruhig halten…'}else live.okSince=live.okSince||now}else{live.okSince=0;live.lastP=null;live.autoArm=true}
- if(k==='ok'&&t!=='✋ Ruhig halten…'){if(autoOn()&&live.autoArm!==false&&!live.shooting){const left=(typeof LV!=='undefined'&&LV.hist.some(Boolean)?2500:1500)-(now-live.okSince);if(left<=0){live.autoArm=false;live.okSince=0;t='📸 Auto-Foto…';liveShoot()}else t='✓ Karte erkannt – ruhig halten…'}else t='✓ Karte erkannt – 📸 Foto drücken'}
- h.textContent=t;h.className='livehint '+(k==='far'?'dark':k)},350);
+ const A=liveAssess(c,frameInCanvas(v,W,H));let k=A.k,t=A.t;const now=Date.now();let mode=A.P?'seen':'',prog=0;window.liveAutoDbg={k,ms:0};
+ if(k==='ok'){const pp=live.lastP;const mv=pp?Math.max(...A.P.map((p,i)=>Math.hypot(p[0]-pp[i][0],p[1]-pp[i][1])))/W:1;live.lastP=A.P;if(mv>AUTO_MOVE){live.okSince=0;t='✋ Ruhig halten…';mode='ok'}else{live.okSince=live.okSince||now;mode='steady'}}else{live.okSince=0;live.lastP=null;live.autoArm=true}
+ if(mode==='steady'){if(autoOn()&&live.autoArm!==false&&!live.shooting){const need=(typeof LV!=='undefined'&&LV.hist.some(Boolean))?1500:AUTO_STEADY,el=now-live.okSince;prog=el/need;if(el>=need){live.autoArm=false;live.okSince=0;t='📸 Aufnahme…';prog=1;liveShoot()}else t='Nicht bewegen…'}else if(autoOn()&&live.autoArm===false){t='✓ Erfasst – nächste Karte in den Rahmen';mode='ok'}else t='✓ Karte erkannt – 📸 Foto drücken'}
+ lqSet(A.P||null,mode,W,prog);$('#scanbox .camwrap')?.classList.toggle('snap',mode==='ok'||mode==='steady');h.textContent=t;h.className='livehint '+(k==='far'?'dark':mode==='steady'?'ok steady':k)},200);
 
 // Karten-/Preisabfrage schon während der Erkennung anstoßen (gleiche URLs wie die Suche → Cache-Treffer)
 const _pf=new Set();function scanPrefetch(p,lang){try{if(!p||!p.name||String(p.name).length<3||/[\u3040-\u30ff\u4e00-\u9fff]/.test(p.name))return;const num=String(p.number||'').split('/')[0].replace(/^0+(?=\d)/,'');const lg=String(lang||'').toLowerCase();
@@ -1262,7 +1283,7 @@ function noMatchSheet(r){r=r||{};let f=$('#nmSheet');if(f)f.remove();f=document.
   const T0=new Set(C0.map(c=>c.id)),byN=!!nm.trim()&&C0.length>0;if(byN)for(let i=C.length-1;i>=0;i--){const c=C[i];if(!T0.has(c.id)&&!((SC[c.id]||0)>=.45))C.splice(i,1)}const nq=String(nu||'').split('/')[0].replace(/^0+/,'').toUpperCase();const sk0=c=>nq&&String(c.localId||'').replace(/^0+/,'').toUpperCase()===nq?20:0;const sk=c=>sk0(c)+(byN&&T0.has(c.id)?10:0)+(SC[c.id]!=null?SC[c.id]:(c.image?-1:-2));C.sort((x,y)=>sk(y)-sk(x));C.forEach(c=>c._sc=SC[c.id]);show(C,go.img&&go.img.length?'inkl. Bildabgleich':'')};
  const show=(C,src,weak)=>{if(f._auto&&f._shown&&f._shown.length){const m=new Map(C.map(c=>[c.id,c]));const K=f._shown.map(o=>m.get(o.id)||o);const ks=new Set(K.map(c=>c.id));C=K.concat(C.filter(c=>!ks.has(c.id)))}// v120: nach dem Öffnen nie schrumpfen/umsortieren – nur anhängen
   {const sn=new Set();C=C.filter(c=>!c||sn.has(c.id)?false:(sn.add(c.id),true))}f._shown=C.slice();const sy=G.scrollTop,wy=window.scrollY;G.innerHTML='';G.classList.toggle('nmweak',!!weak);st.textContent=C.length?`${C.length} Treffer${src?' ('+src+')':''} – richtige Karte antippen:`:'Nichts gefunden – Nummer/Name prüfen oder Sprache wechseln.';
-  C.forEach(c=>{const b=document.createElement('button');b.type='button';b.className='spThumb';b.innerHTML=`${phImg(c.image&&imgU(c.image),c.name,c.localId,'phthumb')}<span>${esc(c.name)} · ${esc(c.set&&c.set.name||sidOf(c.id))} · ${esc(c.localId)}</span>`;
+  C.forEach(c=>{const b=document.createElement('button');b.type='button';b.className='spThumb';const jd=HASJA.test(String(c.name||''))?jpDe(c.name):'';b.innerHTML=`${phImg(c.image&&imgU(c.image),c.name,c.localId,'phthumb')}<span>${esc(jd||c.name)} · ${esc(c.set&&c.set.name||sidOf(c.id))} · ${esc(c.localId)}</span>${jd?`<small class="jpsub" lang="ja">${esc(c.name)}</small>`:''}`;// v130: JP-Kandidat mit DE/EN-Namen vorn, JP klein darunter
    const im=b.querySelector('img');if(im&&typeof window.attachImgFallback==='function')try{window.attachImgFallback(im,c)}catch(e){}
    b.onclick=async()=>{if(!b.classList.contains('nmsel')){G.querySelectorAll('.nmsel').forEach(x=>{x.classList.remove('nmsel');x.querySelector('.nmok')?.remove()});b.classList.add('nmsel');b.insertAdjacentHTML('beforeend','<em class="nmok">✓ Nochmal tippen zum Hinzufügen</em>');return}b.disabled=true;st.textContent='⏳ '+c.name+' wird zur Scan-Liste hinzugefügt…';const lg=lang==='JP'?'ja':lang.toLowerCase();let d=null;try{d=await wto(Prices.byId(c.id,lg),9000,'t')}catch(e){}
     const it=trayItem({name:c.name,number:c.localId},lang,d&&d.id?d:{id:c.id,name:c.name,set:c.set,localId:c.localId,image:c.image});
