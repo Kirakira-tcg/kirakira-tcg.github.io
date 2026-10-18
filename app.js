@@ -419,7 +419,7 @@ async function langFlags(f,{name,number,lang,tid}){const box=f.querySelector('#l
  if(!id||!box.isConnected)return;const imgs={},recs={};
  await Promise.all(L.map(async([l])=>{try{const r=await Prices.byId(id,l);const sid=String(id).replace(/^jp:/,'').replace(/-[^-]*$/,'').toLowerCase();if(r&&r.image&&(!r.set||!r.set.id||String(r.set.id).toLowerCase()===sid||String(r.id||'').toLowerCase()===String(id).toLowerCase())){imgs[l]=r.image;recs[l]=r}}catch(e){}}));
  const mark=a=>box.querySelectorAll('button').forEach(b=>{const ok=!!imgs[b.dataset.l];b.disabled=!ok;b.style.opacity=ok?(b.dataset.l===a?'1':'.55'):'.2';b.style.outline=b.dataset.l===a?'2px solid #a78bfa':'none'});
- const CML={de:3,en:1},cmOf=r=>r&&r.prices&&r.prices.find(p=>/^Cardmarket \(TCGdex/.test(p.source));
+ const CML={de:3,en:1},cmOf=r=>r&&r.prices&&r.prices.find(p=>/^Cardmarket (\(TCGdex|-Preisdatei)/.test(p.source));
  const showP=l=>{const pe=f.querySelector('#lflP');if(!pe)return;const r=recs[l],cm=cmOf(r),cd=cmOf(recs.de),ce=cmOf(recs.en);
   if(!r||!r.best){pe.textContent=`${l.toUpperCase()}: kein Preis bei TCGdex`;return}
   const shared=l!=='ja'&&cm&&cm.idProduct&&cd&&ce&&cd.idProduct===ce.idProduct;
@@ -1858,7 +1858,7 @@ if('serviceWorker' in navigator){let touched=false,hidT=0,rl2=false,want2=false;
 const isJpLang=l=>/^(JP|JA)$/i.test(String(l||''));
 const isJpId=id=>{id=String(id||'');if(id.startsWith('jp:'))return true;const s=id.replace(/-[^-]*$/,'');return /[A-Z]/.test(s)&&!/^(P-A|A\d|B\d)/.test(s)};
 function jpGuard(it){if(!it||it.type==='sealed'||!isJpLang(it.lang))return false;let ch=false;if(it.lang!=='JP'){it.lang='JP';ch=true}
- if(it.ownPrice==null&&!it.estimate){const t=it.tdx||null,tid=t&&t.id,ok=it.price==null||(tid&&isJpId(tid)&&/TCGdex/.test(t.src||'')&&!/pokemontcg/i.test(t.src||''));
+ if(it.ownPrice==null&&!it.estimate){const t=it.tdx||null,tid=t&&t.id,ok=it.price==null||(tid&&isJpId(tid)&&/TCGdex|^Cardmarket-Preisdatei/.test(t.src||'')&&!/pokemontcg/i.test(t.src||''));/* v165: Preise aus der Cardmarket-Preisdatei (über die JP-idProduct von TCGdex) sind JP-Preise */
   if(!ok){it.price=null;it.noPrice=true;it.ph=[];it.tdx={label:'JP-Preis: keine Daten',id:tid&&isJpId(tid)?tid:(isJpId(it.tdxId)?it.tdxId:'')};ch=true}
   if(it.cm){delete it.cm;ch=true}if(it.apiPrice!=null){delete it.apiPrice;ch=true}}
  for(const k of ['img','image'])if(typeof it[k]==='string'&&it[k]&&!/assets\.tcgdex\.net\/ja\//.test(it[k])){it[k]='';ch=true}

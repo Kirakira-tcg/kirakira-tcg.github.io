@@ -74,6 +74,7 @@ async function normalize(card,lang){const p=BADP[card?.id]?{}:(card?.pricing||{}
   out.prices.push({source:`Cardmarket (pokemontcg.io${d?', Stand '+d:''})`,currency:'EUR',value:v,eur:v,umgerechnet:false,fxFallback:false,trend:cm.prices.trendPrice,avg:cm.prices.averageSellPrice,low:cm.prices.lowPrice,avg1:cm.prices.avg1,avg7:cm.prices.avg7,avg30:cm.prices.avg30,url:`https://www.cardmarket.com/de/Pokemon/Products/Search?searchString=${encodeURIComponent(card.name)}`,updated:cm.updatedAt})}}}catch(e){}}
  out.best=out.prices.find(x=>x.eur!=null)||null;
  if(out.best)out.label=`${out.best.eur.toFixed(2).replace('.',',')} € · ${String(out.best.source).replace(/, Ø (7|30) Tage – Trend unplausibel\)/,(m,d)=>`) · Trend wirkt unplausibel, ${d}-Tage-Schnitt gezeigt`)}${out.best.umgerechnet?` · umgerechnet aus ${out.best.currency}${out.best.fxFallback?' (Schätzkurs)':''}`:''}`;
+ if(out.best&&/^Cardmarket-Preisdatei/.test(out.best.source||'')){const d=(out.best.source.match(/Stand ([\d.]+)/)||[])[1];out.label=`${out.best.isLow?'ab ':''}${out.best.eur.toFixed(2).replace('.',',')} € · Cardmarket${out.best.isLow?' (günstigstes Angebot)':''}${d?' · Stand '+d:''}`}
  else out.label='kein Preis bei TCGdex';
  return lang==='ja'?jpm(out):out}
 // v142: keine JP-Marktpreise mehr (pokeca-souba-Nutzungsbedingungen verbieten Auslesen/Weiterverwenden) – JP-Karten ohne Cardmarket-Preis: „JP-Preis: keine Daten“
