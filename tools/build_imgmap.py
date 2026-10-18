@@ -17,6 +17,9 @@ PTCG = "https://api.pokemontcg.io/v2"
 SCRY = "https://api.scrydex.com/pokemon/v1"
 OUT = os.path.join(os.path.dirname(os.path.abspath(__file__)), "..", "imgmap.json")
 NAME_SETS = {"30th-c": "me55c", "cel25cc": "cel25c"}  # tcgdex set -> pokemontcg.io set, other numbering
+# Single cards whose names differ between TCGdex and pokemontcg.io, checked by hand. The URL still comes only from the API response.
+# 30th-c-022 "Palkia" (TCGdex drops "LV.X"): the only Palkia in 30th-c; me55c-106p "Palkia LV.X" is the only Palkia in me55c.
+MANUAL_CARDS = {"30th-c-022": "me55c-106p"}
 
 def get(url, headers=None, tries=10):
     last = None
@@ -71,9 +74,10 @@ def ptcg_stage(gaps, out):
         else:
             bynum = {nnum(c["number"]): c for c in cards}
             hit = lambda c: bynum.get(nnum(c["localId"]))
+        byid = {c["id"]: c for c in cards}
         n = 0
         for c in miss:
-            h = hit(c)
+            h = byid.get(MANUAL_CARDS.get(c["id"], "")) or hit(c)
             if h:
                 out[c["id"]] = {"url": h["images"]["small"], "src": "pokemontcg.io"}; n += 1
         print(f"ptcg {tid:<14} -> {p:<12} {n}/{len(miss)}", flush=True)

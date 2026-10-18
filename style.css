@@ -738,3 +738,11 @@ img.imgld{background:linear-gradient(100deg,rgba(255,255,255,.05) 30%,rgba(255,2
 .cgim{position:relative}.imgsrc.ov{position:absolute;left:6px;bottom:6px;right:6px;margin:0;padding:1px 6px;border-radius:6px;background:rgba(10,8,25,.78);color:#fff;font-weight:600;font-size:.62rem;width:max-content;max-width:calc(100% - 12px)}
 .bslot{position:relative}.slotsrc{position:absolute;left:4px;top:4px;padding:0 4px;border-radius:5px;background:#ffd84d;color:#1d1a33;font-size:.55rem;font-weight:800;line-height:1.5;max-width:calc(100% - 8px);white-space:nowrap;overflow:hidden;text-overflow:ellipsis;pointer-events:none}
 .ownnote{text-align:center;margin:.35rem 0;font-weight:700;color:#3ee08a}
+.cmab{display:block;font-size:.75rem;color:#e2ddf7;margin:.1rem 0 .2rem}
+/* v163: Lade-Kacheln + Bild-Shimmer, Quellen-Hinweise unter dem Bild statt darüber */
+.tile.skel .cgim{aspect-ratio:63/88;border-radius:12px;overflow:hidden}.tile.skel .phload{height:100%}
+.skl{height:.8rem;border-radius:6px;margin:.45rem 0 0;background:linear-gradient(90deg,rgba(255,255,255,.06),rgba(255,255,255,.16),rgba(255,255,255,.06));background-size:200% 100%;animation:kaShim 1.2s linear infinite}.skl.s2{width:55%}
+.bslot img:not([data-ok]),.cgim img:not([data-ok]){background:linear-gradient(90deg,rgba(255,255,255,.06),rgba(255,255,255,.16),rgba(255,255,255,.06));background-size:200% 100%;animation:kaShim 1.2s linear infinite;border-radius:8px}
+.bslot>.isrc,.bslot .slotsrc{position:static!important;display:block;margin:2px 0 0;padding:0;background:none!important;color:#e2ddf7!important;font-size:.62rem!important;font-weight:600;line-height:1.25;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;max-width:100%;border-radius:0}
+.bslot .slotsrc{color:#ffd84d!important}
+@media(prefers-reduced-motion:reduce){.skl,.bslot img:not([data-ok]),.cgim img:not([data-ok]){animation:none}}
