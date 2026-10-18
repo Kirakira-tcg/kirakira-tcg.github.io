@@ -8,13 +8,15 @@ def g(sid):
         try:return json.loads(urllib.request.urlopen(urllib.request.Request('https://api.tcgdex.net/v2/ja/sets/'+urllib.request.quote(sid),headers=UA),timeout=30).read())
         except Exception: time.sleep(1+i)
 with cf.ThreadPoolExecutor(4) as ex: D=list(ex.map(lambda s:g(s['id']),sets))
+# v146: Sets, deren Bilder auf assets.tcgdex.net nicht zur Kartennummer passen (Stichprobe 18.10.2026) – nicht ergänzen
+BAD={'M1S'}
 jobs=[];have={}
 for d in D:
     if not d:continue
     se=(d.get('serie') or {}).get('id');sid=d['id']
     for c in d.get('cards',[]):
         if c.get('image'):have.setdefault(sid,{})[c['localId']]=c['image'];continue
-        if se:jobs.append((sid,c['localId'],f"https://assets.tcgdex.net/ja/{se}/{sid}/{c['localId']}"))
+        if se and sid not in BAD:jobs.append((sid,c['localId'],f"https://assets.tcgdex.net/ja/{se}/{sid}/{c['localId']}"))
 print('to probe',len(jobs))
 def head(j):
     u=j[2]+'/low.webp'
