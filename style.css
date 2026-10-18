@@ -662,3 +662,25 @@ nav .navBinder{display:block}
  #binderView>*{order:2}#binderView>.bhead{order:0}#binderView>.bacts{order:1;justify-content:flex-end;margin:0 0 6px}#binderView>.bacts .chip{min-height:36px;padding:.2rem .7rem;font-size:.8rem}
  #binderView{--sh:calc((100dvh - var(--navh,72px) - 400px) / 3)}
 }
+
+/* v150 */
+nav{z-index:40}
+.psortwait>.tile,.psortwait>.pgmore{display:none!important}
+.psortload{grid-column:1/-1}.psk{display:grid;grid-template-columns:repeat(auto-fill,minmax(150px,1fr));gap:12px;margin-top:6px}
+.psk i{display:block;aspect-ratio:63/100;border-radius:14px;background:linear-gradient(100deg,rgba(255,255,255,.05) 30%,rgba(255,255,255,.12) 50%,rgba(255,255,255,.05) 70%);background-size:200% 100%;animation:pskA 1.2s linear infinite}
+@media(max-width:600px){.psk{grid-template-columns:repeat(2,1fr)}.psk i:nth-child(n+5){display:none}}
+@keyframes pskA{from{background-position:100% 0}to{background-position:-100% 0}}
+@media(prefers-reduced-motion:reduce){.psk i{animation:none}}
+.phist{margin:.6rem 0}.phist h3{margin:.2rem 0}.phsvg{position:relative;height:90px;border-radius:10px;background:rgba(255,255,255,.05)}.phsvg svg{width:100%;height:100%;display:block}
+.phtip{position:absolute;top:-6px;transform:translateY(-100%);background:rgba(10,12,20,.9);border:1px solid rgba(255,255,255,.2);border-radius:8px;padding:2px 8px;white-space:nowrap;pointer-events:none;font-size:.85rem}.phtip[hidden]{display:none}
+.phax{display:flex;justify-content:space-between;gap:6px;flex-wrap:wrap;margin-top:3px}
+/* Binder-Platzhalter am Handy: Abzeichen überdeckt den Namen nicht */
+.bslot .cardph{padding-top:22%!important}.bslot .cardph .phl{font-size:clamp(.45rem,9cqw,.75rem)!important;padding:0 3px}
+@media(max-width:899px){
+ .bflipwrap{display:none!important}
+ #binderView .bpage{animation:bfade .18s ease-out!important}
+ #binderView .bnav{z-index:3}
+ .bslot>.isrc{font-size:.5rem;padding:1px 3px}
+}
+@keyframes bfade{from{opacity:.4}to{opacity:1}}
+@media(prefers-reduced-motion:reduce){#binderView .bpage{animation:none!important}}
