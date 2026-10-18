@@ -768,3 +768,5 @@ button[data-l][aria-disabled="true"]{opacity:.4;cursor:help}
 .tile .acts .wishbtn{flex:0 0 auto;min-width:40px;min-height:32px;font-size:1rem}
 /* v182 (Nr. 24): eBay-Kachel ohne Preis bewusst als Link-Kachel */
 .pcmp .pebay{display:flex;flex-direction:column;gap:4px}.pcmp .pebay .plink{align-self:flex-start;white-space:normal}
+/* v182 (Nr. 33): EN-Bild-Abzeichen im Set-Raster */
+.cgim{position:relative}.cgim .imgnote{position:absolute;left:6px;bottom:6px;margin:0!important;z-index:2}
