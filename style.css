@@ -783,3 +783,6 @@ button[data-l][aria-disabled="true"]{opacity:.4;cursor:help}
 /* v182 (Nr. 37/38) */
 .lflHint{text-align:center;margin:.25rem auto .4rem;max-width:320px}
 .set .nologo{display:flex;align-items:center;justify-content:center;height:48px;margin-bottom:4px;border:1px dashed rgba(167,139,250,.35);border-radius:10px;color:var(--mu);font-size:.75rem}
+/* v182: Sammlungskachel „Preis: Cardmarket · Stand …“ mit Link – bis 3 Zeilen, kein Überlauf bei 400 px */
+.tile .tsrc.cmsrc{-webkit-line-clamp:3!important}
+.tile .tsrc .cmsl{color:inherit;text-decoration:underline;text-underline-offset:2px}
