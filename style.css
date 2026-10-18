@@ -754,3 +754,4 @@ img.imgld{background:linear-gradient(100deg,rgba(255,255,255,.05) 30%,rgba(255,2
 .cgn{white-space:normal!important}.cgteil{display:block;font-size:.8rem;font-weight:800;color:#ffd84d;line-height:1.2}
 .cardph .phteil{font-size:max(11px,.8rem);font-weight:800;color:#ffd84d;line-height:1.2}
 .cgn:has(.cgteil){-webkit-line-clamp:3}
+button[data-l][aria-disabled="true"]{opacity:.4;cursor:help}
