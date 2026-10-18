@@ -731,3 +731,10 @@ img.imgld{background:linear-gradient(100deg,rgba(255,255,255,.05) 30%,rgba(255,2
 .bslot .cardph small{font-size:clamp(.7rem,16cqw,.9rem)!important;overflow:visible!important;text-overflow:clip!important;max-width:none!important}
 .dphcm a{color:#fff;font-weight:700;text-decoration:underline;text-underline-offset:3px}.dphcm a:hover,.dphcm a:focus-visible{color:#ffd84d}
 .setnoimg{grid-column:1/-1;margin:.2rem 0 .4rem;padding:.55rem .8rem;border-radius:10px;background:#2f2468;border:1px solid rgba(255,255,255,.18);color:#fff;font-weight:600;font-size:.95rem}
+.jpcm{text-align:center;margin:.45rem 0}.jpcm a{display:inline-block;padding:.5rem 1rem;border-radius:999px;background:#fff;color:#1d1a33!important;font-weight:700;text-decoration:none}.jpcm a:hover,.jpcm a:focus-visible{background:#ffd84d}
+/* v162: Bild-Badges */
+.imgnote{display:inline-block;font-size:.72rem!important;font-weight:700;color:#1d1a33!important;background:#ffd84d;border-radius:999px;padding:1px 8px;margin:4px 0 0!important}
+.imgsrc{font-size:.68rem;color:#e2ddf7;margin:2px 0 0;line-height:1.25}
+.cgim{position:relative}.imgsrc.ov{position:absolute;left:6px;bottom:6px;right:6px;margin:0;padding:1px 6px;border-radius:6px;background:rgba(10,8,25,.78);color:#fff;font-weight:600;font-size:.62rem;width:max-content;max-width:calc(100% - 12px)}
+.bslot{position:relative}.slotsrc{position:absolute;left:4px;top:4px;padding:0 4px;border-radius:5px;background:#ffd84d;color:#1d1a33;font-size:.55rem;font-weight:800;line-height:1.5;max-width:calc(100% - 8px);white-space:nowrap;overflow:hidden;text-overflow:ellipsis;pointer-events:none}
+.ownnote{text-align:center;margin:.35rem 0;font-weight:700;color:#3ee08a}
