@@ -145,7 +145,9 @@ async function jpImgFallback(url){return null}
 // TCGdex-Set-ID -> pokemontcg.io-Set-ID (nur für Bild-Fallback)
 const PT_REV=Object.fromEntries(Object.entries(TDX_SET).map(([k,v])=>[v,k]));
 const ptcgSet=t=>{t=String(t||'');if(PT_REV[t])return PT_REV[t];if(/[A-Z]/.test(t)||/^(30th|cel25cc)/.test(t))return null;let m;if((m=t.match(/^(sv|me)0?(\d+)(\.5)?$/)))return m[1]+m[2]+(m[3]?'pt5':'');if((m=t.match(/^(swsh|sm|xy|bw)(\d+)\.5$/)))return m[1]+m[2]+'pt5';return t};
-async function ptcgCM(tid){const m=String(tid||'').match(/^(.*)-([^-]+)$/);if(!m)return null;const ps=ptcgSet(m[1]);if(!ps||/^me\d/.test(ps))return null;// v133: me*-Sets haben bei pokemontcg.io keine Cardmarket-Daten (404/500)
+/* v158: gleiche pokemontcg.io-Preisabfrage nie doppelt gleichzeitig senden; Fehler leise -> null (Sperre nach 5xx: app.js ka_ptdown, 20 min) */
+const PTCM_INF=new Map();function ptcgCM(tid){const k=String(tid||'');if(PTCM_INF.has(k))return PTCM_INF.get(k);const p=ptcgCM0(tid).catch(()=>null).finally(()=>PTCM_INF.delete(k));PTCM_INF.set(k,p);return p}
+async function ptcgCM0(tid){const m=String(tid||'').match(/^(.*)-([^-]+)$/);if(!m)return null;const ps=ptcgSet(m[1]);if(!ps||/^me\d/.test(ps))return null;// v133: me*-Sets haben bei pokemontcg.io keine Cardmarket-Daten (404/500)
  const id=ps+'-'+(/^\d+$/.test(m[2])?String(+m[2]):m[2]);const k='ptcm:'+id;const c=cget(k,TTL);if(c!==undefined)return c;if(cget('ptneg:'+id,6*3600e3)===1)return null;
  // pokemontcg.io antwortet oft mit 5xx -> v130: 1 Versuch, Fehler 6 h merken (keine roten Fehlerserien)
  let v=null,okR=false;for(let i=0;i<1&&!okR;i++){if(i)await new Promise(z=>setTimeout(z,700*i));try{const r=await fetch(`https://api.pokemontcg.io/v2/cards/${encodeURIComponent(id)}?select=id,name,cardmarket`,{signal:AbortSignal.timeout(10000)});if(r.status===404){cset(k,null);return null}if(!r.ok)continue;const j=await r.json();v=j&&j.data&&j.data.cardmarket&&j.data.cardmarket.prices?j.data.cardmarket:null;okR=true}catch(e){}}if(!okR){cset('ptneg:'+id,1);return null}cset(k,v);return v}
