@@ -212,7 +212,7 @@ function ownedItem(id,lang){const L=ownedItems(id),lg=ownLang(lang);return (lg&&
 window.ownedItems=ownedItems;window.ownedItem=ownedItem;
 const owned=id=>ownedItems(id).length>0;
 // alle Karten eines Sets (pokemontcg.io, mit Seiten)
-async function setCards(setId,q,sel){let all=[],page=1,tot=1;while(all.length<tot&&page<6){const d=await api(`${API}/cards?q=${encodeURIComponent(q.join(' '))}&pageSize=250&page=${page}${sel}`,3,8000);all=all.concat(d.data||[]);tot=d.totalCount||all.length;page++;if(!(d.data||[]).length)break}return{data:all}}
+/* v182 (Liste Nr. 21): setCards() (pokemontcg.io-API, nirgends aufgerufen) entfernt */
 // Set-Fallback über TCGdex (gleiche Set-IDs bei älteren Sets)
 async function fetchRetry(u,ms=8000,retries=2){let r=null;for(let i=0;i<=retries;i++){try{r=await fetch(u,{signal:AbortSignal.timeout(ms)});if(r.ok||r.status===404)return r}catch(e){if(i===retries)throw e}if(i<retries)await new Promise(z=>setTimeout(z,1000*2**i))}return r}
 async function tdxSetView(R,setId,my){try{const tid=window.Prices&&Prices.tdxSet?Prices.tdxSet(setId):setId;/* v182 (Nr. 33): deutsche Set-Zeile/-Liste -> deutscher Titel und deutsche Kartennamen aus TCGdex de (wörtlich), EN nur als Ersatz */const SL=window._setLang||'de';const pDe=SL==='de'?fetchRetry('https://api.tcgdex.net/v2/de/sets/'+encodeURIComponent(tid),20000,1).then(x=>x&&x.ok?x.json():null).then(x=>x&&x.cards&&x.cards.length?x:null).catch(()=>null):Promise.resolve(null);const r=await fetchRetry('https://api.tcgdex.net/v2/en/sets/'+encodeURIComponent(tid),20000/* v182: 20 s statt 8 s je Versuch */);if(!r.ok)return false;const j=await r.json();const jd=await pDe;const DN=new Map(((jd&&jd.cards)||[]).map(c=>[c.id,c]));if(my!==SEARCHN)return true;
