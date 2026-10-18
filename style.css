@@ -778,3 +778,5 @@ button[data-l][aria-disabled="true"]{opacity:.4;cursor:help}
 .navbar-d{position:sticky;top:-16px;z-index:4;margin:-16px -16px 6px;padding:8px 12px 6px;background:var(--card);border-bottom:1px solid rgba(167,139,250,.18)}.navbar-d .navback-d{position:static;float:none;margin:0}
 /* v182 (Nr. 24): eBay-Link bricht um statt aus der Kachel zu ragen */
 .pcmp .pebay a.plink{width:auto!important;max-width:100%;white-space:normal;line-height:1.25}
+/* v182 (Nr. 41): Binder-Namen vollständig (umbrechen statt „…“) */
+.binfo b{white-space:normal!important;overflow:visible!important;text-overflow:clip!important;overflow-wrap:anywhere}
