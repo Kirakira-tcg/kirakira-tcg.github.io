@@ -686,3 +686,15 @@ nav{z-index:40}
 @media(prefers-reduced-motion:reduce){#binderView .bpage{animation:none!important}}
 .nmlang.nmneed .chip{outline:2px solid var(--ac2,#ffcb05)} /* v141 Scan: Sprache wählen */
 .scanbox.live .camwrap.fit .frame{border-color:#2ecc71!important;box-shadow:0 0 0 9999px rgba(0,0,0,.45),0 0 18px rgba(46,204,113,.7) inset} /* v141 Scan: Abstand passt */
+/* v152: Manuell-Knopf mit Strich-Icon, Sprach-Chips (Flagge bzw. Textmarke), Sprache/Variante ändern */
+.chip.ico,.vswBtn{display:inline-flex;align-items:center;gap:6px}.chip.ico svg,.vswBtn svg{width:18px;height:18px;flex:none}
+.lchips{display:flex;flex-wrap:wrap;gap:6px;margin:.2rem 0 .4rem}.lchips .chip{display:inline-flex;align-items:center;gap:4px;min-height:36px;padding:4px 10px}.lchips .chip b{font-weight:600;font-size:.8rem}.lchips .lflag{font-size:1.05rem;line-height:1}.lchips .chip[disabled]{opacity:.3}.lchips .ltxt b{letter-spacing:.02em}
+.vswBtn{margin:.3rem auto .2rem;min-height:40px}.detail>.vswBtn{display:flex;width:max-content;max-width:100%}
+.vsw{border:1px solid var(--bd);border-radius:12px;padding:8px 10px;margin:.3rem 0 .6rem;background:var(--card2)}.vsw p{margin:.3rem 0}
+.vswL{display:grid;grid-template-columns:repeat(auto-fill,minmax(78px,1fr));gap:8px;max-height:340px;overflow:auto}.vswL .spThumb[hidden]{display:none}
+.vswL .jpb{font-style:normal;background:#dc2626;color:#fff;border-radius:4px;padding:0 3px;font-size:.6rem;font-weight:700}
+.badge.jp{background:#dc2626;color:#fff}.tile .p b.jpnone{font-size:.78rem;font-weight:600;opacity:.85}
+/* v152: Binder bei sehr niedriger Höhe (z. B. 300 % Zoom): Fächer nie kleiner als ~120 px hoch, sonst fiel das Raster zu einer schmalen Spalte zusammen – dann lieber scrollen */
+#binderView{--sh:max(120px,calc((100vh - 250px) / 3))}
+@media(min-width:900px){#binderView{--sh:max(120px,calc((100vh - 310px) / 3))}}
+@media(max-width:899px){#binderView{--sh:max(120px,calc((100dvh - var(--navh,72px) - 400px) / 3))}}
