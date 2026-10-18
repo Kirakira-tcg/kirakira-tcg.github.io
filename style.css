@@ -698,3 +698,16 @@ nav{z-index:40}
 #binderView{--sh:max(120px,calc((100vh - 250px) / 3))}
 @media(min-width:900px){#binderView{--sh:max(120px,calc((100vh - 310px) / 3))}}
 @media(max-width:899px){#binderView{--sh:max(120px,calc((100dvh - var(--navh,72px) - 400px) / 3))}}
+/* v154: Handy-Binder – Fächer wirklich ≥ 120 px hoch: Seitenbreite rechnet Innenabstand + Lücken (~52 px) mit ein (vorher 26 px → Fächer nur ~104 px) */
+@media(max-width:899px){#binderView .bpage{width:min(100%,calc(var(--sh) * 5 / 9 * 3 + 60px))!important}}
+/* v154: Set-Suche über Sprachen (gruppiert, eine Zeile je Sprache) */
+#setList .xhint{grid-column:1/-1;margin:.1rem 0 .3rem}
+#setList .xg{grid-column:1/-1;border:1px solid var(--bd);border-radius:14px;padding:8px 10px;margin:0 0 8px;background:var(--card2)}
+#setList .xgh{margin:0 0 4px;line-height:1.3}
+#setList .xgr{display:flex;align-items:center;gap:8px;width:100%;min-height:44px;text-align:left;background:none;border:0;border-top:1px solid var(--bd);padding:6px 2px;color:inherit;font:inherit;cursor:pointer}
+#setList .xgr:hover{background:rgba(255,255,255,.04)}
+#setList .xgr .lflag{font-size:1.1rem;line-height:1;flex:none}
+#setList .xgr .xlc{font-size:.72rem;font-weight:700;opacity:.8;min-width:1.6rem;flex:none}
+#setList .xgr .xnm{flex:1;min-width:0;overflow-wrap:anywhere}
+#setList .xgr small{flex:none;text-align:right;white-space:nowrap}
+#setList .xgr .jpb{font-style:normal;background:#dc2626;color:#fff;border-radius:4px;padding:0 3px;font-size:.62rem;font-weight:700}

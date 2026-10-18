@@ -1,3 +1,6 @@
+/* v154: Sets, die es nur in jpcards.json gibt (z. B. M6a „30th Celebration“; Groß-/Kleinschreibung zählt: JP „MEE“ ≠ TCGdex „mee“), nicht bei TCGdex abfragen – vorher rote 404 (en/ja/sets/M6a) beim Binder */
+{const F1=window.fetch.bind(window);let JS=null;const only=()=>JS||(JS=F1('jpcards.json').then(r=>r.ok?r.json():null).then(j=>new Set(Object.keys((j&&j.sets)||{}))).catch(()=>{JS=null;return new Set()}));
+ window.fetch=function(u,o){try{const s=typeof u==='string'?u:(u&&u.url)||'';const m=s.match(/^https:\/\/api\.tcgdex\.net\/v2\/[a-z-]+\/sets\/([^?#/]+)$/);if(m){const id=decodeURIComponent(m[1]);return only().then(S=>S.has(id)?new Response('null',{status:404,headers:{'content-type':'application/json'}}):F1(u,o))}}catch(e){}return F1(u,o)}}
 // v119: früh benötigte Konstanten (vor dem ersten render(); vorher TDZ-Fehler bei vorhandener Sammlung)
 var OwnPhoto=(()=>{const DB='kartenapp_photos',ST='photos';let dbp=null;const U=new Map();
  const db=()=>dbp||(dbp=new Promise((ok,no)=>{if(!window.indexedDB)return no(new Error('kein IndexedDB'));const r=indexedDB.open(DB,1);r.onupgradeneeded=()=>{if(!r.result.objectStoreNames.contains(ST))r.result.createObjectStore(ST)};r.onsuccess=()=>ok(r.result);r.onerror=()=>no(r.error)}).catch(e=>{dbp=null;throw e}));
@@ -295,7 +298,7 @@ async function renderJpSets(){const L=$('#setList');if(!window.Prices||!Prices.j
   d.innerHTML=`${s.logo?`<img class="jpcover" loading="lazy" src="${esc(/assets\.tcgdex\.net/.test(s.logo)&&!/\.\w{3,4}$/.test(s.logo)?s.logo+'.webp':s.logo)}" alt="" onerror="this.replaceWith(Object.assign(document.createElement('span'),{className:'jpbadge',textContent:this.dataset.c}))" data-c="${esc(s.id)}">`:`<span class="jpbadge" data-s="${esc((s.id.match(/^[A-Za-z]+/)||[''])[0].toUpperCase())}">${esc(s.id)}</span>`}<b>${esc(JSN(s)||s.name||s.id)}</b> <span class="muted small">${JSN(s)||s.name?esc(s.id):''}${JSN(s)&&s.name?' · '+esc(s.name):''}</span><br><span class="muted">${s.count} Karten${s.src==='jp'?' · neu':''}</span>`;
   d.dataset.sid=s.id;d.onclick=()=>jpSetCardsView(s);L.append(d)}}
 /* v148: „keine JP-Preisquelle“ einmal über dem Raster */
-function jpNoHint(el){const R=el&&el.parentNode;if(!R||R.querySelector(':scope>.jpnohint'))return;const h=document.createElement('p');h.className='muted small jpnohint';h.textContent='Für japanische Karten gibt es noch keine erlaubte JP-Preisquelle. Ein Preis erscheint nur, wenn Cardmarket einen hat.';const f=R.querySelector(':scope>.tile,:scope>.cgtile,:scope>.cg');(f||R.firstElementChild)?R.insertBefore(h,f||null):R.append(h)}
+function jpNoHint(el){const R=el&&el.parentNode;if(!R||R.querySelector(':scope>.jpnohint'))return;const h=document.createElement('p');h.className='muted small jpnohint';h.textContent='„–“ bei japanischen Karten: Cardmarket hat für genau diese JP-Karte keinen Preis (über TCGdex). Eine eigene JP-Preisquelle gibt es nicht.';const f=R.querySelector(':scope>.tile,:scope>.cgtile,:scope>.cg');(f||R.firstElementChild)?R.insertBefore(h,f||null):R.append(h)}
 async function jpSetCardsView(s){window.pendingScan=null;const R=$('#results');R.classList.remove('binder-src');R.innerHTML='<p class="muted">Lade Karten…</p>';window.scrollTo(0,0);
  let cs=[];try{cs=await Prices.jpSetCards(s.id)}catch(e){}
  if(!cs.length){R.innerHTML='<p class="muted">Keine Karten gefunden.</p>';return}
@@ -1911,3 +1914,58 @@ function vswPanel(f,it){const dt=f.querySelector('.detail');if(!dt||dt.querySele
 {const F0=window.fetch.bind(window),SK='ka_tdxsets_v1';let M={};try{M=JSON.parse(localStorage.getItem(SK)||'{}')||{}}catch(e){M={}}const P={};
  const sets=lg=>{const e=M[lg];if(e&&Date.now()-e.t<7*864e5)return Promise.resolve(e.s);if(P[lg])return P[lg];return P[lg]=F0(`https://api.tcgdex.net/v2/${lg}/sets`,{signal:AbortSignal.timeout(8000)}).then(r=>r.ok?r.json():null).then(d=>{if(!Array.isArray(d)||d.length<20)return null;const s=d.map(x=>String(x.id).toLowerCase());M[lg]={t:Date.now(),s};try{localStorage.setItem(SK,JSON.stringify(M))}catch(e){}return s}).catch(()=>null).finally(()=>{delete P[lg]})};
  window.fetch=function(u,o){try{const s=typeof u==='string'?u:(u&&u.url)||'';const m=s.match(/^https:\/\/api\.tcgdex\.net\/v2\/([a-z-]+)\/cards\/([^?#/]+)$/);if(m&&m[1]!=='ja'&&m[1]!=='en'){const set=decodeURIComponent(m[2]).replace(/-[^-]*$/,'').toLowerCase();return sets(m[1]).then(L=>L&&!L.includes(set)?new Response('null',{status:404,headers:{'content-type':'application/json'}}):F0(u,o))}}catch(e){}return F0(u,o)}}
+/* v154: Set-Suche über Sprachen – deutscher, englischer oder japanischer Set-Name (oder Set-ID) findet das Set in allen Sprachen, gruppiert:
+   z. B. „151 · DE/EN sv03.5 · JP SV2a“. Zuordnung JP ↔ international nur aus setxref.json (tools/build_setxref.py: TCGdex-Set-/Kartenlisten,
+   je Paar mit Quelle; unsichere Paare fehlen). Datei wird erst beim ersten Tippen im Set-Filter geladen. Tippfehler-tolerant, ä = ae. */
+{let XR=null,XRP=null;const xrLoad=()=>XRP||(XRP=fetch('setxref.json?v=154',{signal:AbortSignal.timeout(8000)}).then(r=>r.ok?r.json():null).then(j=>{XR=(j&&j.sets)||[]}).catch(()=>{XR=[];XRP=null}));window.xrLoad=xrLoad;
+ const kata=s=>s.replace(/[\u30a1-\u30f6]/g,c=>String.fromCharCode(c.charCodeAt(0)-96));
+ const xn=s=>kata(String(s||'').normalize('NFKC').toLowerCase().replace(/ä/g,'ae').replace(/ö/g,'oe').replace(/ü/g,'ue').replace(/ß/g,'ss').normalize('NFKD').replace(/[\u0300-\u036f]/g,'').normalize('NFC')).replace(/[^a-z0-9\u3040-\u30ff\u4e00-\u9fff.]+/g,' ').replace(/(^|\s)\.|\.(\s|$)/g,' ').trim();
+ const STOP=new Set(['und','and','der','die','das','des','the','of','et','pokemon']);
+ const toks=s=>xn(s).split(' ').filter(t=>t&&!STOP.has(t));
+ const lev=(a,b,max)=>{if(Math.abs(a.length-b.length)>max)return max+1;let p2=null,p=Array.from({length:b.length+1},(_,i)=>i);for(let i=1;i<=a.length;i++){const c=[i];let mn=i;for(let j=1;j<=b.length;j++){c[j]=Math.min(p[j]+1,c[j-1]+1,p[j-1]+(a[i-1]===b[j-1]?0:1));if(p2&&j>1&&a[i-1]===b[j-2]&&a[i-2]===b[j-1])c[j]=Math.min(c[j],p2[j-2]+1);if(c[j]<mn)mn=c[j]}if(mn>max)return max+1;p2=p;p=c}return p[b.length]};
+ const tolOf=n=>n>=8?2:n>=4?1:0;
+ // Punktzahl 0–100 für Suchtext q gegen einen Namen
+ function xsc(q,name){const qt=toks(q),nt=toks(name);if(!qt.length||!nt.length)return 0;const qc=qt.join(''),nc=nt.join('');
+  if(nc===qc)return 100;if(nc.startsWith(qc)&&qc.length>=2)return 92;if(qc.length>=3&&nc.includes(qc))return 82;
+  let sum=0;for(const t of qt){let b=0;for(const u of nt){if(u===t){b=1;break}if(t.length>=2&&u.startsWith(t))b=Math.max(b,.9);else{const k=tolOf(t.length);if(k&&lev(t,u.slice(0,Math.max(t.length,u.length)),k)<=k)b=Math.max(b,.75);else if(k&&u.length>t.length&&lev(t,u.slice(0,t.length),k)<=k)b=Math.max(b,.7)}}if(!b){sum=-1;break}sum+=b}
+  let s=sum>0?Math.round(55+25*sum/qt.length):0;
+  const k=tolOf(qc.length);if(k){if(lev(qc,nc,k+(qc.length>=12?1:0))<=k+(qc.length>=12?1:0))s=Math.max(s,72);else if(nc.length>qc.length&&lev(qc,nc.slice(0,qc.length),k)<=k)s=Math.max(s,64)}
+  return s}
+ const idSc=(q,id)=>{q=String(q).trim().toLowerCase();id=String(id||'').toLowerCase();if(!q||!id)return 0;return id===q?100:(q.length>=2&&id.startsWith(q)&&/\d/.test(q))?85:0};
+ // Gruppen: internationale Sets (setxref) mit belegten JP-Gegenstücken + JP-Sets ohne Gegenstück + pokemontcg.io-Sets, die TCGdex fehlen
+ async function xGroups(){await xrLoad();let J=[];try{J=JPSETL||(JPSETL=await Prices.jpSets())}catch(e){J=[]}try{await jpsnLoad()}catch(e){}
+  const G=[],usedJ=new Set(),jById={};(J||[]).forEach(s=>jById[s.id]=s);
+  for(const s of XR||[]){const g={k:'i:'+s.id,tid:s.id,de:s.de||'',en:s.en,d:s.d||'',jp:(s.jp||[]).map(j=>({...j,s:jById[j.id]||{id:j.id,name:j.ja,count:''}}))};g.jp.forEach(j=>usedJ.add(j.id));G.push(g)}
+  const have=new Set((XR||[]).map(s=>(window.Prices&&Prices.ptcgSet&&Prices.ptcgSet(s.id))||s.id));
+  for(const s of (typeof SETS!=='undefined'?SETS:[]))if(!have.has(s.id)&&!(s.tdx&&(XR||[]).some(x=>x.id===s.tdx)))G.push({k:'p:'+s.id,pid:s.id,de:'',en:s.name,d:String(s.releaseDate||'').replace(/\//g,'-'),code:s.ptcgoCode||'',jp:[]});
+  for(const s of J||[])if(!usedJ.has(s.id)){const r=JPSNM&&JPSNM[s.id];G.push({k:'j:'+s.id,jpOnly:1,de:'',en:'',d:'',jp:[{id:s.id,ja:s.name||(r&&r.ja)||'',en:(r&&r.en)||'',s}]})}
+  return G}
+ function gScore(q,g){let b=0;const t=(v,w=1)=>{if(v){const x=xsc(q,v)*w;if(x>b)b=x}};t(g.de);t(g.en);g.jp.forEach(j=>{t(j.ja);t(j.en,.97);b=Math.max(b,idSc(q,j.id))});b=Math.max(b,idSc(q,g.tid),idSc(q,g.pid),idSc(q,g.code));return b}
+ const intId=g=>{if(g.pid)return g.pid;const p=window.Prices&&Prices.ptcgSet?Prices.ptcgSet(g.tid):null;const s=(typeof SETS!=='undefined'?SETS:[]).find(x=>x.tdx===g.tid||x.id===p);return s?s.id:(p||g.tid)};
+ const openInt=g=>{const id=intId(g);navSet(id);window.pendingScan=null;window.scanLang='';$('#qName').value='';$('#qNum').value='';search('','','',id);window.scrollTo(0,0)};
+ const openJp=async j=>{let s=j.s;if(!s||!s.count){try{const L=JPSETL||(JPSETL=await Prices.jpSets());s=(L||[]).find(x=>x.id===j.id)||s}catch(e){}}jpSetCardsView(s||{id:j.id,name:j.ja})};
+ const yr=d=>String(d||'').slice(0,4);
+ function gHead(g){const nm=g.de||g.en||(g.jp[0]&&(g.jp[0].ja||g.jp[0].id))||'';const parts=[];if(g.tid||g.pid)parts.push(`${g.de?'DE/EN':'EN'} ${g.tid||g.pid}`);if(g.jp.length)parts.push('JP '+g.jp.map(j=>j.id).join(' + '));return `<b>${esc(nm)}</b> <span class="muted small">${esc(parts.join(' · '))}</span>`}
+ function gRows(g){const R=[];const fl=v=>`<span class="lflag">${esc(langMark(v))}</span><b class="xlc">${v}</b>`;
+  if(g.de&&!g.jpOnly)R.push(`<button type="button" class="xgr" data-a="i" title="Deutsches Set öffnen">${fl('DE')}<span class="xnm">${esc(g.de)}</span><small class="muted">${esc(g.tid||g.pid)}${g.d?' · '+yr(g.d):''}</small></button>`);
+  if(g.en&&!g.jpOnly)R.push(`<button type="button" class="xgr" data-a="i" title="Englisches Set öffnen">${fl('EN')}<span class="xnm">${esc(g.en)}</span><small class="muted">${esc(g.tid||g.pid)}${g.d?' · '+yr(g.d):''}</small></button>`);
+  g.jp.forEach((j,i)=>R.push(`<button type="button" class="xgr" data-a="j" data-i="${i}" title="${esc(j.src?'Japanisches Gegenstück – Quelle: '+j.src:'Japanisches Set öffnen')}">${fl('JP')}<span class="xnm">${esc(j.ja||j.id)}${j.en?` <span class="muted small">(${esc(j.en)})</span>`:''}</span><small class="muted"><i class="jpb">JP</i> ${esc(j.id)}${j.s&&j.s.count?' · '+j.s.count+' Karten':''}</small></button>`));
+  return R.join('')}
+ let tok=0;
+ async function renderX(){const L=$('#setList'),q=$('#setFilter').value.trim();const t=++tok;if(!XR)L.innerHTML='<p class="muted small">Suche Sets in allen Sprachen…</p>';const G=await xGroups();if(t!==tok||$('#setFilter').value.trim()!==q)return;
+  const hits=G.map(g=>[gScore(q,g),g]).filter(x=>x[0]>=60).sort((a,b)=>b[0]-a[0]||String(b[1].d).localeCompare(String(a[1].d)));
+  const top=hits.length?hits[0][0]:0,show=hits.filter(x=>x[0]>=Math.min(top-25,82)||x[0]>=top-8).slice(0,15);
+  if(!show.length){L.innerHTML='<p class="muted small">Keine Sets gefunden. Tipp: deutscher, englischer oder japanischer Name oder Set-ID (z. B. sv03.5, SV2a).</p>';return}
+  L.innerHTML=`<p class="muted small xhint">Treffer in allen Sprachen · JP-Gegenstücke nur, wenn die TCGdex-Kartenlisten es belegen</p>`;
+  for(const [,g] of show){const d=document.createElement('div');d.className='xg';d.innerHTML=`<div class="xgh">${gHead(g)}</div>${gRows(g)}`;
+   d.querySelectorAll('.xgr').forEach(b=>b.onclick=()=>b.dataset.a==='j'?openJp(g.jp[+b.dataset.i]):openInt(g));L.append(d)}}
+ window.setXSearch=async q=>{const G=await xGroups();return G.map(g=>[gScore(q,g),g]).filter(x=>x[0]>=60).sort((a,b)=>b[0]-a[0]).map(x=>x[1])};
+ const R0=renderSets,J0=renderJpSets;
+ renderSets=function(){if($('#setFilter').value.trim())return renderX();return R0.apply(this,arguments)};
+ renderJpSets=function(){if($('#setFilter').value.trim())return renderX();return J0.apply(this,arguments)};
+ const f=$('#setFilter');if(f){f.placeholder='Set suchen – Deutsch, Englisch oder Japanisch…';f.addEventListener('focus',()=>xrLoad(),{once:true});let tm=0;f.oninput=()=>{clearTimeout(tm);tm=setTimeout(()=>SETTAB==='ja'?renderJpSets():renderSets(),120)}}
+ // Set-Binder-Dialog: deutsche Set-Namen und JP-Gegenstücke ebenfalls vorschlagen
+ const SS0=setSearch;setSearch=async function(q,lang){const out=await SS0.apply(this,arguments);try{if(!String(q||'').trim()||/^[a-z]{1,4}\d/i.test(String(q).trim()))return out;const lg=lang==='jp'?'ja':lang||'de';const G=(await window.setXSearch(q)).slice(0,6),add=[];
+  for(const g of G){if(g.tid&&lg!=='ja')add.push({id:g.tid,name:(lg==='de'&&g.de)||g.en,lang:lg==='en'?'en':'de',total:null});for(const j of g.jp)if(lg==='ja'||!g.tid)add.push({id:j.id,name:j.ja||j.id,nameJa:j.ja,lang:'ja',total:j.s&&j.s.count||null})}
+  const seen=new Set(add.map(s=>s.id+'|'+s.lang));return [...add,...out.filter(s=>!seen.has(s.id+'|'+s.lang))].slice(0,10)}catch(e){return out}};
+}
