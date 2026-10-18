@@ -617,3 +617,48 @@ html{scrollbar-gutter:stable}
 #results>h3[data-lang],#results>div>h3[data-lang]{margin-top:4px}
 .cardph b{font-size:clamp(.62rem,11.5cqw,1.9rem)!important}
 .cgset .cgsl{display:none!important}
+
+/* v148: Kunden-/Tester-Feinschliff */
+.charttip[hidden]{display:none!important}
+.pnote{display:block;font-size:.75rem;color:var(--mu);margin-top:2px;font-weight:400}
+.jpnohint{grid-column:1/-1;margin:.1rem 0 .5rem}
+/* Platzhalter: Name nur einmal (im Platzhalter), gut lesbar */
+.cgim:has(.cardph)+.cgb .cgn{display:none}
+.cgim .cardph b,.tile .im .cardph b{font-size:clamp(.85rem,13cqw,1.9rem)!important;color:#fff!important;font-weight:800;text-shadow:0 1px 2px rgba(0,0,0,.55)}
+.cardph span,.cardph em,.cardph .phs{color:#e2ddf7!important;opacity:1!important}
+.cardph small{color:#bdb6dc!important;opacity:1!important}
+/* JP-Kennzeichen farbig (Japan-Akzent) */
+.cardph .phl:is([data-jp]),.jpbadge{background:#fff!important;color:#bc002d!important;border:1px solid #bc002d}
+/* Binder-Ansicht */
+#v-binder h2{margin-top:.4rem}
+.blist{display:grid;grid-template-columns:repeat(auto-fill,minmax(280px,1fr));gap:10px;margin-top:8px}
+.bcard{display:flex;align-items:center;gap:12px;padding:10px 12px;border-radius:16px;border:1px solid var(--bd);background:rgba(255,255,255,.07);color:var(--tx);text-align:left;font:inherit;cursor:pointer;min-height:84px}
+.bcard:hover{background:rgba(255,255,255,.12)}
+.bthumbs{display:flex;flex:none;width:96px;height:64px;align-items:center}.bthumbs img{width:44px;height:62px;object-fit:cover;border-radius:5px;margin-left:-18px;box-shadow:0 2px 6px rgba(0,0,0,.5)}.bthumbs img:first-child{margin-left:0}
+.bempty{font-size:2rem;width:100%;text-align:center}
+.binfo{display:flex;flex-direction:column;gap:2px;flex:1;min-width:0}.binfo b{white-space:nowrap;overflow:hidden;text-overflow:ellipsis}.bv{color:var(--ac2);font-weight:800}
+.bgo{font-size:1.6rem;color:var(--mu)}
+#v-binder .binderbar{margin:.2rem 0 .4rem}
+nav .navBinder{display:block}
+@media(max-width:899px){
+ nav [data-v="v-wish"]{display:none}
+ /* Binder am Handy: Fächer passen in die Höhe, Blättern + Knöpfe unten erreichbar */
+ #binderView{--sh:calc((100dvh - var(--navh,72px) - 300px) / 3)}
+ #binderView .bpage{width:min(100%,calc(var(--sh) * 5 / 9 * 3 + 2 * 8px + 10px))!important;margin:0 auto!important}
+ #binderView .bslot{max-height:var(--sh)}
+ #binderView .bnav{position:sticky;bottom:calc(var(--navh,72px) + env(safe-area-inset-bottom,0px));z-index:4;background:rgba(20,14,50,.94);border-radius:14px;padding:4px;margin-top:6px}
+ #binderView .bacts{display:flex;flex-wrap:wrap;gap:6px;justify-content:center;margin-top:6px}
+}
+@media(min-width:900px){.moreWish{display:none}}
+@media(min-width:900px){
+ /* Wertvollste/Trend: Karten der unsichtbaren zweiten Reihe nicht mehr unter der ersten hervorschauen lassen */
+ #topList.hscroll,#trendList.hscroll{padding-bottom:0!important;margin-bottom:8px}
+ #topList.hscroll>*,#trendList.hscroll>*{align-self:start}
+}
+.blist[hidden],#binderView[hidden]{display:none!important}
+.bslot>.isrc{top:6px;bottom:auto;left:6px}
+@media(max-width:899px){
+ #binderView:not([hidden]){display:flex;flex-direction:column}
+ #binderView>*{order:2}#binderView>.bhead{order:0}#binderView>.bacts{order:1;justify-content:flex-end;margin:0 0 6px}#binderView>.bacts .chip{min-height:36px;padding:.2rem .7rem;font-size:.8rem}
+ #binderView{--sh:calc((100dvh - var(--navh,72px) - 400px) / 3)}
+}
