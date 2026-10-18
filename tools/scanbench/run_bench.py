@@ -20,6 +20,7 @@ const pick=r.hit?{id:r.hit.id,name:r.hit.name}:null;
 const sl=x=>x&&{name:x.name,number:x.number,full:x.full,lang:x.lang,set:x.set,setId:x.setId,confident:!!x.confident,conflict:!!x.conflict,timeout:!!x.timeout,
  imgHit:x.imgHit&&{cardId:x.imgHit.cardId,score:x.imgHit.score},img:(x.imgMatch||[]).slice(0,5).map(m=>m.cardId+':'+(+m.score).toFixed(3)),energy:!!x.energy,ms:x.ms};
 return {r:b.r?sl(r):null,r0:b.r0?sl(r0):null,tR:b.tR,tR0:b.tR0,sheet:!!f,nmst:f?f.querySelector('.nmst')?.textContent:'',cands:C,pick,
+ sheetLang:f?(f.querySelector('.nmlang .chip.on')?.dataset.l||'-'):'',langEv:window.langEvDbg||'',
  status:document.getElementById('scanStatus2')?.textContent||'',imgVar:window.imgVar||''}}"""
 ID_RE = re.compile(r'assets\.tcgdex\.net/(\w+)/[^/"]+/([^/"]+)/([^/"]+)/')
 
@@ -67,11 +68,11 @@ async def worker(wid, br, url, q, out, args):
                 mm = ID_RE.search(c['html']); ids.append(c['id'] or (mm.group(2) + '-' + mm.group(3) if mm else '?:' + c['txt']))
             if s['pick']: ids = [s['pick']['id']] + ids
             rr = s['r'] or {}
-            rec = dict(scan_id=m['scan_id'], id=m['id'], name=m['name'], cat=m['cat'], variant=m['variant'], rarity=m['rarity'], lang=m['lang'],
+            rec = dict(scan_id=m['scan_id'], id=m['id'], name=m['name'], cat=m['cat'], variant=m['variant'], rarity=m['rarity'], lang=m['lang'], plang=m.get('plang', ''),
                        outcome=outcome, auto_id=auto, cands='|'.join(ids[:10]), n_cands=len(ids),
                        t_result_ms=round(s['tR'] - t0) if s['tR'] else '', timeout5s=int(bool(rr.get('timeout'))),
                        ocr_name=(s['r0'] or rr).get('name') or '', ocr_number=(s['r0'] or rr).get('full') or (s['r0'] or rr).get('number') or '',
-                       ocr_lang=rr.get('lang') or '', img_top=' '.join(rr.get('img') or (s['r0'] or {}).get('img') or []),
+                       ocr_lang=rr.get('lang') or '', sheet_lang=s.get('sheetLang') or '', lang_ev=s.get('langEv') or '', img_top=' '.join(rr.get('img') or (s['r0'] or {}).get('img') or []),
                        img_score=(rr.get('imgHit') or {}).get('score', ''), img_var=s['imgVar'], status=s['status'][:120], photo=os.path.basename(m['photo']), err='')
         except Exception as e:
             rec = dict(scan_id=m['scan_id'], id=m['id'], name=m['name'], cat=m['cat'], variant=m['variant'], rarity=m['rarity'], lang=m['lang'],

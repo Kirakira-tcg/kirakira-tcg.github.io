@@ -40,6 +40,12 @@ def main():
         r['top1score'] = float(r['img_top'].split()[0].split(':')[1]) if r['img_top'] else 0
         r['t'] = int(r['t_result_ms']) if r.get('t_result_ms') else None
         num = re.sub(r'\D', '', (r['ocr_number'] or '').split('/')[0]).lstrip('0')
+        # v141: Sprache prüfen – gedruckte Sprache (plang, sonst TCGdex-Bildsprache en→EN, ja→JP)
+        tl = (r.get('plang') or ('JP' if r['lang'] == 'ja' else 'EN')).upper(); r['true_lang'] = tl
+        ol = (r.get('ocr_lang') or '').upper(); ol = 'JP' if ol in ('JA', 'JP') else ol
+        r['wrong_lang_auto'] = au and ol != tl
+        sl = (r.get('sheet_lang') or '').upper(); r['wrong_lang_sheet'] = (not au) and sl in ('DE', 'EN', 'JP') and sl != tl
+        r['sheet_lang_none'] = (not au) and r.get('sheet_lang') == '-'
         r['num_ok'] = bool(num) and num == re.sub(r'\D', '', r['id'].rsplit('-', 1)[1]).lstrip('0')
     def block(rows):
         n = len(rows); au = [r for r in rows if r['auto']]
@@ -74,6 +80,10 @@ def main():
     for k, v in cause.most_common():
         e = ex[k]; sc = [r['top1score'] for r in e if r['top1score']]
         md.append(f"- **{k}: {v}**: in Auswahl Top 5 {pct(sum(0<r['rank']<=5 for r in e), v)}, Ø Top-Score {statistics.mean(sc) if sc else 0:.2f}, Nummer richtig gelesen {pct(sum(r['num_ok'] for r in e), v)}. Kategorien: {dict(collections.Counter(r['cat']+'/'+r['variant'] for r in e).most_common(5))}. Beispiele: {', '.join(r['id'] for r in e[:6])}\n")
+    if 'sheet_lang' in R[0]:
+        WL = [r for r in R if r['wrong_lang_auto'] or r['wrong_lang_sheet']]
+        md.append(f"\n## Sprache\nFalsche Sprache bei Auto-Übernahme: {sum(r['wrong_lang_auto'] for r in R)}; falsch vorgewählt im Blatt: {sum(r['wrong_lang_sheet'] for r in R)}; Blatt ohne Vorwahl: {sum(r['sheet_lang_none'] for r in R)} von {sum(not r['auto'] and bool(r.get('sheet_lang')) for r in R)} Blättern\n" +
+                  ''.join(f"- {r['id']} ({r['cat']}/{r['variant']}): echt {r['true_lang']}, übernommen {r['ocr_lang'] if r['auto'] else '–'}, Blatt {r.get('sheet_lang')}\n" for r in WL))
     md.append(f"\n## OCR\nNummer richtig gelesen: {pct(sum(r['num_ok'] for r in R), len(R))} (Foto {pct(sum(r['num_ok'] for r in R if r['variant']=='photo'), sum(r['variant']=='photo' for r in R))}); Name gelesen (nicht leer): {pct(sum(bool(r['ocr_name']) for r in R), len(R))}\n")
     open(os.path.join(a.out, 'summary.md'), 'w').write(''.join(md))
     with open(os.path.join(a.out, 'results_scored.csv'), 'w', newline='') as f:
