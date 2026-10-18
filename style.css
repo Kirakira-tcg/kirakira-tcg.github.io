@@ -764,3 +764,5 @@ button[data-l][aria-disabled="true"]{opacity:.4;cursor:help}
 
 /* v178 (App): „Hinzugefügt“-Leiste (#addToast) am Desktop im Bild – dort ist --navh die volle Höhe der Seitenleiste; --sbot (v176) ist nur bei unterer Handy-Navigation > 0 */
 .addToast{bottom:calc(var(--sbot,var(--navh,72px)) + env(safe-area-inset-bottom,0px) + 12px)}@media(min-width:900px){.addToast{left:calc(var(--sleft,0px) + 12px)}}
+/* v182: ☆ Wunschliste neben „In Binder“ in Suchtreffern */
+.tile .acts .wishbtn{flex:0 0 auto;min-width:40px;min-height:32px;font-size:1rem}
