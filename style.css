@@ -203,7 +203,6 @@ html,body{max-width:100%;overflow-x:clip}
 .jpbadge[data-s=CS],.jpbadge[data-s=CSA]{background:linear-gradient(135deg,#dc2626,#1f2937)}
 .jpbadge[data-s=SV]{background:linear-gradient(135deg,#8b5cf6,#4c1d95)}
 .jpbadge[data-s=M],.jpbadge[data-s=ENE]{background:linear-gradient(135deg,#0ea5e9,#0c4a6e)}
-.set img.jpcover[src*="serebii.net/card/logo/"]{width:100%;max-width:140px;object-fit:contain;box-shadow:none;border-radius:0}
 /* v45: Scan-UI – kein leerer Sucher ohne Kamera, Bilder im Scan-Ergebnis begrenzt */
 .scanbox:not(.live) .camwrap{display:none}
 #scanPick img:not(.spThumb img),#scanbox>img,#scanbox .scanres img{max-width:160px;width:100%;height:auto;aspect-ratio:63/88;object-fit:contain}
@@ -397,6 +396,7 @@ body:has(#addToast:not([hidden])) .scantray .trayall{bottom:calc(var(--navh,72px
 /* v116: alter Preis (>30 Tage) */
 .tile.oldp .p b{color:#8b8aa0;opacity:.75}
 .tile.oldp .tsrc{color:#9a98ad;font-style:italic}
+.pstand,.bstand{font-size:.72rem;color:#9a98ad;font-weight:500;line-height:1.25;margin-top:.15rem}.bstand{text-align:right}
 .oldnote{font-size:.72rem;color:#9a98ad;font-weight:500;line-height:1.25;margin-top:.15rem}
 .oldp-t{color:#a3a1b8}
 .tile .tsrc{white-space:nowrap;overflow:hidden;text-overflow:ellipsis;max-width:100%}
