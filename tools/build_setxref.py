@@ -11,6 +11,7 @@ Nur echte Daten, nichts geraten:
   (4) mindestens MINCARDS Pokémon-Karten verglichen wurden.
   Unsichere Paare fallen weg. Je Paar wird die Quelle (Abdeckung, Anzahl Karten) gespeichert.
 - JP-Namen: TCGdex JA; korrigiert durch jpsetnames.json (geprüfte Namen, z. B. SV4a).
+jpNoList: JP-Sets, für die TCGdex nur die Kartenanzahl, aber keine Kartenliste führt (z. B. S4a).
 Aufruf: python3 tools/build_setxref.py [setxref.json]   (Cache in /tmp/xc)"""
 import json,re,os,sys,datetime,unicodedata,urllib.request,concurrent.futures as cf
 API='https://api.tcgdex.net/v2'
@@ -101,6 +102,7 @@ for s in en:
       r['jp'].append({'id':p['id'],'ja':nm,**({'en':jsn[p['id']]['en']} if p['id'] in jsn else {}),'src':f"TCGdex-Kartenlisten: {p['n']} von {p['of']} JP-Pokémon-Karten im Set ({p['cov']:.0%}, nächstes Set {p['next']:.0%})"})
   out.append(r)
 o=sys.argv[1] if len(sys.argv)>1 else os.path.join(root,'setxref.json')
-json.dump({'v':1,'built':datetime.date.today().isoformat(),'source':'api.tcgdex.net (Set- und Kartenlisten en/de/ja); JP-Namen korrigiert durch jpsetnames.json; Methode: tools/build_setxref.py','sets':out},open(o,'w',encoding='utf-8'),ensure_ascii=False,separators=(',',':'))
+nolist=sorted(k for k,d in JD.items() if not d.get('cards') and ((d.get('cardCount') or {}).get('total') or 0)>0)
+json.dump({'v':1,'built':datetime.date.today().isoformat(),'jpNoList':nolist,'source':'api.tcgdex.net (Set- und Kartenlisten en/de/ja); JP-Namen korrigiert durch jpsetnames.json; Methode: tools/build_setxref.py','sets':out},open(o,'w',encoding='utf-8'),ensure_ascii=False,separators=(',',':'))
 print(sum(len(v) for v in pairs.values()),'JP-Sets zugeordnet zu',len(pairs),'internationalen Sets;',len(out),'Sets gesamt')
 for x in skips:print('SKIP',*x)

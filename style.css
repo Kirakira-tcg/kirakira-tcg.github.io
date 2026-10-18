@@ -711,3 +711,10 @@ nav{z-index:40}
 #setList .xgr .xnm{flex:1;min-width:0;overflow-wrap:anywhere}
 #setList .xgr small{flex:none;text-align:right;white-space:nowrap}
 #setList .xgr .jpb{font-style:normal;background:#dc2626;color:#fff;border-radius:4px;padding:0 3px;font-size:.62rem;font-weight:700}
+/* v156: Sprachen ohne Kartendaten: ausgegraut, gestrichelt, Hinweis „Daten folgen“ */
+.lchips .chip.lsoon[disabled]{opacity:.45;border-style:dashed;cursor:not-allowed}
+.lchips .lsoonh{flex-basis:100%;margin:0;font-size:.72rem}
+/* v156: Set-Suche – JP aufgeteilt / ohne Kartenliste */
+#setList .xsplit{display:inline-block;font-size:.68rem;font-weight:600;padding:1px 6px;border-radius:999px;background:rgba(220,38,38,.18);color:#fca5a5;vertical-align:middle}
+#setList .xgr.xnol{opacity:.55;cursor:not-allowed}
+#setList .xgr.xnol small{white-space:normal}
