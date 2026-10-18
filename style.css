@@ -318,7 +318,7 @@ html{overflow-x:clip}
 .emptyStart[hidden]{display:none!important}
 body{padding-bottom:calc(var(--navh,72px) + env(safe-area-inset-bottom,0px) + 20px)!important}
 .appfoot{padding-bottom:12px!important;margin-top:1.5rem!important}
-.appver{font-size:10px;opacity:.5;text-align:center;margin-top:2px}
+.appver{font-size:12px;opacity:.75;text-align:center;margin-top:4px}/* v182: lesbar (vorher 10px, 50 %) */
 a.plink{position:relative}a.plink::after{content:'';position:absolute;left:-6px;right:-6px;top:50%;height:44px;transform:translateY(-50%)}
 #qNum{min-width:5.4rem!important;width:5.8rem!important}
 #scanBanner{pointer-events:none}
