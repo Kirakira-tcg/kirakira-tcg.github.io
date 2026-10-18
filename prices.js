@@ -70,19 +70,14 @@ async function normalize(card,lang){const p=BADP[card?.id]?{}:(card?.pricing||{}
  if(out.best)out.label=`${out.best.eur.toFixed(2).replace('.',',')} € · ${out.best.source}${out.best.umgerechnet?` · umgerechnet aus ${out.best.currency}${out.best.fxFallback?' (Schätzkurs)':''}`:''}`;
  else out.label='kein Preis bei TCGdex';
  return lang==='ja'?jpm(out):out}
-// JP-Marktpreis (pokeca-souba, Yen) aus statischer jpprices.json (tools/build_jpprices.py) – getrennt von Cardmarket/eBay
-let jppP=null;function jppLoad(){if(jppP)return jppP;const u=(typeof document!=='undefined'&&document.baseURI)?new URL('jpprices.json',document.baseURI).href:'jpprices.json';
- jppP=fetch(u).then(r=>r.ok?r.json():null).then(d=>d&&d.p?d:{p:{}}).catch(()=>{jppP=null;return{p:{}}});return jppP}
-async function jpm(out){if(!out||out.best)return out;try{const d=await jppLoad(),sid=out.set&&out.set.id||String(out.id).replace(/^jp:/,'').replace(/-[^-]*$/,''),e=d.p[sid+'-'+nz(out.localId)];
- if(!e||!e.y)return out;const c=await toEUR(e.y,'JPY');if(!c)return out;
- out.jpMarket={source:'pokeca-souba (JP-Markt)',currency:'JPY',value:e.y,eur:c.eur,umgerechnet:true,fxFallback:!!c.fallback,updated:d.date,url:d.url};out.best=out.jpMarket;
- out.label=`${c.eur.toFixed(2).replace('.',',')} € · JP-Marktpreis (pokeca-souba, umgerechnet) · ¥${e.y.toLocaleString('de-DE')}${c.fallback?' (Schätzkurs)':''}`}catch(e){}return out}
+// v142: keine JP-Marktpreise mehr (pokeca-souba-Nutzungsbedingungen verbieten Auslesen/Weiterverwenden) – JP-Karten ohne Cardmarket-Preis: „JP-Preis: keine Daten“
+async function jpm(out){if(!out||out.best)return out;out.jpNone=true;out.label='JP-Preis: keine Daten';return out}
 
 
 // Japanische Sets, die TCGdex fehlen: statische jpcards.json (tools/build_jp.py)
 let jpP=null,jpLogos={};
 function jpLoad(){if(jpP)return jpP;const u=(typeof document!=='undefined'&&document.baseURI)?new URL('jpcards.json',document.baseURI).href:'jpcards.json';
- jpP=fetch(u).then(r=>r.ok?r.json():null).then(d=>{if(!d||!Array.isArray(d.c))return[];if(d.covers)for(const[k,v]of Object.entries(d.covers))jpLogos[k]=/assets\.tcgdex\.net/.test(v)&&!/\.\w{3,4}$/.test(v)?v+'/low.webp':v;return d.c.map(([set,localId,total,name,img])=>({id:'jp:'+set+'-'+(localId||img.replace(/^.*\/|\.\w+$/g,'')),set,localId,total,name,image:(u=>/pokemon-card\.com|snkrdunk\.com|tcgplayer\.com|serebii\.net|pokeca\.net/i.test(u)?'':u)(/^https?:\/\//.test(img||'')?img:(d.base&&img?d.base+img:'')),setName:(d.sets||{})[set]||set}))}).catch(()=>{jpP=null;return[]});return jpP}
+ jpP=fetch(u).then(r=>r.ok?r.json():null).then(d=>{if(!d||!Array.isArray(d.c))return[];if(d.covers)for(const[k,v]of Object.entries(d.covers))if(!/limitlesstcg|digitaloceanspaces/i.test(v))jpLogos[k]=/assets\.tcgdex\.net/.test(v)&&!/\.\w{3,4}$/.test(v)?v+'/low.webp':v;return d.c.map(([set,localId,total,name,img])=>({id:'jp:'+set+'-'+(localId||img.replace(/^.*\/|\.\w+$/g,'')),set,localId,total,name,image:(u=>/pokemon-card\.com|snkrdunk\.com|tcgplayer\.com|serebii\.net|pokeca\.net|limitlesstcg|digitaloceanspaces/i.test(u)?'':u)(/^https?:\/\//.test(img||'')?img:(d.base&&img?d.base+img:'')),setName:(d.sets||{})[set]||set}))}).catch(()=>{jpP=null;return[]});return jpP}
 const jpNorm=c=>({id:c.id,name:c.name,lang:'ja',set:{id:c.set,name:c.setName&&c.setName!==c.set&&!c.setName.includes(c.set)?`${c.setName} (${c.set})`:c.setName},localId:c.localId,total:c.total,image:c.image,prices:[],best:null,label:'kein Preis – siehe Cardmarket',source:'pokemon-card.com'});
 const nz=x=>String(x??'').split('/')[0].trim().replace(/^0+(?=\d)/,'');
 const numN=n=>{if(n==null)return null;const v=String(n).split('/')[0].trim();return v||null};
@@ -146,7 +141,7 @@ async function jpSetCards(id){if(String(id).startsWith('jp:'))id=id.slice(3);con
  const k='jpset:'+id;let d=cget(k,SET_TTL);if(d===undefined){d=await getJSON(`${BASE}/ja/sets/${encodeURIComponent(id)}`);d=d?{name:d.name,cards:(d.cards||[]).map(c=>({id:c.id,localId:c.localId,name:c.name,image:c.image||null}))}:null;cset(k,d)}
  if(!d)return[];return d.cards.map(c=>({id:c.id,localId:c.localId,name:c.name,img:c.image?c.image+'/low.webp':null,set:{id,name:d.name},lang:'ja'}))}
 
-async function jpImgFallback(url){return null;try{const d=await jppLoad(),L=await jpLoad(),c=L.find(x=>x.image===url);const e=c&&d.p[c.set+'-'+nz(c.localId)];return e&&e.i||null}catch(e){return null}}
+async function jpImgFallback(url){return null}
 // TCGdex-Set-ID -> pokemontcg.io-Set-ID (nur für Bild-Fallback)
 const PT_REV=Object.fromEntries(Object.entries(TDX_SET).map(([k,v])=>[v,k]));
 const ptcgSet=t=>{t=String(t||'');if(PT_REV[t])return PT_REV[t];if(/[A-Z]/.test(t)||/^(30th|cel25cc)/.test(t))return null;let m;if((m=t.match(/^(sv|me)0?(\d+)(\.5)?$/)))return m[1]+m[2]+(m[3]?'pt5':'');if((m=t.match(/^(swsh|sm|xy|bw)(\d+)\.5$/)))return m[1]+m[2]+'pt5';return t};

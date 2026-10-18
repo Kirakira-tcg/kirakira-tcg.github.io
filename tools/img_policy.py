@@ -7,7 +7,7 @@ TCGdex-JA-Bild derselben Karte ersetzt (Set-ID + Nummer + gleicher Name), sonst 
 Aufruf: python3 tools/img_policy.py   (im Repo-Root; wird auch von build_jpprices.py/build_covers.py genutzt)"""
 import json,re,os,time,urllib.request,urllib.parse,urllib.error
 from concurrent.futures import ThreadPoolExecutor
-BAD=re.compile(r'^https?://([^/]*\.)?(pokemon-card\.com|snkrdunk\.com|tcgplayer\.com|serebii\.net|pokeca\.net)(/|$)',re.I)
+BAD=re.compile(r'^https?://([^/]*\.)?(pokemon-card\.com|snkrdunk\.com|tcgplayer\.com|serebii\.net|pokeca\.net|pokeca-souba\.[a-z.]+|limitlesstcg\.nyc3\.cdn\.digitaloceanspaces\.com)(/|$)',re.I)
 OK=re.compile(r'^https://(assets\.tcgdex\.net|images\.pokemontcg\.io|images\.scrydex\.com|limitlesstcg\.nyc3\.cdn\.digitaloceanspaces\.com)/',re.I)
 def safe(u):return bool(u) and bool(OK.match(u)) and not BAD.match(u)
 nrm=lambda x:re.sub(r'[\s・･]','',x or '').lower()
@@ -67,8 +67,7 @@ def fix_cards(d,p,stats=None):
     return d
 if __name__=='__main__':
     D=os.path.join(os.path.dirname(os.path.abspath(__file__)),'..');P=os.path.join(D,'jpprices.json');J=os.path.join(D,'jpcards.json')
-    pp=json.load(open(P,encoding='utf8'));jj=json.load(open(J,encoding='utf8'));st={}
-    fix_prices(pp['p'],st);fix_cards(jj,pp['p'],st)
-    json.dump(pp,open(P,'w',encoding='utf8'),ensure_ascii=False,separators=(',',':'))
+    jj=json.load(open(J,encoding='utf8'));st={}
+    fix_cards(jj,{},st)  # v142: jpprices.json (pokeca-souba) entfernt
     json.dump(jj,open(J,'w',encoding='utf8'),ensure_ascii=False,separators=(',',':'))
     for k,(a,b) in sorted(st.items()):print(f'{k}: ersetzt {a}, Platzhalter/entfernt {b}')

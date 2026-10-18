@@ -58,8 +58,7 @@ with ThreadPoolExecutor(4) as ex:
 # Keine Cover von pokemon-card.com / serebii.net (Hotlink-Risiko) – siehe tools/img_policy.py
 d.pop('logos',None);d.pop('logoBase',None);d['covers']=cov
 import sys;sys.path.insert(0,os.path.dirname(os.path.abspath(__file__)));import img_policy
-try:P=json.load(open(os.path.join(D,'jpprices.json'),encoding='utf8'))['p']
-except Exception:P={}
+P={}  # v142: keine jpprices.json mehr (pokeca-souba)
 img_policy.fix_cards(d,P)
 json.dump(d,open(J,'w',encoding='utf8'),ensure_ascii=False,separators=(",",":"))
 print(len(cov),'covers;',len(d['sets'])+len(ids)-len([i for i in ids if i in cov])-len([s for s in d['sets'] if s in cov]),'without')
