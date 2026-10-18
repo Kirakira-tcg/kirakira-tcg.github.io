@@ -131,6 +131,26 @@ def main():
             out[k] = v; kept += 1
     if FAILED:
         print("FEHLER-Sets (alte Einträge behalten):", sorted(FAILED), "behalten:", kept)
+    # v182 (Liste Nr. 35): Einträge, deren wörtliche Bildadresse beim Bildserver 404 liefert (z. B. pokemontcg.io mcd14–mcd18), nicht aufnehmen -> App zeigt „Bild folgt“ statt roter 404
+    def alive(u):
+        for _ in range(3):
+            try:
+                req = urllib.request.Request(u, headers={"User-Agent": "kartenapp-imgmap", "Range": "bytes=0-0"})
+                with urllib.request.urlopen(req, timeout=30) as r:
+                    return r.status in (200, 206)
+            except urllib.error.HTTPError as e:
+                if e.code == 404:
+                    return False
+            except Exception:
+                pass
+            time.sleep(2)
+        return True  # unklar -> behalten
+    with cf.ThreadPoolExecutor(8) as ex:
+        dead = [k for k, ok in zip(list(out), ex.map(lambda k: alive(out[k]["url"]), list(out))) if not ok]
+    for k in dead:
+        del out[k]
+    if dead:
+        print("404 beim Bildserver, entfernt:", len(dead))
     if not out:
         print("leer – imgmap.json bleibt unverändert", file=sys.stderr); sys.exit(1)
     with open(OUT, "w", encoding="utf-8") as f:
