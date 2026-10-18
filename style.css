@@ -552,3 +552,25 @@ html body #dlgForm .detail>.dcard img{width:100%;height:auto}
 }
 @keyframes bflip{from{opacity:.25;transform:rotateY(10deg) scale(.985)}to{opacity:1;transform:none}}
 @media(prefers-reduced-motion:reduce){#binderView .bpage{animation:none}}
+/* v140: KEIN-BILD-Platzhalter ruhiger und informativer; ruhiges Laden statt aufblitzender Platzhalter */
+.cardph{background:linear-gradient(165deg,hsl(var(--ph,230) 22% 24%),hsl(calc(var(--ph,230) + 25) 18% 13%))!important;border:1px solid rgba(255,255,255,.10)!important;gap:.25rem}
+.cardph .phl{position:absolute;top:6px;right:6px;font-style:normal;font-size:.55rem;font-weight:800;letter-spacing:.05em;padding:1px 5px;border-radius:6px;background:rgba(255,255,255,.14);color:#eef1f7}
+.cardph .phs{font-size:.6rem!important;opacity:.7}
+.cardph small{opacity:.55!important}
+.tile .cardph,.cgim .cardph,.bslot .cardph{animation:phIn .35s ease .5s both}
+@keyframes phIn{from{opacity:0}to{opacity:1}}
+.tile .im,.cgim{background-color:rgba(255,255,255,.04)}
+.cgim img,.bslot:not(.miss) img{animation:imIn .3s ease both}
+@keyframes imIn{from{opacity:0}to{opacity:1}}
+@media(prefers-reduced-motion:reduce){.tile .cardph,.cgim .cardph,.bslot .cardph,.cgim img,.bslot img{animation:none}}
+/* v140: Portfolio am PC: Chart volle Breite, Statistik kompakt in einer Reihe darunter, alles zentriert bis 1500px */
+@media(min-width:900px){
+#v-port.active{grid-template-columns:minmax(0,1fr)!important;max-width:1500px;margin:0 auto}
+#v-port.active>.hero{grid-column:1/-1}
+#v-port.active>.stats{grid-column:1/-1!important;grid-template-columns:repeat(3,minmax(0,1fr))!important;grid-auto-rows:auto!important;align-self:start!important;gap:12px;margin:12px 0 4px!important}
+#v-port.active>.stats>*{min-height:0!important;height:auto!important;padding:10px 14px}
+}
+@media(min-width:900px){#binderView{--sh:calc((100vh - 310px) / 3)}#binderView .bacts{display:flex;flex-wrap:wrap;justify-content:flex-end;gap:8px;margin-top:6px}}
+.isrc{position:absolute;left:4px;bottom:4px;z-index:2;font-size:.55rem;line-height:1;padding:2px 4px;border-radius:4px;background:rgba(0,0,0,.55);color:#e6e1f5;pointer-events:none}
+.tile .im,.cgim,.bslot{position:relative}
+.isrcd{text-align:center;margin:4px 0 0}

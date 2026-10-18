@@ -138,7 +138,7 @@ async function suggest(query,lang='de',limit=24){const q=String(query||'').trim(
  return r}
 
 // Set-Browser JP: jpSets() -> [{id,name,count,src,logo}], neueste zuerst; jpSetCards(id) -> [{id,localId,name,img,set,lang}]
-async function jpSets(){let t=cget('jpsets:ja',SET_TTL);if(!t){try{const d=await getJSON(`${BASE}/ja/sets`)||[];t=d.map(s=>({id:s.id,name:s.name,count:s.cardCount?.total||0,logo:s.logo||s.symbol||null,src:'tcgdex'}));if(t.length)cset('jpsets:ja',t)}catch(e){t=[]}}
+async function jpSets(){let t=cget('jpsets:ja',SET_TTL);if(!t){try{const d=await getJSON(`${BASE}/ja/sets`)||[];t=d.map(s=>({id:s.id,name:s.name,count:s.cardCount?.total||0,logo:(u=>u&&!/\.\w{3,4}$/.test(u)?u+'.webp':u)(s.logo||s.symbol||null),src:'tcgdex'}));if(t.length)cset('jpsets:ja',t)}catch(e){t=[]}}
  const L=await jpLoad(),m=new Map();for(const c of L){const e=m.get(c.set)||{id:c.set,name:c.setName,count:0,logo:null,src:'jp'};e.count++;m.set(c.set,e)}
  const have=new Set(t.map(s=>s.id));t=t.map(s=>({...s,logo:jpLogos[s.id]||null}));for(const e of m.values())e.logo=jpLogos[e.id]||null;const jn=[...m.values()].filter(s=>!have.has(s.id)).sort((a,b)=>(a.id==='ENE')-(b.id==='ENE')||(b.id==='M6a')-(a.id==='M6a'));return[...jn.filter(s=>s.id!=='ENE'),...t.slice().reverse(),...jn.filter(s=>s.id==='ENE')]}
 async function jpSetCards(id){if(String(id).startsWith('jp:'))id=id.slice(3);const L=await jpLoad(),j=L.filter(c=>c.set===id);
