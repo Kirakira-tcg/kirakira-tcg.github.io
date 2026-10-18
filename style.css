@@ -766,3 +766,5 @@ button[data-l][aria-disabled="true"]{opacity:.4;cursor:help}
 .addToast{bottom:calc(var(--sbot,var(--navh,72px)) + env(safe-area-inset-bottom,0px) + 12px)}@media(min-width:900px){.addToast{left:calc(var(--sleft,0px) + 12px)}}
 /* v182: ☆ Wunschliste neben „In Binder“ in Suchtreffern */
 .tile .acts .wishbtn{flex:0 0 auto;min-width:40px;min-height:32px;font-size:1rem}
+/* v182 (Nr. 24): eBay-Kachel ohne Preis bewusst als Link-Kachel */
+.pcmp .pebay{display:flex;flex-direction:column;gap:4px}.pcmp .pebay .plink{align-self:flex-start;white-space:normal}
