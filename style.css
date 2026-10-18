@@ -574,3 +574,46 @@ html body #dlgForm .detail>.dcard img{width:100%;height:auto}
 .isrc{position:absolute;left:4px;bottom:4px;z-index:2;font-size:.55rem;line-height:1;padding:2px 4px;border-radius:4px;background:rgba(0,0,0,.55);color:#e6e1f5;pointer-events:none}
 .tile .im,.cgim,.bslot{position:relative}
 .isrcd{text-align:center;margin:4px 0 0}
+
+/* v143: Kunden-/Tester-Feinschliff */
+html{scrollbar-gutter:stable}
+/* einheitlicher Platzhalter: Kartenformat, ruhiger Verlauf, Schrift wächst mit der Größe */
+.cardph{container-type:size;background:linear-gradient(165deg,#3a3360,#1d1a33)!important;border:1px solid rgba(255,255,255,.12)!important;gap:.25em!important;padding:8%!important}
+.cardph b{font-size:clamp(.6rem,10cqw,1.9rem)!important;line-height:1.15}
+.cardph span{font-size:clamp(.55rem,7cqw,1.25rem)!important}
+.cardph em,.cardph .phs{font-size:clamp(.5rem,5.6cqw,1.05rem)!important;opacity:.8}
+.cardph small{font-size:clamp(.45rem,4.4cqw,.8rem)!important}
+.cardph .phl{font-size:clamp(.5rem,4.8cqw,.9rem)!important;top:4%!important;right:5%!important}
+.dph{aspect-ratio:63/88}
+/* Bildquelle direkt am Detailbild */
+.dcard .isrcd{position:absolute;right:6px;bottom:6px;z-index:3;font-size:.65rem;line-height:1;padding:3px 6px;border-radius:5px;background:rgba(0,0,0,.6);color:#eee;pointer-events:none}
+/* große Sets schrittweise */
+.tile.pgh{display:none!important}
+.pgmore{grid-column:1/-1;justify-self:center;margin:10px auto 18px;min-height:44px;padding:.4rem 1.2rem}
+/* Binder-Zugang */
+.navBinder{display:none}
+.binderJump{display:block;margin:.5rem auto 0}
+@media(min-width:900px){
+ nav .navBinder{display:block}
+ .binderJump{display:none}
+ /* Wertvollste/Trend füllen die Breite: Raster in einer Zeile, so viele Karten wie passen */
+ #topList.hscroll,#trendList.hscroll{display:grid;grid-template-columns:repeat(auto-fill,minmax(150px,1fr));grid-template-rows:auto;grid-auto-rows:0;row-gap:0;column-gap:14px;overflow:hidden;padding-bottom:6px}
+ #topList.hscroll .tile,#trendList.hscroll .tile{min-width:0;max-width:none}
+ .hsw:has(>#topList) .hsbtn,.hsw:has(>#trendList) .hsbtn{display:none!important}
+}
+/* Update-Hinweis unten statt über der Suche */
+#updBanner{top:auto!important;bottom:calc(84px + env(safe-area-inset-bottom))!important}
+@media(min-width:900px){#updBanner{bottom:18px!important;left:calc(50% + 46px)!important}}
+/* Handy: Detail-Flaggen und Bewegungssensor luftiger */
+@media(max-width:899px){
+ #lfl{gap:.6rem!important;margin:.7rem 0 .35rem!important;flex-wrap:wrap}
+ #lflP{margin:.1rem 0 .4rem!important}
+ .detail .gyroBtn{margin:14px auto 0!important}
+ .detail .gyroBtn+p{margin:.35rem 0 .6rem!important}
+}
+/* v143: kein Leerraum unter dem Suchfilter */
+#results>#noHit:empty,#results>.cghead+#noHit:empty{display:none}
+#results>.sortbar{margin-bottom:0}
+#results>h3[data-lang],#results>div>h3[data-lang]{margin-top:4px}
+.cardph b{font-size:clamp(.62rem,11.5cqw,1.9rem)!important}
+.cgset .cgsl{display:none!important}

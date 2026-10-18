@@ -8,7 +8,7 @@ Aufruf: python3 tools/img_policy.py   (im Repo-Root; wird auch von build_jpprice
 import json,re,os,time,urllib.request,urllib.parse,urllib.error
 from concurrent.futures import ThreadPoolExecutor
 BAD=re.compile(r'^https?://([^/]*\.)?(pokemon-card\.com|snkrdunk\.com|tcgplayer\.com|serebii\.net|pokeca\.net|pokeca-souba\.[a-z.]+|limitlesstcg\.nyc3\.cdn\.digitaloceanspaces\.com)(/|$)',re.I)
-OK=re.compile(r'^https://(assets\.tcgdex\.net|images\.pokemontcg\.io|images\.scrydex\.com|limitlesstcg\.nyc3\.cdn\.digitaloceanspaces\.com)/',re.I)
+OK=re.compile(r'^https://(assets\.tcgdex\.net|images\.pokemontcg\.io)/',re.I)  # v143: nur TCGdex/pokemontcg.io
 def safe(u):return bool(u) and bool(OK.match(u)) and not BAD.match(u)
 nrm=lambda x:re.sub(r'[\s・･]','',x or '').lower()
 nz=lambda x:re.sub(r'^0+(?=\d)','',str(x or '').split('/')[0].strip())
