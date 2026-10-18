@@ -755,3 +755,7 @@ img.imgld{background:linear-gradient(100deg,rgba(255,255,255,.05) 30%,rgba(255,2
 .cardph .phteil{font-size:max(11px,.8rem);font-weight:800;color:#ffd84d;line-height:1.2}
 .cgn:has(.cgteil){-webkit-line-clamp:3}
 button[data-l][aria-disabled="true"]{opacity:.4;cursor:help}
+.lhint{margin:.3rem 0 .1rem;color:#ffd84d;font-weight:700;font-size:max(12px,.85rem)}
+/* v174: „Teil 1/2“ auf Platzhaltern mind. 11 px (überschreibt .cardph span{clamp(.55rem,…)!important}); LEGEND-Titel nie abschneiden */
+.cardph span.phteil{font-size:clamp(11px,7cqw,1.25rem)!important;font-weight:800;color:#ffd84d}
+.cgn:has(.cgteil){display:block!important;-webkit-line-clamp:unset!important;overflow:visible!important;white-space:normal!important}
