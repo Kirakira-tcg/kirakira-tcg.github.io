@@ -1,4 +1,16 @@
 'use strict';
+/* v170: zentrale Drossel für TCGdex (max. 6 Anfragen gleichzeitig, gleiche URL nie doppelt gleichzeitig, bekannte 404 drei Tage gemerkt -> keine CORS-/429-Fehlerserien in der Konsole). pokemontcg.io-API im Browser grundsätzlich gesperrt (auch falls alter Code sie noch aufruft). */
+(function(){if(typeof window==='undefined'||!window.fetch||window.__kaF)return;window.__kaF=1;const F=window.fetch.bind(window),MAX=6,Q=[],INF=new Map(),NK='ka_tdx404',TTL=3*864e5;let act=0,NEG={};try{NEG=JSON.parse(localStorage.getItem(NK)||'{}')||{}}catch(e){}const t0=Date.now();for(const k in NEG)if(!(t0-NEG[k]<TTL))delete NEG[k];
+const saveNeg=()=>{try{const ks=Object.keys(NEG);if(ks.length>600)ks.sort((x,y)=>NEG[x]-NEG[y]).slice(0,ks.length-600).forEach(k=>delete NEG[k]);localStorage.setItem(NK,JSON.stringify(NEG))}catch(e){}};
+const pump=()=>{while(act<MAX&&Q.length){const j=Q.shift();act++;j().finally(()=>{act--;pump()})}};
+window.fetch=function(u,o){const s=typeof u==='string'?u:(u&&u.url)||String(u||'');
+ if(/^https?:\/\/api\.pokemontcg\.io\//.test(s))return Promise.reject(new TypeError('pokemontcg.io-API im Browser deaktiviert (v170)'));
+ if(!/^https:\/\/api\.tcgdex\.net\//.test(s)||(o&&o.method&&!/^get$/i.test(o.method)))return F(u,o);
+ if(NEG[s])return Promise.resolve(new Response('null',{status:404,headers:{'content-type':'application/json'}}));
+ let p=INF.get(s);if(!p){const o2=Object.assign({},o||{});delete o2.signal;/* Wartezeit in der Schlange zählt nicht gegen das Zeitlimit des Aufrufers: eigenes Limit ab Start */const job=()=>F(u,Object.assign(o2,{signal:AbortSignal.timeout(12000)})).then(r=>{if(r.status===404){NEG[s]=Date.now();saveNeg()}return r});p=new Promise((res,rej)=>{const j=()=>job().then(res,rej);/* Suchen/Listen vor Einzelkarten */if(/\?|\/(sets|series)$/.test(s))Q.unshift(j);else Q.push(j);pump()});INF.set(s,p);p.then(()=>setTimeout(()=>INF.delete(s),0),()=>INF.delete(s))}
+ return p.then(r=>r.clone())};
+})();
+
 // Zweite Preisquelle: TCGdex (mehrsprachig, Cardmarket EUR, TCGplayer USD).
 // Fremdwährungen (USD, JPY) werden nach EUR umgerechnet und als "umgerechnet" markiert.
 // Eigener Cache-Schlüssel – 'kartenapp_v1' wird nie angefasst.
@@ -63,8 +75,11 @@ let CMP=null;function cmpLoad(){return CMP||(CMP=fetch('cmprices.json',{cache:'n
 const cmpDate=d=>{const m=String(d||'').match(/^(\d{4})-(\d{2})-(\d{2})/);return m?`${m[3]}.${m[2]}.${m[1]}`:''};
 async function normalize(card,lang){const p=BADP[card?.id]?{}:(card?.pricing||{});const out={id:card.id,name:legN(card.id,card.name),lang,set:card.set,localId:card.localId,image:card.image?card.image+'/high.webp':null,prices:[],best:null};
  const cm=p.cardmarket;let cmf=null;if(cm&&cm.idProduct){try{const F=await cmpLoad();const e=F.p[String(cm.idProduct)];if(e&&(e[0]!=null||e[1]!=null))cmf={trend:e[0],low:e[1],date:cmpDate(F.date)}}catch(e){}}
- if(cmf&&cmf.trend&&cm.avg7&&cm.avg30&&cmf.trend<.25*cm.avg7&&cmf.trend<.25*cm.avg30)cmf=null;/* Trend unplausibel → bisherige Logik */
- if(cmf){const isLow=cmf.trend==null;const v=isLow?cmf.low:cmf.trend;out.prices.push({source:`Cardmarket-Preisdatei · ${isLow?'ab-Preis':'Trend'}${cmf.date?' · Stand '+cmf.date:''}`,currency:'EUR',value:v,eur:v,umgerechnet:false,fxFallback:false,isLow,trend:cmf.trend,low:cmf.low,avg:cm.avg,avg1:cm.avg1,avg7:cm.avg7,avg30:cm.avg30,holo:{trend:cm['trend-holo'],avg:cm['avg-holo'],low:cm['low-holo'],avg30:cm['avg30-holo']},idProduct:cm.idProduct,url:`https://www.cardmarket.com/de/Pokemon/Products?idProduct=${cm.idProduct}`,updated:cmf.date})}
+ /* v170: Trend unplausibel (< 25 % von Ø7 UND Ø30) -> nie einen Durchschnitt hochrechnen (Ø enthält Ausreißer/Graded-Verkäufe), sondern konservativ den ab-Preis (günstigstes Angebot) zeigen; ohne ab-Preis wie bisher */
+ const implaus=(t)=>!!(t&&cm&&cm.avg7&&cm.avg30&&t<.25*cm.avg7&&t<.25*cm.avg30);
+ if(cmf&&implaus(cmf.trend))cmf=cmf.low!=null?{trend:null,low:cmf.low,date:cmf.date,np:true}:null;
+ if(!cmf&&cm&&implaus(cm.trend)&&cm.low)cmf={trend:null,low:cm.low,date:cmpDate(cm.updated),np:true,tdx:true};
+ if(cmf){const isLow=cmf.trend==null;const v=isLow?cmf.low:cmf.trend;out.prices.push({source:cmf.tdx?`Cardmarket (TCGdex) · ab-Preis${cmf.date?' · Stand '+cmf.date:''} · Trend nicht plausibel`:`Cardmarket-Preisdatei · ${isLow?'ab-Preis':'Trend'}${cmf.date?' · Stand '+cmf.date:''}${cmf.np?' · Trend nicht plausibel':''}`,currency:'EUR',value:v,eur:v,umgerechnet:false,fxFallback:false,isLow,trend:cmf.trend,low:cmf.low,avg:cm.avg,avg1:cm.avg1,avg7:cm.avg7,avg30:cm.avg30,holo:{trend:cm['trend-holo'],avg:cm['avg-holo'],low:cm['low-holo'],avg30:cm['avg30-holo']},idProduct:cm.idProduct,url:`https://www.cardmarket.com/de/Pokemon/Products?idProduct=${cm.idProduct}`,updated:cmf.date})}
  else if(cm){let pick=cm.trend||cm.avg30||cm.avg||cm.low||cm['trend-holo']||cm['avg30-holo']||null,fixed=null;if(cm.trend&&cm.avg7&&cm.avg30&&cm.trend<.25*cm.avg7&&cm.trend<.25*cm.avg30){pick=cm.avg7;fixed='Ø 7 Tage'}else if(cm.trend&&!cm.avg7&&cm.avg30&&cm.trend<.25*cm.avg30){pick=cm.avg30;fixed='Ø 30 Tage'}const cur=(cm.unit||'EUR').toUpperCase();const conv=await toEUR(pick,cur);
   out.prices.push({source:fixed?`Cardmarket (TCGdex, ${fixed} – Trend unplausibel)`:'Cardmarket (TCGdex)',currency:cur,value:pick,eur:conv?.eur??null,umgerechnet:!!conv?.umgerechnet,fxFallback:!!conv?.fallback,
    trend:cm.trend,avg:cm.avg,low:cm.low,avg1:cm.avg1,avg7:cm.avg7,avg30:cm.avg30,holo:{trend:cm['trend-holo'],avg:cm['avg-holo'],low:cm['low-holo'],avg30:cm['avg30-holo']},
@@ -76,8 +91,8 @@ async function normalize(card,lang){const p=BADP[card?.id]?{}:(card?.pricing||{}
   out.prices.push({source:`Cardmarket (pokemontcg.io${d?', Stand '+d:''})`,currency:'EUR',value:v,eur:v,umgerechnet:false,fxFallback:false,trend:cm.prices.trendPrice,avg:cm.prices.averageSellPrice,low:cm.prices.lowPrice,avg1:cm.prices.avg1,avg7:cm.prices.avg7,avg30:cm.prices.avg30,url:`https://www.cardmarket.com/de/Pokemon/Products/Search?searchString=${encodeURIComponent(card.name)}`,updated:cm.updatedAt})}}}catch(e){}}
  out.best=out.prices.find(x=>x.eur!=null)||null;
  if(out.best)out.label=`${out.best.eur.toFixed(2).replace('.',',')} € · ${String(out.best.source).replace(/, Ø (7|30) Tage – Trend unplausibel\)/,(m,d)=>`) · Trend wirkt unplausibel, ${d}-Tage-Schnitt gezeigt`)}${out.best.umgerechnet?` · umgerechnet aus ${out.best.currency}${out.best.fxFallback?' (Schätzkurs)':''}`:''}`;
- if(out.best&&/^Cardmarket-Preisdatei/.test(out.best.source||'')){const d=(out.best.source.match(/Stand ([\d.]+)/)||[])[1];out.label=`${out.best.isLow?'ab ':''}${out.best.eur.toFixed(2).replace('.',',')} € · Cardmarket${out.best.isLow?' (günstigstes Angebot)':''}${d?' · Stand '+d:''}`}
- else out.label='kein Preis bei TCGdex';
+ if(out.best&&/^Cardmarket(-Preisdatei| \(TCGdex\) · ab-Preis)/.test(out.best.source||'')){const d=(out.best.source.match(/Stand ([\d.]+)/)||[])[1];out.label=`${out.best.isLow?'ab ':''}${out.best.eur.toFixed(2).replace('.',',')} € · Cardmarket${out.best.isLow?' (günstigstes Angebot)':''}${d?' · Stand '+d:''}${/Trend nicht plausibel/.test(out.best.source)?' · Trend nicht plausibel':''}`}
+ else if(!out.best)out.label='kein Preis bei TCGdex';/* v170: vorher überschrieb das jeden TCGdex-Preis */
  return lang==='ja'?jpm(out):out}
 // v142: keine JP-Marktpreise mehr (pokeca-souba-Nutzungsbedingungen verbieten Auslesen/Weiterverwenden) – JP-Karten ohne Cardmarket-Preis: „JP-Preis: keine Daten“
 async function jpm(out){if(!out||out.best)return out;out.jpNone=true;out.label='JP-Preis: keine Daten';return out}
@@ -160,7 +175,7 @@ async function ptcgCM0(tid){return null/* v168: kein direkter pokemontcg.io-API-
  const id=ps+'-'+(/^\d+$/.test(m[2])?String(+m[2]):m[2]);const k='ptcm:'+id;const c=cget(k,TTL);if(c!==undefined)return c;if(cget('ptneg:'+id,6*3600e3)===1)return null;
  // pokemontcg.io antwortet oft mit 5xx -> v130: 1 Versuch, Fehler 6 h merken (keine roten Fehlerserien)
  let v=null,okR=false;for(let i=0;i<1&&!okR;i++){if(i)await new Promise(z=>setTimeout(z,700*i));try{const r=await fetch(`https://api.pokemontcg.io/v2/cards/${encodeURIComponent(id)}?select=id,name,cardmarket`,{signal:AbortSignal.timeout(10000)});if(r.status===404){cset(k,null);return null}if(!r.ok)continue;const j=await r.json();v=j&&j.data&&j.data.cardmarket&&j.data.cardmarket.prices?j.data.cardmarket:null;okR=true}catch(e){}}if(!okR){cset('ptneg:'+id,1);return null}cset(k,v);return v}
-root.Prices={tdxSet,tdxId,tdxNum,ptcgSet,clsNum,clsFix,jpImgFallback,jpSets,jpSetCards,lookup,suggest,byId:async(id,lang)=>{lang=normLang(lang);if(String(id).startsWith('jp:')){const L=await jpLoad();const c=L.find(x=>x.id===id);return c?jpm(jpNorm(c)):null}const c=await getCard(id,lang);if(c)return normalize(c,lang);// v118: JP-Sets ohne TCGdex (z.B. M6a 30th) -> jpcards.json (Name/Nummer als Fakten, kein Bild)
+root.Prices={suggestAll:(q,lg)=>suggestLang(String(q||'').trim(),normLang(lg),400)/* v170: alle Treffer einer Sprache (auch ohne Bild) */,tdxSet,tdxId,tdxNum,ptcgSet,clsNum,clsFix,jpImgFallback,jpSets,jpSetCards,lookup,suggest,byId:async(id,lang)=>{lang=normLang(lang);if(String(id).startsWith('jp:')){const L=await jpLoad();const c=L.find(x=>x.id===id);return c?jpm(jpNorm(c)):null}const c=await getCard(id,lang);if(c)return normalize(c,lang);// v118: JP-Sets ohne TCGdex (z.B. M6a 30th) -> jpcards.json (Name/Nummer als Fakten, kein Bild)
  if(lang==='ja'){const L=await jpLoad(),k=String(id).toLowerCase(),j=L.find(x=>x.id.toLowerCase()==='jp:'+k)||L.find(x=>(x.set+'-'+nz(x.localId)).toLowerCase()===String(id).replace(/-0*(\d)/,'-$1').toLowerCase());if(j)return jpm(jpNorm(j))}return null},search,toEUR,rate,
  clearCache(){mem.clear();store={c:{}};save()},CACHE_KEY:KEY,LANGS};
 })(typeof window!=='undefined'?window:globalThis);
