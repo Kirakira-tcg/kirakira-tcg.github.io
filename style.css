@@ -770,3 +770,11 @@ button[data-l][aria-disabled="true"]{opacity:.4;cursor:help}
 .pcmp .pebay{display:flex;flex-direction:column;gap:4px}.pcmp .pebay .plink{align-self:flex-start;white-space:normal}
 /* v182 (Nr. 33): EN-Bild-Abzeichen im Set-Raster */
 .cgim{position:relative}.cgim .imgnote{position:absolute;left:6px;bottom:6px;margin:0!important;z-index:2}
+/* v182 (Nr. 39) */
+.ownnote.ownother{color:var(--mu)!important}
+/* v182 (Nr. 29): Setzeile/Quelle/Name in Kacheln bis 2 Zeilen statt „…“ */
+.tile .s,.tile .tsrc,.tile .n{white-space:normal!important;overflow:hidden;text-overflow:clip;display:-webkit-box;-webkit-box-orient:vertical;-webkit-line-clamp:2;overflow-wrap:anywhere}
+/* v182 (Nr. 36): Zurück-Pfeil in eigener, deckender Kopfleiste – verdeckt beim Scrollen keine Beschriftungen mehr */
+.navbar-d{position:sticky;top:-16px;z-index:4;margin:-16px -16px 6px;padding:8px 12px 6px;background:var(--card);border-bottom:1px solid rgba(167,139,250,.18)}.navbar-d .navback-d{position:static;float:none;margin:0}
+/* v182 (Nr. 24): eBay-Link bricht um statt aus der Kachel zu ragen */
+.pcmp .pebay a.plink{width:auto!important;max-width:100%;white-space:normal;line-height:1.25}
