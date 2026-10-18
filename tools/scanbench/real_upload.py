@@ -14,11 +14,11 @@ const vis=e=>e&&e.offsetParent!==null;const cs=f?[...f.querySelectorAll('.nmgrid
 const hd=(f&&f.querySelector('b')||{}).textContent||'';const cf=q('#scanConfirm');const sp=q('#scanPick');const spv=sp&&!sp.hidden&&vis(sp)?sp.textContent.trim().slice(0,120):'';return {pick:spv,head:hd.slice(0,80),confirm:cf?cf.textContent.trim().slice(0,90):'',sheet:!!(f&&vis(f)),name:f&&f.name?f.name.value:'',num:f&&f.num?f.num.value:'',hb:(f&&f.querySelector('.nmbg')||{}).textContent||'',lang:f?(f.querySelector('.nmlang .chip.on')?.dataset.l||'-'):'',
  cands:cs,ls:window.lastScan?{id:window.lastScan.id||window.lastScan.tdxId||'',name:window.lastScan.name,lang:window.lastScan.lang}:null,
  toast:[...document.querySelectorAll('.toast,#toast')].filter(vis).map(e=>e.textContent.trim().slice(0,80)),
- banner:(q('#scanStatus2')||{}).textContent||'',T:window.__T}}"""
+ banner:(q('#scanStatus2')||{}).textContent||'',T:window.__T,onscr:(()=>{const on=e=>{if(!e)return null;const r=e.getBoundingClientRect();return r.height>0&&r.top>=-1&&r.bottom<=innerHeight+1&&r.left>=-1&&r.right<=innerWidth+1};const t=f&&f.querySelector('.nmgrid .spThumb');return {sheet:on(f),tile1:t?(t.getBoundingClientRect().top<innerHeight&&t.getBoundingClientRect().bottom>0):null,confirm:on(cf)}})()}}"""
 async def main():
     async with async_playwright() as p:
         br=await p.chromium.launch()
-        ctx=await br.new_context(viewport={'width':W,'height':900 if W>500 else 860},service_workers='block')
+        ctx=await br.new_context(viewport={'width':W,'height':int(os.environ.get('H') or (900 if W>500 else 860))},service_workers='block')
         pg=await ctx.new_page()
         thr=float(os.environ.get('THROTTLE','1'))
         if thr>1:
@@ -36,7 +36,7 @@ async def main():
                 if first is not None and snap is None and time.time()-tf>=1.0:snap=s
             s=await pg.evaluate(UI)
             exp=m['id'];rank=(s['cands'].index(exp)+1) if exp in s['cands'] else None
-            print(json.dumps(dict(nr=k,exp=exp,plang=m.get('plang'),first_s=first,user=snap and dict(pick=snap['pick'],head=snap['head'],confirm=snap['confirm'],name=snap['name'],num=snap['num'],lang=snap['lang'],hb=snap['hb'][:40],cands=snap['cands'][:40]),first_name=snap and snap['name'],final_name=s['name'],num=s['num'],hb=s['hb'][:40],pick=s['pick'],lang=s['lang'],ls=s['ls'],rank=rank,ncand=len(s['cands']),cands=s['cands'][:6],toast=s['toast'],T=s['T']),ensure_ascii=False),flush=True)
+            print(json.dumps(dict(nr=k,exp=exp,plang=m.get('plang'),first_s=first,user=snap and dict(pick=snap['pick'],head=snap['head'],confirm=snap['confirm'],name=snap['name'],num=snap['num'],lang=snap['lang'],hb=snap['hb'][:40],cands=snap['cands'][:40],onscr=snap.get('onscr')),first_name=snap and snap['name'],final_name=s['name'],num=s['num'],hb=s['hb'][:40],pick=s['pick'],lang=s['lang'],ls=s['ls'],rank=rank,ncand=len(s['cands']),cands=s['cands'][:6],toast=s['toast'],T=s['T']),ensure_ascii=False),flush=True)
             await pg.evaluate("try{document.querySelector('#nmSheet')&&closeNm&&closeNm()}catch(e){};try{go('v-scan')}catch(e){}")
             await pg.keyboard.press('Escape')
         await br.close()
