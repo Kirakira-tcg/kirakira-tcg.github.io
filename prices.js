@@ -49,7 +49,9 @@ const NEG=new Map();
 const tdxNum=(id,lang)=>{const m=String(id).match(/^(.*)-(0*)(\d+)([a-z]?)$/);if(!m)return id;const set=m[1],n=m[3]+m[4];if(lang==='ja')return set+'-'+m[3].padStart(3,'0')+m[4];return set+'-'+(tdxPad(set)?m[3].padStart(3,'0')+m[4]:n)};
 async function getCard(id,lang){lang=normLang(lang);if(!String(id).startsWith('jp:'))id=tdxNum(tdxId(id),lang);const k=`card:${lang}:${id}`;if(!idLangOk(id,lang))return null;if(NEG.has(k)&&Date.now()-NEG.get(k)<6*3600e3)return null;if(cget('neg:'+k,7*864e5)===1)return null;const c=cget(k,TTL);if(c!==undefined)return c;
  let d=null;try{d=await getJSON(`${BASE}/${lang}/cards/${encodeURIComponent(id)}`)}catch(e){d=null}if(!d){NEG.set(k,Date.now());cset('neg:'+k,1)}cset(k,d?slim(d):null);return d?slim(d):null}
-const slim=d=>({id:d.id,localId:d.localId,name:d.name,image:d.image||null,rarity:d.rarity||null,set:d.set?{id:d.set.id,name:d.set.name}:null,pricing:d.pricing||null});
+/* v168: LEGEND-Karten bestehen aus 2 Hälften mit gleichem Namen (TCGdex: gleicher Name, aufeinanderfolgende Nummern im selben Set) -> Teil 1/2 / 2/2 nach Nummer */
+const LEGP={"30th-c-019":1,"30th-c-020":2,"hgss1-111":1,"hgss1-112":2,"hgss1-113":1,"hgss1-114":2,"hgss2-90":1,"hgss2-91":2,"hgss2-92":1,"hgss2-93":2,"hgss2-94":1,"hgss2-95":2,"hgss3-87":1,"hgss3-88":2,"hgss3-89":1,"hgss3-90":2,"hgss4-99":1,"hgss4-100":2,"hgss4-101":1,"hgss4-102":2};const legN=(id,n)=>{const t=LEGP[String(id||'').replace(/^jp:/,'')];n=String(n??'');return t&&n&&!/\(Teil [12]\/2\)/.test(n)?n+' (Teil '+t+'/2)':n};root.legN=legN;
+const slim=d=>({id:d.id,localId:d.localId,name:legN(d.id,d.name),image:d.image||null,rarity:d.rarity||null,set:d.set?{id:d.set.id,name:d.set.name}:null,pricing:d.pricing||null});
 async function search(name,lang){lang=normLang(lang);const k=`s:${lang}:${name.toLowerCase()}`;const c=cget(k,TTL);if(c!==undefined)return c;
  const d=await getJSON(`${BASE}/${lang}/cards?name=${encodeURIComponent(name)}`)||[];cset(k,d);return d}
 
@@ -59,7 +61,7 @@ const BADP={'cel25cc-CC020':1,'cel25cc-CC021':1};
 /* v163: offizielle Cardmarket-Preisdatei (cmprices.json, tools/build_cmprices.py): {date, p:{idProduct:[trend,low]}}; Zuordnung NUR über die idProduct, die TCGdex pro Karte liefert */
 let CMP=null;function cmpLoad(){return CMP||(CMP=fetch('cmprices.json',{cache:'no-cache'}).then(r=>r.ok?r.json():null).catch(()=>null).then(j=>j&&j.p?j:{date:'',p:{}}))}
 const cmpDate=d=>{const m=String(d||'').match(/^(\d{4})-(\d{2})-(\d{2})/);return m?`${m[3]}.${m[2]}.${m[1]}`:''};
-async function normalize(card,lang){const p=BADP[card?.id]?{}:(card?.pricing||{});const out={id:card.id,name:card.name,lang,set:card.set,localId:card.localId,image:card.image?card.image+'/high.webp':null,prices:[],best:null};
+async function normalize(card,lang){const p=BADP[card?.id]?{}:(card?.pricing||{});const out={id:card.id,name:legN(card.id,card.name),lang,set:card.set,localId:card.localId,image:card.image?card.image+'/high.webp':null,prices:[],best:null};
  const cm=p.cardmarket;let cmf=null;if(cm&&cm.idProduct){try{const F=await cmpLoad();const e=F.p[String(cm.idProduct)];if(e&&(e[0]!=null||e[1]!=null))cmf={trend:e[0],low:e[1],date:cmpDate(F.date)}}catch(e){}}
  if(cmf&&cmf.trend&&cm.avg7&&cm.avg30&&cmf.trend<.25*cm.avg7&&cmf.trend<.25*cm.avg30)cmf=null;/* Trend unplausibel → bisherige Logik */
  if(cmf){const isLow=cmf.trend==null;const v=isLow?cmf.low:cmf.trend;out.prices.push({source:`Cardmarket-Preisdatei · ${isLow?'ab-Preis':'Trend'}${cmf.date?' · Stand '+cmf.date:''}`,currency:'EUR',value:v,eur:v,umgerechnet:false,fxFallback:false,isLow,trend:cmf.trend,low:cmf.low,avg:cm.avg,avg1:cm.avg1,avg7:cm.avg7,avg30:cm.avg30,holo:{trend:cm['trend-holo'],avg:cm['avg-holo'],low:cm['low-holo'],avg30:cm['avg30-holo']},idProduct:cm.idProduct,url:`https://www.cardmarket.com/de/Pokemon/Products?idProduct=${cm.idProduct}`,updated:cmf.date})}
@@ -127,7 +129,7 @@ async function suggestLang(q,lang,limit){let list;try{list=await search(q,lang)}
  if(!Array.isArray(list)||!list.length)return[];const ql=q.toLowerCase(),names=await setNames(lang);
  const rank=c=>{const n=(c.name||'').toLowerCase();return (n===ql?0:n.startsWith(ql)?1:n.split(/[\s-]/).some(w=>w.startsWith(ql))?2:3)+(c.image?0:4)};
  return list.filter(c=>c&&c.id&&c.name).map((c,i)=>({c,i,r:rank(c)})).sort((a,b)=>a.r-b.r||a.i-b.i).slice(0,limit).map(({c})=>{const sid=setIdOf(c);
-  return{id:c.id,name:c.name,localId:c.localId||'',set:{id:sid,name:names[sid]||sid},img:c.image?c.image+'/low.webp':null,lang}})}
+  return{id:c.id,name:legN(c.id,c.name),localId:c.localId||'',set:{id:sid,name:names[sid]||sid},img:c.image?c.image+'/low.webp':null,lang}})}
 function nameRows(q){const ql=q.toLowerCase(),rows=[].concat(root.PNAMES||[],root.TNAMES||[]),ex=[],pre=[];
  for(const r of rows){const m=r.map(x=>(x||'').toLowerCase());if(m.includes(ql))ex.push(r);else if(pre.length<3&&m.some(x=>x&&x.startsWith(ql)))pre.push(r)}return ex.length?ex.slice(0,2):pre}
 async function suggest(query,lang='de',limit=24){const q=String(query||'').trim();if(q.length<2)return[];lang=normLang(lang);limit=Math.max(1,Math.min(+limit||24,100));
@@ -154,7 +156,7 @@ const PT_REV=Object.fromEntries(Object.entries(TDX_SET).map(([k,v])=>[v,k]));
 const ptcgSet=t=>{t=String(t||'');if(PT_REV[t])return PT_REV[t];if(/[A-Z]/.test(t)||/^(30th|cel25cc)/.test(t))return null;let m;if((m=t.match(/^(sv|me)0?(\d+)(\.5)?$/)))return m[1]+m[2]+(m[3]?'pt5':'');if((m=t.match(/^(swsh|sm|xy|bw)(\d+)\.5$/)))return m[1]+m[2]+'pt5';return t};
 /* v158: gleiche pokemontcg.io-Preisabfrage nie doppelt gleichzeitig senden; Fehler leise -> null (Sperre nach 5xx: app.js ka_ptdown, 20 min) */
 const PTCM_INF=new Map();function ptcgCM(tid){const k=String(tid||'');if(PTCM_INF.has(k))return PTCM_INF.get(k);const p=ptcgCM0(tid).catch(()=>null).finally(()=>PTCM_INF.delete(k));PTCM_INF.set(k,p);return p}
-async function ptcgCM0(tid){const m=String(tid||'').match(/^(.*)-([^-]+)$/);if(!m)return null;const ps=ptcgSet(m[1]);if(!ps||/^me\d/.test(ps))return null;// v133: me*-Sets haben bei pokemontcg.io keine Cardmarket-Daten (404/500)
+async function ptcgCM0(tid){return null/* v168: kein direkter pokemontcg.io-API-Aufruf im Browser mehr (500er in der Konsole, z. B. bw10-65); Preise nur TCGdex + Cardmarket-Preisdatei */;const m=String(tid||'').match(/^(.*)-([^-]+)$/);if(!m)return null;const ps=ptcgSet(m[1]);if(!ps||/^me\d/.test(ps))return null;// v133: me*-Sets haben bei pokemontcg.io keine Cardmarket-Daten (404/500)
  const id=ps+'-'+(/^\d+$/.test(m[2])?String(+m[2]):m[2]);const k='ptcm:'+id;const c=cget(k,TTL);if(c!==undefined)return c;if(cget('ptneg:'+id,6*3600e3)===1)return null;
  // pokemontcg.io antwortet oft mit 5xx -> v130: 1 Versuch, Fehler 6 h merken (keine roten Fehlerserien)
  let v=null,okR=false;for(let i=0;i<1&&!okR;i++){if(i)await new Promise(z=>setTimeout(z,700*i));try{const r=await fetch(`https://api.pokemontcg.io/v2/cards/${encodeURIComponent(id)}?select=id,name,cardmarket`,{signal:AbortSignal.timeout(10000)});if(r.status===404){cset(k,null);return null}if(!r.ok)continue;const j=await r.json();v=j&&j.data&&j.data.cardmarket&&j.data.cardmarket.prices?j.data.cardmarket:null;okR=true}catch(e){}}if(!okR){cset('ptneg:'+id,1);return null}cset(k,v);return v}

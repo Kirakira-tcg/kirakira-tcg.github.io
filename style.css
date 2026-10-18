@@ -746,3 +746,6 @@ img.imgld{background:linear-gradient(100deg,rgba(255,255,255,.05) 30%,rgba(255,2
 .bslot>.isrc,.bslot .slotsrc{position:static!important;display:block;margin:2px 0 0;padding:0;background:none!important;color:#e2ddf7!important;font-size:.62rem!important;font-weight:600;line-height:1.25;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;max-width:100%;border-radius:0}
 .bslot .slotsrc{color:#ffd84d!important}
 @media(prefers-reduced-motion:reduce){.skl,.bslot img:not([data-ok]),.cgim img:not([data-ok]){animation:none}}
+/* v168: Bildquellen-Hinweise bei 400 px mindestens 11 px (vorher 9,9 px) */
+.imgsrc,.imgsrc.ov,.isrc,.isrcd,.dcard .isrcd,.dimgsrc,.slotsrc,.bslot>.isrc,.bslot .slotsrc,.imgnote{font-size:max(11px,.7rem)!important;line-height:1.3}
+@media (max-width:480px){.bslot>.isrc,.bslot .slotsrc{font-size:11px!important;letter-spacing:-.01em}}

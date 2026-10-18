@@ -2,9 +2,9 @@
 """Build imgmap.json: image URLs for TCGdex-EN cards that have NO image at TCGdex.
 
 Runs only by hand or via GitHub Action (workflow_dispatch / weekly) – never in the browser.
-Output: imgmap.json = {tcgdexId: {"url": ..., "src": "pokemontcg.io" | "scrydex"}}  (nothing else, no prices).
+Output: imgmap.json = {tcgdexId: {"url": ..., "large": ... (if the API has it), "src": "pokemontcg.io" | "scrydex"}}  (nothing else, no prices).
 
-Stage 1: pokemontcg.io API (api.pokemontcg.io, retries on 5xx). URL = images.small exactly as returned.
+Stage 1: pokemontcg.io API (api.pokemontcg.io, retries on 5xx). URL = images.small exactly as returned; "large" = images.large exactly as returned (if present).
 Stage 2 (optional): Scrydex API, only if env SCRYDEX_API_KEY and SCRYDEX_TEAM_ID are set.
          URL = images[front].small exactly as returned by the API. Never built by hand, never from the website.
 Set matching: same id / '.5'->'pt5' / dots removed / same set name; NAME_SETS use name matching
@@ -19,7 +19,10 @@ OUT = os.path.join(os.path.dirname(os.path.abspath(__file__)), "..", "imgmap.jso
 NAME_SETS = {"30th-c": "me55c", "cel25cc": "cel25c"}  # tcgdex set -> pokemontcg.io set, other numbering
 # Single cards whose names differ between TCGdex and pokemontcg.io, checked by hand. The URL still comes only from the API response.
 # 30th-c-022 "Palkia" (TCGdex drops "LV.X"): the only Palkia in 30th-c; me55c-106p "Palkia LV.X" is the only Palkia in me55c.
-MANUAL_CARDS = {"30th-c-022": "me55c-106p"}
+# bwp-BW04 Reshiram / bwp-BW05 Zekrom: pokemontcg.io numbers them BW004/BW005 (same name, same promo number; checked 18.10.2026 via the API).
+MANUAL_CARDS = {"30th-c-022": "me55c-106p", "bwp-BW04": "bwp-BW004", "bwp-BW05": "bwp-BW005"}
+
+FAILED = set()  # v168: Sets, deren Abfrage scheiterte – alte Einträge bleiben dann erhalten (nichts geht verloren)
 
 def get(url, headers=None, tries=10):
     last = None
@@ -46,7 +49,7 @@ def tdx_gaps():
         try:
             d = get(f"{TDX}/sets/{s['id']}", tries=4)
         except Exception as e:
-            print("tcgdex", s["id"], e, file=sys.stderr); return s, []
+            print("tcgdex", s["id"], e, file=sys.stderr); FAILED.add(s["id"]); return s, []
         return d, [c for c in d.get("cards") or [] if not c.get("image")]
     with cf.ThreadPoolExecutor(8) as ex:
         return [(d, g) for d, g in ex.map(one, sets) if g]
@@ -60,9 +63,15 @@ def ptcg_stage(gaps, out):
         if not p:
             continue
         try:
-            cards = get(f"{PTCG}/cards?q=set.id:{p}&pageSize=250&select=id,number,name,images")["data"]
+            cards, page = [], 1
+            while True:  # v168: alle Seiten (swshp/smp haben > 250 Karten)
+                j = get(f"{PTCG}/cards?q=set.id:{p}&pageSize=250&page={page}&select=id,number,name,images")
+                cards += j.get("data") or []
+                if len(j.get("data") or []) < 250 or len(cards) >= (j.get("totalCount") or 0):
+                    break
+                page += 1
         except Exception as e:
-            print("ptcg", p, e, file=sys.stderr); continue
+            print("ptcg", p, e, file=sys.stderr); FAILED.add(tid); continue
         cards = [c for c in cards if (c.get("images") or {}).get("small")]
         if tid in NAME_SETS:
             cnt = {}
@@ -79,7 +88,9 @@ def ptcg_stage(gaps, out):
         for c in miss:
             h = byid.get(MANUAL_CARDS.get(c["id"], "")) or hit(c)
             if h:
-                out[c["id"]] = {"url": h["images"]["small"], "src": "pokemontcg.io"}; n += 1
+                e = {"url": h["images"]["small"], "src": "pokemontcg.io"}
+                if h["images"].get("large"): e["large"] = h["images"]["large"]  # wörtlich aus der API, nie gebaut
+                out[c["id"]] = e; n += 1
         print(f"ptcg {tid:<14} -> {p:<12} {n}/{len(miss)}", flush=True)
 
 def scrydex_stage(gaps, out):
@@ -99,7 +110,9 @@ def scrydex_stage(gaps, out):
             imgs = (j.get("data") or j).get("images") or []
             front = next((i for i in imgs if i.get("type") == "front"), imgs[0] if imgs else None)
             if front and front.get("small"):
-                out[c["id"]] = {"url": front["small"], "src": "scrydex"}; n += 1
+                e = {"url": front["small"], "src": "scrydex"}
+                if front.get("large"): e["large"] = front["large"]  # wörtlich aus der API, nie gebaut
+                out[c["id"]] = e; n += 1
     print(f"scrydex: {n} Lücken geschlossen")
 
 def main():
@@ -108,6 +121,16 @@ def main():
     out = {}
     ptcg_stage(gaps, out)
     scrydex_stage(gaps, out)
+    try:
+        old = json.load(open(OUT, encoding="utf-8"))
+    except Exception:
+        old = {}
+    kept = 0
+    for k, v in old.items():
+        if k not in out and k.rsplit("-", 1)[0] in FAILED:
+            out[k] = v; kept += 1
+    if FAILED:
+        print("FEHLER-Sets (alte Einträge behalten):", sorted(FAILED), "behalten:", kept)
     if not out:
         print("leer – imgmap.json bleibt unverändert", file=sys.stderr); sys.exit(1)
     with open(OUT, "w", encoding="utf-8") as f:
