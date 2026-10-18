@@ -35,7 +35,6 @@ const rarRank=t=>{t=String(t||'').toLowerCase();if(!t)return-1;let r=0;RAR.forEa
  const e=C.get(s);if(e&&Date.now()-e.t<TTL)return e.p.then(r=>r.clone());const p=f0(s,o&&o.headers?{headers:o.headers}:undefined).then(r=>{if(!r.ok)C.delete(s);return r},err=>{C.delete(s);throw err});C.set(s,{p,t:Date.now()});if(C.size>400)C.delete(C.keys().next().value);
  const sg=o&&o.signal;const out=p.then(r=>r.clone());return sg?Promise.race([out,new Promise((_,j)=>{if(sg.aborted)j(sg.reason);sg.addEventListener('abort',()=>j(sg.reason||new DOMException('Aborted','AbortError')))})]):out}})();
 'use strict';
-const API='https://api.pokemontcg.io/v2';
 const K='kartenapp_v1';
 const $=s=>document.querySelector(s), $$=s=>[...document.querySelectorAll(s)];
 const USD=1.08; // grober Umrechnungskurs EUR->USD
@@ -54,8 +53,7 @@ function load(){try{const d=JSON.parse(localStorage.getItem(K));if(d){const bad=
 function save(){localStorage.setItem(K,JSON.stringify(S))}
 const uid=()=>Date.now().toString(36)+Math.random().toString(36).slice(2,6);
 const today=()=>new Date().toISOString().slice(0,10);
-// v121: pokemontcg.io nicht erreichbar -> 90 s Pause (keine Fehlerserie in der Konsole), Aufrufer fallen auf TCGdex zurück
-let APIDOWN=0;async function api(url,tries=2,ms=7000){if(/pokemontcg\.io/.test(url)&&Date.now()<APIDOWN)throw new Error('API nicht erreichbar');tries=Math.min(tries,2);for(let i=0;i<tries;i++){try{const r=await fetch(url,{signal:AbortSignal.timeout(ms)});if(r.ok)return await r.json();if(r.status<500&&r.status!==429)break}catch(e){if(/pokemontcg\.io/.test(url)&&i===tries-1)APIDOWN=Date.now()+90000}if(i<tries-1)await new Promise(r=>setTimeout(r,800*(i+1)))}throw new Error('API nicht erreichbar')}
+/* v182 (Liste Nr. 21): unbenutzte pokemontcg.io-Reste entfernt (const API, function api/APIDOWN – nirgends aufgerufen) */
 // Trend unplausibel (< 25 % von Ø7 und Ø30) -> Ø7 (bzw. Ø30) verwenden
 function trendFix(t,a7,a30){if(t&&a7&&a30&&t<.25*a7&&t<.25*a30)return{v:a7,fixed:'Ø 7 Tage'};if(t&&!a7&&a30&&t<.25*a30)return{v:a30,fixed:'Ø 30 Tage'};return{v:t,fixed:null}}
 function cmFix(c){const p=c&&c.cardmarket&&c.cardmarket.prices;if(!p)return{v:null,fixed:null};const f=trendFix(p.trendPrice,p.avg7,p.avg30);return f.v?f:{v:p.avg30||p.averageSellPrice||p.lowPrice||null,fixed:null}}
