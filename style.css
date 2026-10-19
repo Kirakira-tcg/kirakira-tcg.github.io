@@ -889,8 +889,10 @@ body:has(#addToast:not([hidden])) #kaInst,body:has(#kaBackToast.on) #kaInst{disp
  .kaFbar{display:flex;align-items:center;gap:10px;margin:.2rem 0 .5rem;min-width:0}.kaFbtn{min-height:48px;padding:0 20px;border-radius:999px;font-weight:800;font-size:1rem;background:rgba(255,255,255,.12);border:1px solid rgba(255,255,255,.25);color:var(--tx);flex:0 0 auto}.kaFsum{font-size:.85rem;color:var(--mu);overflow:hidden;text-overflow:ellipsis;white-space:nowrap;min-width:0}
 }
 .langChips{flex-wrap:wrap}
-#kaLoad{display:flex;align-items:center;gap:10px;margin:8px 0;font-weight:700;color:var(--tx)}#kaLoad i{width:22px;height:22px;border-radius:50%;border:3px solid rgba(255,255,255,.25);border-top-color:#ffcf3f;animation:kaSpin .8s linear infinite}
+#kaLoad{display:flex;align-items:center;gap:10px;margin:8px 0;font-weight:700;color:var(--tx)}#kaLoad i{width:22px;height:22px;border-radius:50%;border:3px solid rgba(255,255,255,.25);border-top-color:#ffcf3f;animation:kaSpinB .8s linear infinite}@keyframes kaSpinB{to{transform:rotate(360deg)}}
 @keyframes kaSpin{to{transform:rotate(360deg)}}.sbtn.busy{opacity:.75}
 @media(prefers-reduced-motion:reduce){#kaLoad i{animation-duration:2.4s}}
 details.kaAdv{margin:10px 0;border:1px solid rgba(255,255,255,.18);border-radius:14px;padding:4px 12px}details.kaAdv>summary{min-height:44px;display:flex;align-items:center;font-weight:700;cursor:pointer}
 details.kaAdv>summary{list-style:none}details.kaAdv>summary::-webkit-details-marker{display:none}details.kaAdv>summary::before{content:"▸";margin-right:8px;transition:transform .15s}details.kaAdv[open]>summary::before{transform:rotate(90deg)}
+/* v184 (NEU-B) */.kaShell{display:flex;align-items:center;gap:10px;min-height:120px;justify-content:center;font-weight:700;color:var(--mu)}.kaShell i{width:24px;height:24px;border-radius:50%;border:3px solid rgba(255,255,255,.25);border-top-color:#ffcf3f;animation:kaSpinB .8s linear infinite}@keyframes kaSpinB{to{transform:rotate(360deg)}}
+/* v184 (NEU-B) */.kaHoloIO .tile .holo{animation-play-state:paused}.kaHoloIO .tile.kaVis .holo{animation-play-state:running}
