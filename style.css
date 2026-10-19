@@ -586,7 +586,7 @@ html{scrollbar-gutter:stable}
 .cardph .phl{font-size:clamp(.5rem,4.8cqw,.9rem)!important;top:4%!important;right:5%!important}
 .dph{aspect-ratio:63/88}
 /* Bildquelle direkt am Detailbild */
-.dcard .isrcd{position:absolute;right:6px;bottom:6px;z-index:3;font-size:.65rem;line-height:1;padding:3px 6px;border-radius:5px;background:rgba(0,0,0,.6);color:#eee;pointer-events:none}
+.dcard .isrcd{position:absolute;right:6px;bottom:6px;z-index:3;font-size:12px;line-height:1.2;padding:4px 7px;border-radius:6px;background:rgba(0,0,0,.65);color:#eee;pointer-events:none;font-style:normal;font-weight:700}/* v184 (Nr. 67) */
 /* große Sets schrittweise */
 .tile.pgh{display:none!important}
 .pgmore{grid-column:1/-1;justify-self:center;margin:10px auto 18px;min-height:44px;padding:.4rem 1.2rem}
