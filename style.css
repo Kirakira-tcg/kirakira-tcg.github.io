@@ -923,3 +923,6 @@ details.kaAdv>summary{list-style:none}details.kaAdv>summary::-webkit-details-mar
 /* v185 (Nr. 67): genau eine Bildquellen-Zeile unter dem Detailbild (ruhig, kein gelber Hinweis); „EN-Bild“ nur als Kennzeichen am Bild */
 #dlgForm .detail>.dimgsrc{text-align:center;color:var(--mu);font-size:12px!important;line-height:1.3;margin:4px 0 0;font-weight:600}
 @media(min-width:900px){#dlgForm .detail>.dimgsrc{grid-column:1}}
+/* v185 (Nr. 66): Ringlöcher – 4 gleichmäßige, runde Löcher statt eines Rings mit langem dunklem Balken; Handy links, PC in der Mitte der Doppelseite */
+.bpage::before{content:""!important;position:absolute!important;left:6px!important;top:5%!important;bottom:5%!important;width:16px!important;margin:0!important;border-radius:0!important;box-shadow:none!important;background:radial-gradient(circle at 50% 50%,#0c0a18 0 4px,rgba(255,255,255,.7) 4.5px 6px,rgba(0,0,0,.3) 6.4px 7.2px,transparent 7.6px) 0 0/16px 25% repeat-y!important;pointer-events:none}
+@media(min-width:900px){.bpage::before{left:50%!important;margin-left:-8px!important}}
