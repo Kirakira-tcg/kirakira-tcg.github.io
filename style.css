@@ -915,3 +915,8 @@ details.kaAdv>summary{list-style:none}details.kaAdv>summary::-webkit-details-mar
 .scanbox.live #scanManual:not([hidden]){position:fixed;left:max(12px,env(safe-area-inset-left));right:max(12px,env(safe-area-inset-right));bottom:calc(var(--navh,72px) + 18px);z-index:31;margin:0;width:auto}
 .scanbox.live:has(#scanManual:not([hidden])) .livebtns{bottom:calc(var(--navh,72px) + 82px)}
 .scanbox.live:has(#scanManual:not([hidden])) .camwrap{height:calc(100dvh - var(--navh) - 278px - env(safe-area-inset-top))}
+/* v185 (Nr. 118): Lade-Platzhalter im Zwischenstand des Auswahlblatts */
+#nmSheet .spThumb.nmph{pointer-events:none;opacity:.75}
+#nmSheet .nmphb{aspect-ratio:63/88;width:100%;border-radius:10px;background:linear-gradient(100deg,rgba(255,255,255,.05) 30%,rgba(255,255,255,.14) 50%,rgba(255,255,255,.05) 70%);background-size:300% 100%;animation:nmphs 1.4s linear infinite}
+@keyframes nmphs{from{background-position:100% 0}to{background-position:0 0}}
+@media (prefers-reduced-motion:reduce){#nmSheet .nmphb{animation:none}}
