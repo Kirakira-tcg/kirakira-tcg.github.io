@@ -45,13 +45,13 @@ function reveal(it){const L=document.getElementById('fxLayer');if(!L)return;if(r
  <div class="pack"><div class="pack-top"></div><div class="pack-body"><svg viewBox="0 0 64 64" width="70" height="70"><path d="M32 6l7 15 16 2-12 11 3 17-14-8-14 8 3-17L9 23l16-2z" fill="#fff" opacity=".95"/></svg><b>NEUE KARTE</b><small>Tippen zum Öffnen</small></div></div>
  <div class="rv-card"><div class="dcard">${img?`<img src="${esc(img)}" alt="">`:`<div class="rv-ph">${esc(it.name)}</div>`}<i class="holo"></i></div><div class="rv-name">${esc(it.name)}</div><div class="rv-price">${money(it.price)}</div><button type="button" class="primary rv-ok">Super!</button></div>
  <div class="sparks">${Array.from({length:18},(_,i)=>`<i style="--a:${i*20}deg;--d:${80+Math.random()*90}px"></i>`).join('')}</div></div>`;
- const rv=L.firstChild;L.classList.add('on');requestAnimationFrame(()=>rv.classList.add('in'));
+ const rv=L.firstChild;L.style.pointerEvents='';L.classList.add('on');requestAnimationFrame(()=>rv.classList.add('in'));
  const open=()=>{if(rv.classList.contains('open'))return;rv.classList.add('open');navigator.vibrate?.([30,40,60])};
  let done=false;const key=e=>{if(e.key==='Escape'||e.key==='Esc'){e.preventDefault();close()}};
  let tm=setTimeout(()=>close(),4000);
- function close(now){if(done)return;done=true;clearTimeout(tm);document.removeEventListener('keydown',key,true);rv.onclick=null;rvClose=null;rv.classList.add('out');const fin=()=>{if(L.firstChild===rv){L.classList.remove('on');L.innerHTML=''}};if(now||RM)fin();else setTimeout(fin,350)}
- rvClose=close;document.addEventListener('keydown',key,true);
- rv.onclick=e=>{const t=e.target;if(t.closest('.rv-x,.rv-ok'))return close();if(t.closest('.pack')){clearTimeout(tm);tm=setTimeout(()=>close(),4000);return open()}if(t.closest('.rv-card .dcard,.rv-name,.rv-price'))return;close()};if(RM)open()}
+ function close(now){if(done)return;done=true;clearTimeout(tm);document.removeEventListener('keydown',key,true);rv.onclick=null;rvClose=null;rv.classList.add('out');/* v183 (NEU-C): beim Ausblenden fängt die Ebene keine Tipps mehr */L.style.pointerEvents='none';rv.style.pointerEvents='none';try{if(!rv._kaPop&&window.kaBack&&kaBack.has('fx:reveal')&&!kaBack.inPop)kaBack.close('fx:reveal')}catch(_){}const fin=()=>{if(L.firstChild===rv){L.classList.remove('on');L.innerHTML='';L.style.pointerEvents=''}};if(now||RM)fin();else setTimeout(fin,350)}
+ rvClose=close;document.addEventListener('keydown',key,true);/* v183: Zurück schließt die Booster-Ebene zuerst */try{if(window.kaBack)kaBack.open('fx:reveal',()=>{rv._kaPop=1;close(true)})}catch(_){}
+ rv.onclick=e=>{const t=e.target;if(t.closest('.rv-x,.rv-ok'))return close();if(t.closest('.pack')){clearTimeout(tm);tm=setTimeout(()=>close(),4000);return open()}if(t.closest('.rv-card .dcard,.rv-name,.rv-price'))return;/* v183 (NEU-C): Tipp daneben schließt sofort und geht an das, was darunter liegt (vorher verschluckt) */close(true);try{const u=document.elementFromPoint(e.clientX,e.clientY);if(u&&u!==document.body&&u!==document.documentElement&&!L.contains(u)){const c=u.closest('button,a,input,select,textarea,label,[onclick],.tile,.chip,.set,nav [data-v]')||u;if(/INPUT|TEXTAREA|SELECT/.test(c.tagName))c.focus();c.click()}}catch(_){}};if(RM)open()}
 // Binder-Ansicht für Sets
 function binder(R,set){const tiles=[...R.children];if(!tiles.length)return;const per=9,pages=Math.ceil(tiles.length/per);let pg=0;
  const wrap=document.createElement('div');wrap.className='binder';
