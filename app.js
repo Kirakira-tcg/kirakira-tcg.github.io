@@ -2362,3 +2362,7 @@ document.addEventListener('click',e=>{const b=e.target.closest&&e.target.closest
 
 /* v184 (Jason): Knopf „📱 Karte mit dem Handy bewegen“ entfernt – am Handy tat ein Tipp sichtbar nichts (Neigen läuft auf Android schon automatisch). Die Bewegung bleibt: iOS fragt die Erlaubnis jetzt beim ersten Tipp auf die große Karte im Detail. */
 document.addEventListener('click',e=>{if(e.target.closest&&e.target.closest('.dcard')&&window.FX&&FX.gyro)FX.gyro()},true);
+/* v185 (Nr. 65): Kartendetail am PC – Klick/Tipp auf den Hintergrund außerhalb schließt wie „← Zurück“ (dlg.close('cancel') -> kaBack hält den Verlauf gleich). Nur wenn Drücken UND Loslassen außerhalb des Dialogs liegen (Ziehen/Text markieren, das außen endet, schließt nicht); am Handy ist das Detail Vollbild – kein Außen */
+{const D=document.getElementById('dlg');if(D){let down=false;const out=e=>{if(e.target!==D)return false;const r=D.getBoundingClientRect();return e.clientX<r.left||e.clientX>r.right||e.clientY<r.top||e.clientY>r.bottom};
+ D.addEventListener('pointerdown',e=>{down=D.open&&!!D.querySelector('#dlgForm .detail')&&out(e)},true);
+ D.addEventListener('click',e=>{const ok=down;down=false;if(!ok||!D.open||!D.querySelector('#dlgForm .detail')||!out(e))return;e.preventDefault();e.stopPropagation();D.close('cancel')},true)}}
