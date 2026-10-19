@@ -836,3 +836,13 @@ nav button{font-size:.8rem!important}
 .kaShifted{outline:3px solid var(--ac2,#ffd84d)!important}
 /* v184 (Nr. 82): Set ohne Logo – freundliche Karten-Kachel statt „Kein Logo“ (kein Bild aus fremden Quellen, Setname steht darunter) */
 .set .nologo{font-size:0!important;border:0!important;background:linear-gradient(135deg,rgba(255,95,162,.25),rgba(90,184,255,.25))!important}.set .nologo::before{content:'🃏';font-size:28px;line-height:1}
+/* v184 (NEU-A, App-Gefühl): kein Webseiten-Gefühl auf dem Handy – kein blauer Tipp-Blitz, kein Doppeltipp-Zoom, kein Gummiband/Pull-to-Refresh, keine Textmarkierung beim Tippen/Halten auf Knöpfen und Kacheln, eigener Fokusrahmen */
+html{-webkit-tap-highlight-color:transparent;touch-action:manipulation;-webkit-text-size-adjust:100%;text-size-adjust:100%}
+html,body{overscroll-behavior-y:none}
+button,.btn,.chip,nav,nav *,.tile,.set,.bslot,.bcard,.bpk,label.tgl,summary,.seg,.tf,.xgr,.cgadd{-webkit-user-select:none;user-select:none;-webkit-touch-callout:none}
+input,textarea,select{-webkit-user-select:text;user-select:text}
+:focus{outline:none}:focus-visible{outline:3px solid var(--ac2,#ffd84d)!important;outline-offset:2px}
+input:focus,select:focus,textarea:focus{border-color:var(--ac2,#ffd84d)!important;box-shadow:0 0 0 3px rgba(255,216,77,.25)}
+input,select,textarea{font-size:16px}/* iOS zoomt sonst beim Antippen eines Feldes */
+@media(max-width:899px){button,.btn,.chip,select,input:not([type=checkbox]):not([type=radio]),label.tgl,summary{min-height:48px}}
+header{padding-top:max(12px,env(safe-area-inset-top));padding-left:max(16px,env(safe-area-inset-left));padding-right:max(16px,env(safe-area-inset-right))}
