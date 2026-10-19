@@ -31,6 +31,38 @@ var OwnPhoto=(()=>{const DB='kartenapp_photos',ST='photos';let dbp=null;const U=
 let NAVIGN=0;const navSt=()=>history.state||{};
 /* v183 (Liste Nr. 48): Verlaufseinträge tragen die Kennung dieser Seite. Nach einem Neuladen steht im Verlauf evtl. noch {lv:'card'} von vorher – dann beim Schließen nicht history.back() (das ginge auf die alte Seite = Neuladen, Portfolio), sondern den Eintrag still ersetzen */
 const NAVDOC=Date.now().toString(36)+Math.random().toString(36).slice(2,6);if(navSt().lv==='card')try{history.replaceState(navSt().up||{},'')}catch(e){}
+/* v184 (Jason: Zurück-Taste/Wischgeste bleibt in der App): EIN gemeinsamer Mechanismus für alle Ebenen – auch für den Scan (PokemonTCG).
+   window.kaBack.open(id, closeFn[, state]) legt eine Ebene an (genau ein Verlaufseintrag {ka:id}); Zurück ruft die oberste closeFn (innerste Ebene zuerst).
+   kaBack.close(id) – wenn die Oberfläche sich selbst schließt (✕, daneben tippen): Ebene (und alle darüber) weg + stilles history.back(), closeFn läuft NICHT doppelt.
+   closeFn=null: Ebene wird entfernt und das popstate geht an die alten Handler weiter (Set -> Setliste wie seit v118).
+   Unterste Ebene = Portfolio: 1. Zurück zeigt „Nochmal zurück zum Beenden“ (2 s), 2. Zurück verlässt die App.
+   Ersetzt das eigene pushState/back von Kartendetail (Nr. 48) – eine Quelle, kein Doppel-Push, kein Neuladen. Alle <dialog>.showModal() werden automatisch Ebenen. */
+window.kaBack=(()=>{const L=[];let ign=0,pend=[],toastT=0,leaving=false,inPop=false;
+ const st=(id,x)=>({...(x||{}),ka:id,kad:NAVDOC,kn:L.length});
+ const push=s=>{if(ign>0)pend.push(s);else try{history.pushState(s,'')}catch(e){}};
+ const guard=()=>push({ka:'home',kad:NAVDOC});
+ /* Start: alter Eintrag nach Neuladen (andere NAVDOC) -> still ersetzen; dann Wurzel + Wächter */
+ try{const s=history.state||{};if(s.ka||s.lv==='card'){history.replaceState({ka:'home',kad:NAVDOC},'')}else{history.replaceState({...s,ka:'root',kad:NAVDOC},'');history.pushState({ka:'home',kad:NAVDOC},'')}}catch(e){}
+ const toast=()=>{let t=document.getElementById('kaBackToast');if(!t){t=document.createElement('div');t.id='kaBackToast';t.setAttribute('role','status');document.body.append(t)}t.textContent='Nochmal zurück zum Beenden';t.classList.add('on');clearTimeout(toastT);toastT=setTimeout(()=>{t.classList.remove('on');leaving=false;/* noch auf der Wurzel -> Wächter wieder setzen */if(!L.length&&(history.state||{}).ka!=='home')guard()},2000)};
+ const api={open(id,fn,x){if(!id)return;const i=L.findIndex(l=>l.id===id);if(i>=0){L[i].fn=fn;return}L.push({id,fn});push(st(id,x))},
+  close(id){const i=L.findIndex(l=>l.id===id);if(i<0)return;const n=L.length-i;L.splice(i);ign+=n;history.go(-n)},
+  top(){return L.length?L[L.length-1].id:null},has(id){return L.some(l=>l.id===id)},get inPop(){return inPop},_L:L};
+ addEventListener('popstate',e=>{if(ign>0){ign--;e.stopImmediatePropagation();if(!ign&&pend.length){const p=pend.splice(0);p.forEach(s=>{try{history.pushState(s,'')}catch(_){}})}return}
+  const s=e.state||{};
+  if(L.length){/* Ziel-Eintrag liegt unter der obersten Ebene -> oberste Ebene schließen */const l=L.pop();if(l.fn){e.stopImmediatePropagation();inPop=true;try{l.fn()}catch(err){console.warn('kaBack',l.id,err)}finally{inPop=false}}return}
+  if(s.ka==='home'&&s.kad===NAVDOC)return;
+  /* keine Ebene offen = Wurzel erreicht */e.stopImmediatePropagation();
+  if(leaving){try{history.back()}catch(_){}return}
+  const pv=document.querySelector('#v-port.view.active');if(!pv){inPop=true;try{go('v-port')}finally{inPop=false}guard();return}
+  leaving=true;toast()},true);
+ return api})();
+{const sm=HTMLDialogElement.prototype.showModal;HTMLDialogElement.prototype.showModal=function(){const d=this,was=d.open;const r=sm.apply(d,arguments);if(was||!d.open)return r;
+  if(!d._kaL){d._kaL=1;d.addEventListener('close',()=>{if(d.open){return}/* schon wieder geöffnet (detail() baut neu) -> Ebene bleibt */const k=d._kaOn;d._kaOn=null;if(d._kaPop){d._kaPop=false;return}if(k)kaBack.close(k)})}
+  if(d._kaOn)return r;const id='dlg:'+(d.id||d.className||'x')+':'+Math.random().toString(36).slice(2,6);d._kaOn=id;
+  kaBack.open(id,()=>{d._kaPop=true;if(d.id==='dlg')d._pop=true;d.close('cancel')},d.id==='dlg'?{lv:'card',up:navSt(),doc:NAVDOC}:null);return r}}
+{const g0=go;go=function(v){const r=g0.apply(this,arguments);try{if(!kaBack.inPop){if(v==='v-port')kaBack.close('view');else{/* Ebenen, die zu einer anderen Ansicht gehören, still schließen */if(v!=='v-binder')kaBack.close('binder');if(v!=='v-search')kaBack.close('set');kaBack.open('view',()=>g0('v-port'))}}}catch(e){}return r}}
+/* Binder: geöffneter Binder ist eine Ebene über der Binderliste (Tester v182: Zurück sprang in die Suche) */
+{const b0=binderUI;binderUI=function(){const r=b0.apply(this,arguments);try{if(!kaBack.inPop){const on=document.querySelector('#v-binder.view.active')&&typeof BND!=='undefined'&&BND.sel&&BND.sel!=='all';if(on)kaBack.open('binder',()=>{BND.sel='all';BND.pg=0;b0()});else if(kaBack.has('binder')&&document.querySelector('#v-binder.view.active'))kaBack.close('binder')}}catch(e){}return r}}
 /* v183 (Nr. 48): jedes Neuladen durch die App nennt den Grund in der Konsole (und sessionStorage kaReload) */
 function rlWhy(w){try{console.info('[Kartenapp] Seite wird neu geladen: '+w);sessionStorage.setItem('kaReload',w+' · '+new Date().toLocaleString('de-DE'))}catch(e){}}
 const SORTK=v=>'kartenapp_sort_'+(v==='set'?'set3':v);/* v148: neuer Schlüssel -> Set-Standard „Preis absteigend“ */
@@ -1712,12 +1744,12 @@ function cgTile(c,own,X={}){const p=cmPrice(c),ci=cmInfo(c),ch=ci&&ci.avg7&&p?(p
 // v118: Navigation Suche → Set → Karte mit history.pushState (Zurück-Taste/Wischgeste geht eine Ebene hoch), Suchtext + Scrollposition werden wiederhergestellt
 
 function navBackBtn(){return navSt().lv==='set'?'<button type="button" class="navback" aria-label="Zurück" onclick="history.back()">←</button>':''}
-function navSet(setId){const q=[$('#qName').value,$('#qNum').value,($('#qSet')||{}).value||''];if(navSt().lv==='set')history.replaceState({lv:'set',setId,back:navSt().back},'');else{history.replaceState({...navSt(),lv:'search',q,y:scrollY},'');history.pushState({lv:'set',setId},'')}}
-{const D0=detail;detail=function(o){const r=D0.apply(this,arguments);const dlg=$('#dlg');if(dlg&&dlg.open&&!dlg._card){dlg._card=true;if(navSt().lv!=='card')history.pushState({lv:'card',up:navSt(),doc:NAVDOC},'');
+function navSet(setId){/* v184 (Tester v182): Suchtext nur merken, wenn wirklich Suchtreffer zu sehen waren – sonst führt Zurück zur Setliste statt zu einer alten Suche */const R0=$('#results'),hadQ=!!(R0&&!R0.classList.contains('cgset')&&R0.querySelector('.tile'));const q=hadQ?[$('#qName').value,$('#qNum').value,($('#qSet')||{}).value||'']:['','',''];if(navSt().lv==='set')history.replaceState({...navSt(),lv:'set',setId,back:navSt().back},'');else{history.replaceState({...navSt(),lv:'search',q,y:scrollY},'');kaBack.open('set',null,{lv:'set',setId})}/* v184: Set ist eine kaBack-Ebene; Zurück -> Setliste über den alten Handler */}
+{const D0=detail;detail=function(o){const r=D0.apply(this,arguments);const dlg=$('#dlg');if(dlg&&dlg.open&&!dlg._card){dlg._card=true;/* v184: Verlaufseintrag macht jetzt kaBack (showModal-Ebene) */
   const f=$('#dlgForm');if(f&&!f.querySelector('.navback'))f.insertAdjacentHTML('afterbegin','<div class="navbar-d"><button type="button" class="navback navback-d" aria-label="Zurück">←</button></div>');/* v182 (Nr. 36): eigene Kopfleiste statt schwebendem Pfeil über dem Inhalt */f&&f.querySelector('.navback-d')?.addEventListener('click',()=>dlg.close('cancel'));
   /* v160: auch aus Suche/Set-Browser geöffnet – Karte im Besitz? */const it=o&&(o.item||(o.api&&o.api.id&&(ownedItem(o.api.id,o.api._lang||o.api.lang||'EN')||ownedItems(o.api.id)[0])));if(it&&phId(it)&&f&&f.querySelector('.dph')&&!f.querySelector('.ownadd'))OwnPhoto.url(phId(it),it.lang).then(u=>{if(u||!dlg.open||f.querySelector('.ownadd'))return;const w=document.createElement('div');w.className='ownadd';w.innerHTML='<label class="chip">📷 Eigenes Foto als Kartenbild nehmen<input type="file" accept="image/*" hidden></label><p class="muted small">Du besitzt die Karte: Fotografiere sie und nimm das Foto als Kartenbild, bis TCGdex ein offizielles Bild hat. Das Foto bleibt nur auf diesem Gerät.</p>';w.querySelector('input').onchange=async e=>{const fl=e.target.files&&e.target.files[0];if(!fl)return;try{const bm=await createImageBitmap(fl),k=Math.min(1,900/Math.max(bm.width,bm.height)),cv=document.createElement('canvas');cv.width=Math.round(bm.width*k);cv.height=Math.round(bm.height*k);cv.getContext('2d').drawImage(bm,0,0,cv.width,cv.height);await OwnPhoto.put(phId(it),it.lang,cv);const ph=f.querySelector('.dph');if(ph)ph.innerHTML=`<img alt="" src="${cv.toDataURL('image/jpeg',.85)}" style="width:100%;height:100%;object-fit:cover;border-radius:14px">`;w.remove();render();try{binderUI()}catch(_){}}catch(err){w.querySelector('p').textContent='Foto konnte nicht gespeichert werden.'}};f.querySelector('.dph').after(w)}).catch(()=>{});
     if(it&&phId(it))OwnPhoto.url(phId(it),it.lang).then(u=>{if(!u||!dlg.open)return;const box=document.createElement('div');box.className='ownphd';box.innerHTML=`<img alt="" src="${u}"><span class="ownph">eigenes Foto</span><button type="button" class="chip danger">Foto entfernen</button><p class="muted small">Nur auf diesem Gerät gespeichert, wird nie hochgeladen oder geteilt.</p>`;box.querySelector('button').onclick=async()=>{try{await OwnPhoto.del(phId(it),it.lang)}catch(e){}box.remove();render();try{binderUI()}catch(e){}};f.append(box)})}return r}}
-$('#dlg').addEventListener('close',()=>{const d=$('#dlg');if(!d._card)return;d._card=false;if(d._pop){d._pop=false;return}if(navSt().lv==='card'){if(navSt().doc===NAVDOC){NAVIGN++;history.back()}else try{history.replaceState(navSt().up||{},'')}catch(e){}}});
+$('#dlg').addEventListener('close',()=>{const d=$('#dlg');d._card=false;d._pop=false});/* v184: Zurück/Schließen regelt kaBack */
 addEventListener('popstate',e=>{if(NAVIGN>0){NAVIGN--;return}const d=$('#dlg'),s=e.state||{};
  if(d&&d.open&&d._card){d._pop=true;d.close('cancel');return}
  if(s.lv==='set'&&s.setId){go('v-search');search('','','',s.setId);scrollTo(0,0);return}

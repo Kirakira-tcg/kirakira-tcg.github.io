@@ -805,3 +805,5 @@ dialog.bpickdlg{width:min(96vw,980px);max-width:none;max-height:calc(100dvh - 24
 .bpkscan{min-height:64px;padding:0 28px;font-size:1.25rem;border-radius:18px}.bpksearch{min-height:44px}
 .btake{min-height:44px;margin:0 0 10px;font-weight:700;grid-column:1/-1}
 .addToast .bundo{font-size:1.05rem;min-width:140px}
+/* v184 (kaBack): Hinweis „Nochmal zurück zum Beenden“ */
+#kaBackToast{position:fixed;left:50%;bottom:calc(var(--navh,72px) + env(safe-area-inset-bottom,0px) + 18px);transform:translate(-50%,20px);z-index:200;padding:12px 18px;border-radius:14px;background:rgba(20,14,50,.97);border:1px solid rgba(255,255,255,.25);color:#fff;font-weight:700;font-size:1rem;opacity:0;pointer-events:none;transition:opacity .2s,transform .2s}#kaBackToast.on{opacity:1;transform:translate(-50%,0)}
