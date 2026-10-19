@@ -950,3 +950,7 @@ details.kaAdv>summary{list-style:none}details.kaAdv>summary::-webkit-details-mar
 .tile .im>.imgsrc.ov,.cgim>.imgsrc.ov{z-index:3;pointer-events:none;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
 .listsrc.lsrow{margin:-4px 0 6px}
 .binder-page .tile .s{display:none!important}
+/* v186: Kachel-Preiszeile – Prozent nie abgeschnitten („+36,2“ statt „+36,2 %“ am PC): Preis und Prozent je ungeteilt; reicht die Breite nicht, rutscht das Prozent in eine eigene Zeile (rechtsbündig) statt abgeschnitten zu werden */
+.tile:not(.cg)>.p{flex-wrap:wrap;overflow:visible;column-gap:6px;row-gap:0}
+.tile:not(.cg)>.p>b,.tile:not(.cg)>.p>span{white-space:nowrap;flex:none}
+.tile:not(.cg)>.p>span{margin-left:auto}
