@@ -33,10 +33,11 @@ async function gyro(){try{if(typeof DeviceOrientationEvent!=='undefined'&&Device
   for(const el of [...els,...tiles])if(el!==cur)aim(el,x,y)})})}catch(e){}}
 if(typeof DeviceOrientationEvent!=='undefined'&&!DeviceOrientationEvent.requestPermission&&matchMedia('(pointer:coarse)').matches&&!RM)gyro();
 // Hochzählen
-const last=new WeakMap();
-function count(el,v){const from=last.get(el)??0;last.set(el,v);const fmt=n=>{const u=S.settings.cur==='USD';return (u?n*USD:n).toLocaleString('de-DE',{style:'currency',currency:u?'USD':'EUR'})};
- if(RM||Math.abs(v-from)<.005){el.textContent=fmt(v);return}const t0=performance.now(),d=900;
- (function step(t){const k=Math.min(1,(t-t0)/d),e=1-Math.pow(1-k,3);el.textContent=fmt(from+(v-from)*e);if(k<1)requestAnimationFrame(step);else{el.classList.remove('pop');void el.offsetWidth;el.classList.add('pop')}})(t0)}
+const last=new WeakMap(),run=new WeakMap();
+/* v185: Fortschritt auf 0..1 begrenzt (rAF-Zeitstempel kann vor t0 liegen → kurz negativer Wert); neuer Aufruf am selben Element bricht den laufenden ab und startet beim gerade angezeigten Wert (kein Sprung, kein Gegeneinander zweier Läufe) */
+function count(el,v){const R=run.get(el);if(R){cancelAnimationFrame(R.id);run.delete(el)}const from=R?R.cur:(last.get(el)??0);last.set(el,v);const fmt=n=>{const u=S.settings.cur==='USD';return (u?n*USD:n).toLocaleString('de-DE',{style:'currency',currency:u?'USD':'EUR'})};
+ if(RM||Math.abs(v-from)<.005){el.textContent=fmt(v);return}const t0=performance.now(),d=900,me={id:0,cur:from};run.set(el,me);
+ (function step(t){if(run.get(el)!==me)return;const k=Math.max(0,Math.min(1,(t-t0)/d)),e=1-Math.pow(1-k,3);me.cur=from+(v-from)*e;el.textContent=fmt(me.cur);if(k<1)me.id=requestAnimationFrame(step);else{run.delete(el);el.classList.remove('pop');void el.offsetWidth;el.classList.add('pop')}})(t0)}
 // Booster-Reveal
 let rvClose=null;
 function reveal(it){const L=document.getElementById('fxLayer');if(!L)return;if(rvClose)rvClose(true);const ty=((it.types||[])[0]||'none').toLowerCase(),col=TC[ty]||TC.none;
