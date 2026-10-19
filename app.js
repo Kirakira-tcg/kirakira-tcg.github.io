@@ -2290,5 +2290,5 @@ document.addEventListener('click',e=>{const b=e.target.closest&&e.target.closest
 
 /* v184 (Nr. 66): Set-Binder in der Binderliste mit Set-Logo von TCGdex (aus sets.json), sonst Text-Kachel mit Setnamen – keine anderen Bildquellen */
 {const deco=()=>{try{const L=$('#binderList');if(!L)return;L.querySelectorAll('.bcard').forEach(c=>{const e=c.querySelector('.bthumbs .bempty');if(!e||c.dataset.lg)return;const b=binderList().find(x=>x.id===c.dataset.b);if(!b||!b.setId)return;c.dataset.lg=1;const s=(typeof SETS!=='undefined'?SETS:[]).find(x=>x.tdx===b.setId||x.id===b.setId);const lg=s&&s.images&&s.images.logo;const nm=(s&&s.name)||b.name.replace(/^Set:\s*/,'');
-  e.outerHTML=lg?`<span class="blogo"><img loading="lazy" decoding="async" alt="" src="${esc(lg)}" onerror="this.parentNode.outerHTML='<span class=&quot;btxt&quot;>${esc(nm).replace(/'/g,'&#39;')}</span>'"></span>`:`<span class="btxt">${esc(nm)}</span>`})}catch(err){}};
+  e.outerHTML=lg?`<span class="blogo" data-n="${esc(nm)}"><img loading="lazy" decoding="async" alt="" src="${esc(lg)}" onerror="this.parentNode.classList.add('lgfail')"></span>`:`<span class="btxt">${esc(nm)}</span>`})}catch(err){}};
  const mo=new MutationObserver(deco);const st=()=>{const h=$('#binderHost');if(h){mo.observe(h,{childList:true,subtree:true});deco()}else setTimeout(st,500)};st()}
