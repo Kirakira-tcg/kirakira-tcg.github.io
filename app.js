@@ -2258,8 +2258,8 @@ function tSrcD(best){let l=tSrc(best&&best.source);if(best&&!/Stand|\d{2}\.\d{2}
 /* v184 (Nr. 79): Tipp nach Layout-Sprung schlucken – nur wenn genau die Stelle unter dem Finger in den letzten 0,6 s
    von einem verschobenen Element neu belegt wurde (vorher war dort etwas anderes). Sonst wirkt jeder Tipp sofort. */
 {const R=[];const ins=(r,x,y)=>r&&x>=r.x&&x<=r.x+r.width&&y>=r.y&&y<=r.y+r.height;
- try{new PerformanceObserver(l=>{const t=performance.now();for(const e of l.getEntries())if(!e.hadRecentInput)for(const s of e.sources||[])R.push({t,prev:s.previousRect,cur:s.currentRect});while(R.length>40)R.shift()}).observe({type:'layout-shift',buffered:false})}catch(e){}
- let bad=false;document.addEventListener('pointerdown',e=>{const t=performance.now();bad=R.some(s=>t-s.t<600&&ins(s.cur,e.clientX,e.clientY)&&!ins(s.prev,e.clientX,e.clientY))},true);
+ try{new PerformanceObserver(l=>{for(const e of l.getEntries())if(!e.hadRecentInput)for(const s of e.sources||[])R.push({t:e.startTime/* Zeitpunkt des Sprungs, nicht der (unter Last späten) Meldung */,prev:s.previousRect,cur:s.currentRect});while(R.length>40)R.shift()}).observe({type:'layout-shift',buffered:false})}catch(e){}
+ let bad=false;document.addEventListener('pointerdown',e=>{const t=performance.now();bad=R.some(s=>t-s.t<300&&s.cur&&s.prev&&Math.max(Math.abs(s.cur.y-s.prev.y),Math.abs(s.cur.x-s.prev.x))>=24&&ins(s.cur,e.clientX,e.clientY)&&!ins(s.prev,e.clientX,e.clientY))/* v184 (Nr. 79): Fenster 0,6 s -> 0,3 s und nur Sprünge ab 24 px – vorher schluckte der Wächter einen gezielten Tipp 0,33 s nach dem Nachrutschen der Setliste (PokemonTCG mobil_back.py Schritt 4) */},true);
  document.addEventListener('click',e=>{if(!bad)return;bad=false;const t=e.target.closest&&e.target.closest('#results .tile,#setList .set,#setList .xgr,#collGrid .tile');if(t){e.preventDefault();e.stopImmediatePropagation();t.classList.add('kaShifted');setTimeout(()=>t.classList.remove('kaShifted'),400)}},true)}
 
 /* v184 (Nr. 62): Kartendetail auf dem Handy als Vollbild-Ansicht mit EINEM Scrollbereich; oben großer „← Zurück“ (48 px) und ✕ rechts */
