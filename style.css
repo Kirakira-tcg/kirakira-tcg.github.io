@@ -875,3 +875,22 @@ body:has(#addToast:not([hidden])) #kaInst,body:has(#kaBackToast.on) #kaInst{disp
 .cgsl,a.dset{display:inline-flex!important;align-items:center;gap:4px;max-width:100%;text-decoration:none!important;color:var(--tx)!important;background:rgba(255,255,255,.1);border:1px solid rgba(255,255,255,.2);border-radius:999px;padding:2px 10px;font-weight:700;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
 .cgsl{font-size:.8rem!important;min-height:28px;margin:2px 0}a.dset{min-height:44px;padding:4px 14px}.cgsl::before,a.dset::before{content:"📦";font-size:.9em}
 .sscalc{font-weight:600;color:var(--mu);font-size:.8rem}
+/* v184 (Nr. 64): ein großes Suchfeld, Filter-Blatt, Ladeanzeige, „Erweitert“-Bereiche */
+@media(max-width:899px){
+ #v-search #searchForm{display:flex;gap:8px}#v-search #qName{flex:1;font-size:1.1rem;min-height:52px}#v-search #qNum{display:none}#v-search #qNum.kaHas{display:block;flex:0 0 64px}
+ #v-search #searchForm .sbtn{min-height:52px;min-width:52px}
+ .sortbar.kaSheet{display:none}
+ .sortbar.kaSheet.open{display:flex;flex-direction:column;align-items:stretch;gap:14px;position:fixed;left:0;right:0;bottom:0;z-index:3001;margin:0;padding:16px 16px calc(20px + env(safe-area-inset-bottom));max-height:82vh;overflow:auto;background:#241a5c;border-top:2px solid var(--bd);border-radius:22px 22px 0 0;font-size:1rem!important;box-shadow:0 -10px 40px rgba(0,0,0,.5)}
+ .sortbar.kaSheet.open label{display:flex;flex-direction:column;gap:6px;font-weight:700}.sortbar.kaSheet.open .sbc{flex-direction:row;align-items:center;gap:10px;min-height:44px}.sortbar.kaSheet.open .sbc input{width:24px;height:24px}
+ .sortbar.kaSheet.open select{width:100%;min-height:48px;font-size:1rem!important}
+ .kaSh{display:flex;justify-content:space-between;align-items:center;font-size:1.1rem}.kaShX{min-height:44px;padding:0 18px;border-radius:999px;font-weight:800;background:var(--ac,#ffcf3f);color:#1b1240;border:0}
+ .kaLang{display:flex;flex-direction:column;gap:6px;font-weight:700}.kaLang .langChips{flex-wrap:wrap!important;overflow:visible!important;-webkit-mask-image:none!important;mask-image:none!important}
+ #kaShBd{position:fixed;inset:0;z-index:3000;background:rgba(0,0,0,.55)}
+ .kaFbar{display:flex;align-items:center;gap:10px;margin:.2rem 0 .5rem;min-width:0}.kaFbtn{min-height:48px;padding:0 20px;border-radius:999px;font-weight:800;font-size:1rem;background:rgba(255,255,255,.12);border:1px solid rgba(255,255,255,.25);color:var(--tx);flex:0 0 auto}.kaFsum{font-size:.85rem;color:var(--mu);overflow:hidden;text-overflow:ellipsis;white-space:nowrap;min-width:0}
+}
+.langChips{flex-wrap:wrap}
+#kaLoad{display:flex;align-items:center;gap:10px;margin:8px 0;font-weight:700;color:var(--tx)}#kaLoad i{width:22px;height:22px;border-radius:50%;border:3px solid rgba(255,255,255,.25);border-top-color:#ffcf3f;animation:kaSpin .8s linear infinite}
+@keyframes kaSpin{to{transform:rotate(360deg)}}.sbtn.busy{opacity:.75}
+@media(prefers-reduced-motion:reduce){#kaLoad i{animation-duration:2.4s}}
+details.kaAdv{margin:10px 0;border:1px solid rgba(255,255,255,.18);border-radius:14px;padding:4px 12px}details.kaAdv>summary{min-height:44px;display:flex;align-items:center;font-weight:700;cursor:pointer}
+details.kaAdv>summary{list-style:none}details.kaAdv>summary::-webkit-details-marker{display:none}details.kaAdv>summary::before{content:"▸";margin-right:8px;transition:transform .15s}details.kaAdv[open]>summary::before{transform:rotate(90deg)}

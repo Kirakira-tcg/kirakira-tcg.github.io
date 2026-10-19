@@ -19,14 +19,14 @@
  <div class="stats"><div><span id="sumBuyL">Einstand</span><b id="sumBuy">–</b></div><div><span id="sumGainL">Gewinn/Verlust</span><b id="sumGain">–</b></div><div><span>Artikel</span><b id="sumCnt">–</b></div></div>
  <h2>Wertvollste</h2><div id="topList" class="hscroll"></div>
  <h2>Trend heute</h2><div id="trendList" class="hscroll"></div>
- <div class="h2row"><h2>Meine Sammlung</h2><div class="seg" id="filt"><button data-f="all" class="on">Alle</button><button data-f="card">Karten</button><button data-f="sealed">Sealed</button></div></div>
+ <div class="h2row"><h2>Meine Sammlung</h2><div class="seg" id="filt"><button data-f="all" class="on">Alle</button><button data-f="card">Karten</button><button data-f="sealed">Display/Box</button></div></div>
  <div class="sortrow"><select id="sort"><option value="val">Wert ↓</option><option value="chg">Änderung ↓</option><option value="name">Name A–Z</option><option value="new">Neueste</option></select></div>
  <div id="collGrid" class="cgrid"></div>
 </section>
 <section id="v-search" class="view">
  <form id="searchForm" class="sbar"><input id="qName" placeholder="z.B. Glurak 4/102, Pikachu 44" aria-label="Kartenname und optional Nummer"><input id="qNum" placeholder="Nr." size="5" aria-label="Kartennummer (optional)"><button class="sbtn">🔍 Suchen</button></form>
  <input id="qSet" type="hidden">
- <div class="chips"><button id="manualBtn" class="chip ico"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M4 20h4L19 9a2.8 2.8 0 0 0-4-4L4 16z" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linejoin="round"/><path d="M13.5 6.5l4 4" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round"/></svg>Manuell hinzufügen</button><button id="sealedBtn" class="chip">📦 Sealed hinzufügen</button></div>
+ <div class="chips"><button id="manualBtn" class="chip ico"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M4 20h4L19 9a2.8 2.8 0 0 0-4-4L4 16z" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linejoin="round"/><path d="M13.5 6.5l4 4" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round"/></svg>Manuell hinzufügen</button><button id="sealedBtn" class="chip">📦 Display/Box hinzufügen</button></div>
  <div id="scanStatus" class="muted small"></div>
  <div id="results" class="cgrid"></div>
  <h2>Sets durchsuchen</h2><div id="setTabs" class="chips"><button type="button" class="chip on" data-t="en">🌍 International</button><button type="button" class="chip" data-t="ja">🇯🇵 Japanisch</button></div><input id="setFilter" class="full" placeholder="Set filtern…"><div id="setList" class="setlist"><p class="muted small">Lade Sets…</p></div>
@@ -48,7 +48,7 @@
 <section id="v-more" class="view">
  <h2>Einstellungen</h2>
  <div class="menu a11y"><label class="tgl"><input type="checkbox" id="uiBig"> Große Schrift</label><label class="tgl"><input type="checkbox" id="uiHc"> Hoher Kontrast</label></div>
- <div class="menu"><button id="exportBtn">⬇️ Export (JSON)</button><label class="btn">⬆️ Import<input type="file" id="importFile" accept="application/json" hidden></label><button id="resetBtn" class="danger">Alles löschen</button></div>
+ <details class="kaAdv"><summary>Erweitert: Sicherung (Export/Import als JSON)</summary><div class="menu"><button id="exportBtn">⬇️ Export (JSON)</button><label class="btn">⬆️ Import<input type="file" id="importFile" accept="application/json" hidden></label><button id="resetBtn" class="danger">Alles löschen</button></div></details>
  <p class="muted small">Preise: Cardmarket-Preistrend (EUR) über TCGdex bzw. die Pokémon TCG API – kann verzögert sein oder bei neuen Sets/JP-Karten fehlen. Graded-Werte sind grobe Schätzungen (Faktoren), keine echten Verkäufe. Daten liegen nur auf diesem Gerät.</p>
  <h2>So berechnen wir Preise</h2>
  <div class="muted small legal pinfo"><ul>
