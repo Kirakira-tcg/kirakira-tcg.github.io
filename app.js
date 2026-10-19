@@ -523,12 +523,13 @@ function detail({api:c,item,list}){if(c&&!c._tdx&&!c._syd&&window.Prices){c._syd
 const PTNEGK='ka_ptneg',PTNEGT=6*3600e3;const ptNeg=()=>{try{return JSON.parse(localStorage.getItem(PTNEGK)||'{}')}catch(e){return{}}};
 const ptNegSet=ids=>{try{const n=ptNeg(),t=Date.now();ids.forEach(i=>n[i]=t);for(const k in n)if(t-n[k]>PTNEGT)delete n[k];localStorage.setItem(PTNEGK,JSON.stringify(n))}catch(e){}};
 const ptcgOk=id=>{id=String(id||'');const m=id.match(/^([a-z0-9]+)-([a-z0-9]+)$/i);if(!m||/[A-Z]/.test(m[1]))return false;return !/^(me\d|30th)/.test(m[1])};
-async function refreshPrices(){const btn=$('#refresh');btn.innerHTML='⏳ <span>lädt…</span>';/* v184 (Nr. 68): Beschriftung bleibt */const items=[...S.collection,...S.wishlist].filter(x=>x.apiId&&!/^(JP|JA)$/i.test(String(x.lang||'')));
+async function refreshPrices(){window._pRun=1;/* v185 (Nr. 73): Summe zählt nicht, solange Preise noch kommen */try{return await refreshPrices0()}finally{if(window._pRun){window._pRun=0;try{render()}catch(e){}}}}
+async function refreshPrices0(){const btn=$('#refresh');btn.innerHTML='⏳ <span>lädt…</span>';/* v184 (Nr. 68): Beschriftung bleibt */const items=[...S.collection,...S.wishlist].filter(x=>x.apiId&&!/^(JP|JA)$/i.test(String(x.lang||'')));
  const NG=ptNeg(),ids=[...new Set(items.map(x=>x.apiId))].filter(id=>ptcgOk(id)&&!(NG[id]&&Date.now()-NG[id]<PTNEGT));
  /* v168: kein pokemontcg.io-API-Aufruf mehr; Preise über TCGdex + Cardmarket-Preisdatei */
  await Promise.all(items.map(async x=>{const c={id:x.apiId};if(await cmSync(c)){x.cm=cmInfo(c);const p=cmPrice(c);if(p!=null&&x.ownPrice==null){x.price=p;delete x.estimate}}}));
  for(const x of [...S.collection,...S.wishlist])if(x.type!=='sealed'&&tdxNeed(x))await tdxFill(x);
- S.collection.forEach(trackPrice);pStamp();btn.innerHTML='⟳ <span>Preise</span>';window._pLoad=false;save();snapshot();render()}
+ S.collection.forEach(trackPrice);pStamp();btn.innerHTML='⟳ <span>Preise</span>';window._pLoad=false;window._pRun=0;/* v185 (Nr. 73): alle Preise da -> diese Darstellung darf (einmal) zählen */save();snapshot();render()}
 $('#refresh').onclick=refreshPrices;
 
 // Gewinn/Verlust nur für Karten mit Kaufpreis (>0); ohne Kaufpreis zählt nur der Wert
@@ -606,8 +607,11 @@ function tdxNext(im){const cs=im.getAttribute('src')||'';if(im.dataset.tdxo&&im.
 document.addEventListener('error',e=>{const t=e.target;if(t&&t.tagName==='IMG'&&!t.hasAttribute('onerror'))tdxNext(t)},true);
 
 /* v184 (Nr. 73): Portfolio-Summe nur einmal ruhig hochzählen – nicht bei jedem Teilladen neu starten (13k→8k→22k); Stand (Nr. 43) folgt dem angezeigten Wert */
-let _sumTok=0,_sumWait=0,_sumPend=null;
-function sumShow(v,stand){const el=$('#sumVal'),ss=$('#sumStand');if(!el)return;_sumPend={v,stand};clearTimeout(_sumWait);const go=()=>{const p=_sumPend;if(!p)return;_sumPend=null;el.classList.remove('loading');if(window.FX&&!window._noAnim)FX.count(el,p.v);else el.textContent=money(p.v);if(ss){ss.textContent=p.stand||'';ss.hidden=!p.stand}};
+/* v185 (Nr. 73, live-Rückfall 3.081,23 → 2.960,36 → hoch): FX.count bricht eine laufende Zählung nicht ab – ein zweiter Aufruf (gleicher oder neuer Wert) setzte den Text sofort, die alte Schleife schrieb danach weiter ihre Zwischenwerte (sichtbar: zurückspringen und nochmal hochzählen). Außerdem gab der 20-s-Notausgang (_pLoad) die Summe frei, während refreshPrices noch lief. Jetzt: höchstens EINE Zählung pro Sitzung, nur wenn kein Preisabruf mehr läuft (_pRun); jede spätere Änderung ruhig ohne Zählen, und erst nach Ende einer laufenden Zählung */
+let _sumTok=0,_sumWait=0,_sumPend=null,_sumDone=false,_sumEnd=0;
+function sumShow(v,stand){const el=$('#sumVal'),ss=$('#sumStand');if(!el)return;_sumPend={v,stand};clearTimeout(_sumWait);const go=()=>{const p=_sumPend;if(!p)return;const now=performance.now();if(now<_sumEnd){_sumWait=setTimeout(go,_sumEnd-now+30);return}_sumPend=null;el.classList.remove('loading');
+ const anim=window.FX&&!window._noAnim&&!_sumDone&&!window._pRun&&!(matchMedia&&matchMedia('(prefers-reduced-motion: reduce)').matches);_sumDone=true;
+ if(anim){_sumEnd=now+950;const tk=++_sumTok,t0=now,d=900,to=p.v;/* eigene, abbrechbare Zählung: FX.count rechnet mit dem rAF-Zeitstempel, der vor t0 liegen kann (k<0 -> kurz negativer Wert, live „-389,91 €“) */const st=t=>{if(tk!==_sumTok)return;const k=Math.min(1,Math.max(0,(t-t0)/d)),e=1-Math.pow(1-k,3);el.textContent=money(to*e);if(k<1)requestAnimationFrame(st);else{el.textContent=money(to);el.classList.remove('pop');void el.offsetWidth;el.classList.add('pop')}};requestAnimationFrame(st)}else{_sumTok++;el.textContent=money(p.v)}if(ss){ss.textContent=p.stand||'';ss.hidden=!p.stand}};
  /* unter Last/Offline: warten bis der Wert 400 ms stabil ist; bei _noAnim sofort */
  if(window._noAnim){go();return}_sumWait=setTimeout(go,400)}
 function render(){{const real=S.collection,es=$('#emptyStart');if(es){es.hidden=real.length>0;const ch=$('#chart'),tf=$('#tf');if(ch)ch.style.display=real.length?'':'none';if(tf)tf.style.display=real.length?'':'none'}}const t=totals();const tf=S.settings.tf;$('#tfLbl').textContent=({1:'1T',7:'7T',30:'30T',90:'3M',365:'1J',0:'Alle'})[tf];
