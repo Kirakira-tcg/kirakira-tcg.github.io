@@ -2385,3 +2385,32 @@ document.addEventListener('click',e=>{if(e.target.closest&&e.target.closest('.dc
 {const D=document.getElementById('dlg');if(D){let down=false;const out=e=>{if(e.target!==D)return false;const r=D.getBoundingClientRect();return e.clientX<r.left||e.clientX>r.right||e.clientY<r.top||e.clientY>r.bottom};
  D.addEventListener('pointerdown',e=>{down=D.open&&!!D.querySelector('#dlgForm .detail')&&out(e)},true);
  D.addEventListener('click',e=>{const ok=down;down=false;if(!ok||!D.open||!D.querySelector('#dlgForm .detail')||!out(e))return;e.preventDefault();e.stopPropagation();D.close('cancel')},true)}}
+
+/* v185 (Nr. 113): JP-Karte nie mit Preis/Link einer anderen Sprachausgabe. Glurak M6a 137 (JP) zeigte 66,84 € und verlinkte „Glurak (30thC 137) – 30 Jahre Simplified Chinese“ (idProduct 908315).
+   M6a gibt es bei TCGdex in keiner Sprache (nur jpcards.json) -> es gibt keine TCGdex-idProduct für diese Karte, also keinen verlässlichen Cardmarket-Preis.
+   Regeln: gespeicherter Cardmarket-Preis/-Link einer JP-Karte gilt nur, wenn TCGdex-JA für GENAU diese Karten-ID heute dieselbe idProduct liefert.
+   Sonst: Preis weg (nicht im Portfolio-Wert, zählt als „ohne Preis“), kein Produktlink, Hinweis „Kein verlässlicher Cardmarket-Preis“ + neutrale Cardmarket-Suche. Nichts wird geschätzt. */
+const cmPid=u=>{const m=String(u||'').match(/[?&]idProduct=(\d+)/);return m?+m[1]:null};
+let JPONLY=new Set(['M6a']);try{fetch('jpcards.json').then(r=>r.ok?r.json():null).then(j=>{if(j&&j.sets)JPONLY=new Set(Object.keys(j.sets))}).catch(()=>{})}catch(e){}
+const jpCmCand=it=>it&&it.type!=='sealed'&&isJpLang(it.lang)&&it.ownPrice==null&&!it.estimate;
+const jpCmHas=it=>{const t=it.tdx||{};return it.price!=null&&(/Cardmarket|TCGdex/i.test(t.src||'')||!!cmPid(t.url))};
+const jpTid=it=>String((it.tdx&&it.tdx.id)||it.tdxId||'');
+function jpCmStrip(it,why){const t=it.tdx||{},pid=cmPid(t.url),tid=jpTid(it);it.cmRej=[...new Set([...(it.cmRej||[]),...(pid?[pid]:[])])];it.price=null;it.noPrice=true;it.ph=[];it.cmUnsure=true;it.tdx={label:'Kein verlässlicher Cardmarket-Preis',id:tid,unsure:1};try{console.info('Nr. 113: Cardmarket-Preis verworfen',tid,pid||'',why)}catch(e){}return true}
+function jpCmSync(it){if(!jpCmCand(it))return false;if(!jpCmHas(it)){if(it.cmUnsure&&it.price!=null){delete it.cmUnsure;return true}return false}
+ const tid=jpTid(it),pid=cmPid(it.tdx&&it.tdx.url),set=tid.replace(/^jp:/,'').replace(/-[^-]*$/,'');
+ if(!tid||tid.startsWith('jp:'))return jpCmStrip(it,'jpcards.json hat keine Preise');if(JPONLY.has(set))return jpCmStrip(it,'Set '+set+' nicht bei TCGdex');
+ if(pid&&(it.cmRej||[]).includes(pid))return jpCmStrip(it,'idProduct schon verworfen');if(it.cmUnsure){delete it.cmUnsure;return true}return false}
+{const JG=jpGuard;jpGuard=function(it){let ch=JG(it);try{if(jpCmSync(it))ch=true}catch(e){}return ch}}
+const JPV=new Set();
+async function jpCmVerify(it){if(!jpCmCand(it)||!jpCmHas(it)||!window.Prices)return false;const tid=jpTid(it),k=tid+'|'+(it.tdx&&it.tdx.url||'');if(JPV.has(k))return false;JPV.add(k);
+ let r=null;try{r=await Prices.byId(tid,'ja')}catch(e){return false}if(!r)return false/* Netz-/404-Fehler: nichts ändern, nächster Start prüft erneut */;
+ const cm=r.best&&/^Cardmarket/.test(r.best.source||'')?r.best:null,sp=cmPid(it.tdx&&it.tdx.url),ok=!r.cmUnsure&&!String(r.id||'').startsWith('jp:')&&String(r.id||'').toLowerCase()===tid.replace(/^jp:/,'').toLowerCase()&&cm&&(!sp||cmPid(cm.url)===sp);
+ return ok?false:jpCmStrip(it,r.cmUnsure?'TCGdex-Zuordnung unklar':!cm?'TCGdex-JA hat keinen Cardmarket-Preis':'andere idProduct als gespeichert')}
+async function jpCmVerifyAll(){let ch=false;try{for(const L of [S.collection||[],S.wishlist||[]])for(const it of L)if(await jpCmVerify(it))ch=true}catch(e){}if(ch){try{save();render()}catch(e){}}return ch}
+setTimeout(()=>{jpCmVerifyAll()},2500);
+/* Kartendetail: unsichere JP-Karte -> klarer Hinweis; Cardmarket-Link, der nur eine Suche ist, heißt auch so */
+{const D13=detail;detail=function(o){const r=D13.apply(this,arguments);const it=o&&o.item;const fix=()=>{try{const f=$('#dlgForm');if(!f||!f.querySelector('.detail'))return;
+  f.querySelectorAll('.dphcm a, .jpcm a').forEach(a=>{if(/\/Products\/Search\?/.test(a.href))a.textContent='Bei Cardmarket suchen ↗'});
+  if(it&&it.cmUnsure&&it.price==null){f.querySelectorAll('.jpnone2 b').forEach(b=>b.textContent='Kein verlässlicher Cardmarket-Preis');const big=f.querySelector('.detail>.big');if(big&&!f.querySelector('.jpnone2')&&!f.querySelector('.cmuns'))big.insertAdjacentHTML('afterend','<p class="small cmuns" style="margin:.2rem 0"><b>Kein verlässlicher Cardmarket-Preis</b> <span class="muted">· nicht im Portfolio-Wert eingerechnet</span></p>')}}catch(e){}};
+ fix();setTimeout(fix,0);setTimeout(fix,1600);setTimeout(fix,4100);
+ if(it&&jpCmCand(it)&&jpCmHas(it))jpCmVerify(it).then(ch=>{if(ch){try{save();render();if($('#dlg').open)detail(o)}catch(e){}}});return r}}

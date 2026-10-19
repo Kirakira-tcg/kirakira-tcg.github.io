@@ -72,8 +72,15 @@ async function search(name,lang){lang=normLang(lang);const k=`s:${lang}:${name.t
 const BADP={'cel25cc-CC020':1,'cel25cc-CC021':1};
 /* v163: offizielle Cardmarket-Preisdatei (cmprices.json, tools/build_cmprices.py): {date, p:{idProduct:[trend,low]}}; Zuordnung NUR über die idProduct, die TCGdex pro Karte liefert */
 let CMP=null;function cmpLoad(){return CMP||(CMP=fetch('cmprices.json',{cache:'no-cache'}).then(r=>r.ok?r.json():null).catch(()=>null).then(j=>j&&j.p?j:{date:'',p:{}}))}
+/* v185 (Nr. 113): Cardmarket-Zuordnung nur, wenn sie eindeutig zur Sprachausgabe der Karte gehört.
+   - TCGdex zh-tw/zh-cn: Karten tragen die idProduct der JAPANISCHEN Karte gleicher ID (z. B. zh-tw/cards/SV2a-006 -> 719448 = ja/cards/SV2a-006) -> nie als Preis/Link verwenden.
+   - idProduct, die TCGdex mehreren Karten verschiedener Sets/Sprachen gibt (cmprices.json „x“, z. B. 821707 an SV-P-262 UND SV9a-022/071) -> unklar.
+   Unklar = kein Preis, kein Produktlink, Hinweis „Kein verlässlicher Cardmarket-Preis“ (nie geschätzt/übernommen). */
+const CM_AMB=new Set([821707]);const cmLangOk=l=>!/^zh/.test(String(l||''));
+/* x (tools/build_cmprices.py): {idProduct:[Karten, denen sie gehört]} – [] = für keine Karte verlässlich */
+async function cmAmb(pid,cardId,lang){if(!pid)return false;if(CM_AMB.has(+pid))return true;try{const F=await cmpLoad(),o=F.x&&F.x[String(pid)];if(!Array.isArray(o))return false;return !o.includes((lang==='ja'?'ja:':'en:')+cardId)}catch(e){return false}}
 const cmpDate=d=>{const m=String(d||'').match(/^(\d{4})-(\d{2})-(\d{2})/);return m?`${m[3]}.${m[2]}.${m[1]}`:''};
-async function normalize(card,lang){const p=BADP[card?.id]?{}:(card?.pricing||{});const out={id:card.id,name:legN(card.id,card.name),lang,set:card.set,localId:card.localId,image:card.image?card.image+'/high.webp':null,prices:[],best:null};
+async function normalize(card,lang){let p=BADP[card?.id]?{}:(card?.pricing||{});let cmUnsure=false;if(p.cardmarket&&(!cmLangOk(lang)||await cmAmb(p.cardmarket.idProduct,card.id,lang))){cmUnsure=true;p={...p,cardmarket:null}}const out={id:card.id,name:legN(card.id,card.name),lang,set:card.set,localId:card.localId,image:card.image?card.image+'/high.webp':null,prices:[],best:null};
  const cm=p.cardmarket;let cmf=null;if(cm&&cm.idProduct){try{const F=await cmpLoad();const e=F.p[String(cm.idProduct)];if(e&&(e[0]!=null||e[1]!=null))cmf={trend:e[0],low:e[1],date:cmpDate(F.date)}}catch(e){}}
  /* v170: Trend unplausibel (< 25 % von Ø7 UND Ø30) -> nie einen Durchschnitt hochrechnen (Ø enthält Ausreißer/Graded-Verkäufe), sondern konservativ den ab-Preis (günstigstes Angebot) zeigen; ohne ab-Preis wie bisher */
  const implaus=(t)=>!!(t&&cm&&cm.avg7&&cm.avg30&&t<.25*cm.avg7&&t<.25*cm.avg30);
@@ -87,15 +94,15 @@ async function normalize(card,lang){const p=BADP[card?.id]?{}:(card?.pricing||{}
  const tp=p.tcgplayer;if(tp){const cur=(tp.unit||'USD').toUpperCase();for(const [v,o] of Object.entries(tp)){if(!o||typeof o!=='object')continue;const val=o.marketPrice??o.midPrice??o.lowPrice??null;const conv=await toEUR(val,cur);
   out.prices.push({source:'TCGplayer (TCGdex)',variant:v,currency:cur,value:val,eur:conv?.eur??null,umgerechnet:!!conv?.umgerechnet,fxFallback:!!conv?.fallback,low:o.lowPrice,mid:o.midPrice,high:o.highPrice,market:o.marketPrice,updated:tp.updated})}}
  // v114: TCGdex ohne Preis -> Cardmarket-Werte derselben Karte aus pokemontcg.io (mit Datum, da teils alt)
- if(!out.prices.length&&lang!=='ja'&&!String(card.id).startsWith('jp:')){try{const cm=await ptcgCM(card.id);if(cm){const v=cm.prices.trendPrice||cm.prices.avg30||cm.prices.averageSellPrice||null;if(v){const d=String(cm.updatedAt||'').split('/').reverse().join('.');
+ if(!out.prices.length&&!cmUnsure&&lang!=='ja'&&!String(card.id).startsWith('jp:')){try{const cm=await ptcgCM(card.id);if(cm){const v=cm.prices.trendPrice||cm.prices.avg30||cm.prices.averageSellPrice||null;if(v){const d=String(cm.updatedAt||'').split('/').reverse().join('.');
   out.prices.push({source:`Cardmarket (pokemontcg.io${d?', Stand '+d:''})`,currency:'EUR',value:v,eur:v,umgerechnet:false,fxFallback:false,trend:cm.prices.trendPrice,avg:cm.prices.averageSellPrice,low:cm.prices.lowPrice,avg1:cm.prices.avg1,avg7:cm.prices.avg7,avg30:cm.prices.avg30,url:`https://www.cardmarket.com/de/Pokemon/Products/Search?searchString=${encodeURIComponent(card.name)}`,updated:cm.updatedAt})}}}catch(e){}}
  out.best=out.prices.find(x=>x.eur!=null)||null;
  if(out.best)out.label=`${out.best.eur.toFixed(2).replace('.',',')} € · ${String(out.best.source).replace(/, Ø (7|30) Tage – Trend unplausibel\)/,(m,d)=>`) · Trend wirkt unplausibel, ${d}-Tage-Schnitt gezeigt`)}${out.best.umgerechnet?` · umgerechnet aus ${out.best.currency}${out.best.fxFallback?' (Schätzkurs)':''}`:''}`;
  if(out.best&&/^Cardmarket(-Preisdatei| \(TCGdex\) · ab-Preis)/.test(out.best.source||'')){const d=(out.best.source.match(/Stand ([\d.]+)/)||[])[1];out.label=`${out.best.isLow?'ab ':''}${out.best.eur.toFixed(2).replace('.',',')} € · Cardmarket${out.best.isLow?' (günstigstes Angebot)':''}${d?' · Stand '+d:''}${/Trend nicht plausibel/.test(out.best.source)?' · Trend nicht plausibel':''}`}
- else if(!out.best)out.label='kein Preis bei TCGdex';/* v170: vorher überschrieb das jeden TCGdex-Preis */
+ else if(!out.best)out.label=cmUnsure?'Kein verlässlicher Cardmarket-Preis':'kein Preis bei TCGdex';if(cmUnsure)out.cmUnsure=true;/* v170: vorher überschrieb das jeden TCGdex-Preis */
  return lang==='ja'?jpm(out):out}
 // v142: keine JP-Marktpreise mehr (pokeca-souba-Nutzungsbedingungen verbieten Auslesen/Weiterverwenden) – JP-Karten ohne Cardmarket-Preis: „JP-Preis: keine Daten“
-async function jpm(out){if(!out||out.best)return out;out.jpNone=true;out.label='JP-Preis: keine Daten';return out}
+async function jpm(out){if(!out||out.best)return out;out.jpNone=true;out.label=out.cmUnsure?'Kein verlässlicher Cardmarket-Preis':'JP-Preis: keine Daten';return out}
 
 
 // Japanische Sets, die TCGdex fehlen: statische jpcards.json (tools/build_jp.py)
@@ -172,7 +179,7 @@ const ptcgSet=t=>{t=String(t||'');if(PT_REV[t])return PT_REV[t];if(/[A-Z]/.test(
 /* v158: gleiche pokemontcg.io-Preisabfrage nie doppelt gleichzeitig senden; Fehler leise -> null (Sperre nach 5xx: app.js ka_ptdown, 20 min) */
 const PTCM_INF=new Map();function ptcgCM(tid){const k=String(tid||'');if(PTCM_INF.has(k))return PTCM_INF.get(k);const p=ptcgCM0(tid).catch(()=>null).finally(()=>PTCM_INF.delete(k));PTCM_INF.set(k,p);return p}
 async function ptcgCM0(tid){return null/* v168: kein direkter pokemontcg.io-API-Aufruf im Browser; v182 (Liste Nr. 21): toter Abrufcode entfernt – Preise nur TCGdex + Cardmarket-Preisdatei */}
-root.Prices={suggestAll:(q,lg)=>suggestLang(String(q||'').trim(),normLang(lg),400)/* v170: alle Treffer einer Sprache (auch ohne Bild) */,tdxSet,tdxId,tdxNum,ptcgSet,clsNum,clsFix,jpImgFallback,jpSets,jpSetCards,lookup,suggest,byId:async(id,lang)=>{lang=normLang(lang);if(String(id).startsWith('jp:')){const L=await jpLoad();const c=L.find(x=>x.id===id);return c?jpm(jpNorm(c)):null}const c=await getCard(id,lang);if(c)return normalize(c,lang);// v118: JP-Sets ohne TCGdex (z.B. M6a 30th) -> jpcards.json (Name/Nummer als Fakten, kein Bild)
+root.Prices={suggestAll:(q,lg)=>suggestLang(String(q||'').trim(),normLang(lg),400)/* v170: alle Treffer einer Sprache (auch ohne Bild) */,tdxSet,tdxId,tdxNum,ptcgSet,clsNum,clsFix,jpImgFallback,jpSets,jpSetCards,lookup,suggest,byId:async(id,lang)=>{lang=normLang(lang);if(String(id).startsWith('jp:')){const L=await jpLoad();const c=L.find(x=>x.id===id);return c?jpm(jpNorm(c)):null}/* v185 (Nr. 113): JP-Sets nur in jpcards.json (z. B. M6a) nicht bei TCGdex anfragen – sonst rote 404 ja/cards/M6a-137 in der Konsole */if(lang==='ja'){const sid=String(id).replace(/-[^-]*$/,'');const L=await jpLoad();if(L.some(x=>x.set===sid)){const k=String(id).replace(/-0*(\d)/,'-$1').toLowerCase(),j=L.find(x=>x.id.toLowerCase()==='jp:'+String(id).toLowerCase())||L.find(x=>(x.set+'-'+nz(x.localId)).toLowerCase()===k);return j?jpm(jpNorm(j)):null}}const c=await getCard(id,lang);if(c)return normalize(c,lang);// v118: JP-Sets ohne TCGdex (z.B. M6a 30th) -> jpcards.json (Name/Nummer als Fakten, kein Bild)
  if(lang==='ja'){const L=await jpLoad(),k=String(id).toLowerCase(),j=L.find(x=>x.id.toLowerCase()==='jp:'+k)||L.find(x=>(x.set+'-'+nz(x.localId)).toLowerCase()===String(id).replace(/-0*(\d)/,'-$1').toLowerCase());if(j)return jpm(jpNorm(j))}return null},search,toEUR,rate,
  clearCache(){mem.clear();store={c:{}};save()},CACHE_KEY:KEY,LANGS};
 })(typeof window!=='undefined'?window:globalThis);
