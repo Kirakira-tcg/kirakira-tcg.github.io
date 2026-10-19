@@ -368,7 +368,7 @@ let JPSNM=null,JPSNP=null;function jpsnLoad(){return JPSNP||(JPSNP=fetch('jpsetn
 if(window.Prices&&Prices.jpSets&&!Prices._jpsFix){const J0=Prices.jpSets;Prices._jpsFix=1;Prices.jpSets=async function(){const L=await J0.apply(this,arguments);try{await jpsnLoad();const cnt={};(L||[]).forEach(x=>{if(x&&x.name)cnt[x.name]=(cnt[x.name]||0)+1});return (L||[]).map(x=>{if(!x)return x;const r=JPSNM&&JPSNM[x.id];if(r&&r.ja)return x.name===r.ja?x:{...x,name:r.ja,tdxName:x.name};if(x.name&&cnt[x.name]>1)return{...x,name:'',tdxName:x.name};return x})}catch(e){return L}}}
 let SETTAB='en',JPSETL=null;
 /* v183 (Liste Nr. 49): Erscheinungsdatum der JP-Sets aus jpsetdates.json (TCGdex releaseDate je Set, tools/build_jpsetdates.py) – die TCGdex-Setliste liefert kein Datum */
-let JPSD=null,JPSDP=null;function jpsdLoad(){return JPSDP||(JPSDP=fetch('jpsetdates.json?v=183',{signal:AbortSignal.timeout(8000)}).then(r=>r.ok?r.json():null).then(j=>{JPSD=(j&&j.dates)||{}}).catch(()=>{JPSD={}}))}
+let JPSD=null,JPSDP=null;function jpsdLoad(){return JPSDP||(JPSDP=fetch('jpsetdates.json?v=184',{signal:AbortSignal.timeout(8000)}).then(r=>r.ok?r.json():null).then(j=>{JPSD=(j&&j.dates)||{}}).catch(()=>{JPSD={}}))}
 async function renderJpSets(){const L=$('#setList');if(!window.Prices||!Prices.jpSets){L.innerHTML='<p class="muted small">Nicht verfügbar.</p>';return}
  if(!JPSETL){L.innerHTML='<p class="muted small">Lade japanische Sets…</p>';try{JPSETL=await Prices.jpSets()}catch(e){JPSETL=[]}if(SETTAB!=='ja')return}
  await jpsnLoad();await jpsdLoad();const JSN=s=>(JPSNM[s.id]&&JPSNM[s.id].en)||'';const JSD=s=>(JPSD[s.id]||'').split('-').reverse().join('.');const f=$('#setFilter').value.toLowerCase();L.innerHTML='';const fl=setFilt(JPSETL,f,s=>[s.id],s=>s.name+' '+JSN(s));
