@@ -40,7 +40,7 @@ function count(el,v){const from=last.get(el)??0;last.set(el,v);const fmt=n=>{con
 // Booster-Reveal
 let rvClose=null;
 function reveal(it){const L=document.getElementById('fxLayer');if(!L)return;if(rvClose)rvClose(true);const ty=((it.types||[])[0]||'none').toLowerCase(),col=TC[ty]||TC.none;
- const img=(it.img||'').replace('/small','/large')||it.img;
+ /* v181: große Adresse nur wörtlich aus imgmap 'large' (API-Daten), sonst das kleine Bild – keine selbst gebaute /large-URL */const img=(typeof imgMapLarge==='function'&&!/assets\.tcgdex\.net\//.test(it.img||'')?imgMapLarge(it.img):'')||it.img||'';
  L.innerHTML=`<div class="rv" style="--tc:${col}" role="dialog" aria-label="Neue Karte"><div class="rv-rays"></div><button type="button" class="rv-x" aria-label="Schließen">✕</button>
  <div class="pack"><div class="pack-top"></div><div class="pack-body"><svg viewBox="0 0 64 64" width="70" height="70"><path d="M32 6l7 15 16 2-12 11 3 17-14-8-14 8 3-17L9 23l16-2z" fill="#fff" opacity=".95"/></svg><b>NEUE KARTE</b><small>Tippen zum Öffnen</small></div></div>
  <div class="rv-card"><div class="dcard">${img?`<img src="${esc(img)}" alt="">`:`<div class="rv-ph">${esc(it.name)}</div>`}<i class="holo"></i></div><div class="rv-name">${esc(it.name)}</div><div class="rv-price">${money(it.price)}</div><button type="button" class="primary rv-ok">Super!</button></div>
