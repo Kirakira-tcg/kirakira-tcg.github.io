@@ -1758,7 +1758,7 @@ addEventListener('popstate',e=>{if(NAVIGN>0){NAVIGN--;return}const d=$('#dlg'),s
 
 // v118: Sortierung + Filter für Set-Ansicht und Suchergebnisse (pro Ansicht in localStorage, bleibt beim Zurückgehen erhalten)
 
-function sortGet(v){const d={s:v==='set'?'pd':'rel',p:false,o:'all'};let x=null;try{x=JSON.parse(localStorage.getItem(SORTK(v))||'null')}catch(e){}if(!x||typeof x!=='object')return d;const S0=['rel','num','pa','pd','name','rar'];return{s:S0.includes(x.s)&&!(v==='set'&&x.s==='rel')?x.s:d.s,p:v==='set'?!!window._setP:x.p===true,o:['all','have','miss'].includes(x.o)?x.o:'all'}}
+function sortGet(v){/* v184 (Nr. 78): Set standardmäßig in Set-Reihenfolge – „Preis absteigend“ musste erst ALLE ~190 Preise laden */const d={s:v==='set'?'num':'rel',p:false,o:'all'};let x=null;try{x=JSON.parse(localStorage.getItem(SORTK(v))||'null')}catch(e){}if(!x||typeof x!=='object')return d;const S0=['rel','num','pa','pd','name','rar'];return{s:S0.includes(x.s)&&!(v==='set'&&x.s==='rel')?x.s:d.s,p:v==='set'?!!window._setP:x.p===true,o:['all','have','miss'].includes(x.o)?x.o:'all'}}
 
 function tInfo(el){const pb=el.querySelector('.cgp b,.p b'),pt=pb?pb.textContent:'',m=pt.match(/(\d[\d.]*,\d{2})\s*€/),num=el.dataset.num||((el.querySelector('.cgr,.s')||{}).textContent||'').match(/(?:^|[ #·•])#?([A-Za-z]{0,4}\d+[a-z]?)(?:\/|\s|$)/)?.[1]||'';
  return{p:m?parseFloat(m[1].replace(/\./g,'').replace(',','.')):null,n:((el.querySelector('.cgn,.n')||{}).textContent||'').replace(/^(✓\s*)?(#\S+\s+)?/,'').trim(),num,r:rarRank(el.dataset.rar||(el.querySelector('.cgr')||{}).textContent),own:el.classList.contains('owned')||/BESITZ/.test((el.querySelector('.badge')||{}).textContent||'')}}
