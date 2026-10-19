@@ -855,3 +855,5 @@ header{padding-top:max(12px,env(safe-area-inset-top));padding-left:max(16px,env(
 html:has(dialog[open]){overflow:hidden}
 /* v184 (Nr. 68) */
 #refresh span{font-size:.8rem;font-weight:700}#v-more>.a11yh{margin-top:4px}
+/* v184 (Nr. 65): kleiner Zusatz-Pfeil im Set-Kopf weg – der große „← Zurück zu den Sets“ bleibt */
+#results.cgset:has(.tosets) .navback{display:none}
