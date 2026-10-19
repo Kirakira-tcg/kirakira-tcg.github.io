@@ -786,3 +786,22 @@ button[data-l][aria-disabled="true"]{opacity:.4;cursor:help}
 /* v182: Sammlungskachel „Preis: Cardmarket · Stand …“ mit Link – bis 3 Zeilen, kein Überlauf bei 400 px */
 .tile .tsrc.cmsrc{-webkit-line-clamp:3!important}
 .tile .tsrc .cmsl{color:inherit;text-decoration:underline;text-underline-offset:2px}
+/* v183 (Jason, Binder): freier Platz antippbar + Auswahlfenster mit großen Kartenbildern */
+.bslot.bfree{cursor:pointer;font:inherit;color:var(--tx)}.bslot.bfree span{display:flex;flex-direction:column;align-items:center;gap:4px;opacity:.9}.bslot.bfree .bplus{font-style:normal;font-size:1.6rem;line-height:1;font-weight:800;color:var(--ac2,#ffd84d)}
+.bslot.bfree:hover,.bslot.bfree:focus-visible{border-color:var(--ac2,#ffd84d);background:rgba(255,216,77,.08)}
+dialog.bpickdlg{width:min(96vw,980px);max-width:none;max-height:calc(100dvh - 24px);padding:0;overflow:hidden;flex-direction:column}dialog.bpickdlg[open]{display:flex}
+.bpkhead{display:flex;align-items:center;justify-content:space-between;gap:8px;padding:10px 10px 10px 16px;border-bottom:1px solid var(--bd);flex:none}.bpkhead b{font-size:1.15rem}
+.bpkx{min-width:48px;min-height:48px;border-radius:14px;border:0;background:rgba(255,255,255,.12);color:var(--tx);font-size:1.3rem;font-weight:800;cursor:pointer}
+.bpkq{margin:8px 12px 0;width:auto!important;flex:none;font-size:.85rem;padding:6px 10px;min-height:36px}
+.bpkgrid{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:12px;padding:12px;overflow:auto;overscroll-behavior:contain;min-height:0}
+@media(min-width:600px){.bpkgrid{grid-template-columns:repeat(3,minmax(0,1fr))}}@media(min-width:900px){.bpkgrid{grid-template-columns:repeat(5,minmax(0,1fr))}}
+.bpk{display:flex;flex-direction:column;gap:3px;min-width:0;min-height:44px;padding:6px;border-radius:14px;border:2px solid rgba(255,255,255,.12);background:rgba(255,255,255,.06);color:var(--tx);font:inherit;text-align:center;cursor:pointer}
+.bpk[hidden]{display:none}.bpk:hover,.bpk:focus-visible{border-color:var(--ac2,#ffd84d)}.bpk:active{transform:scale(.97)}
+.bpkim{position:relative;display:block;width:100%;aspect-ratio:63/88;border-radius:10px;overflow:hidden}.bpkim img,.bpkim .phthumb{width:100%;height:100%;object-fit:contain;display:block}
+.bpkb,.bpkin{position:absolute;left:4px;top:4px;font-style:normal;font-size:11px;font-weight:800;padding:1px 5px;border-radius:6px;background:#ffd84d;color:#1d1a33}.bpkin{top:auto;bottom:4px;background:rgba(20,14,50,.9);color:#fff}
+.bpkn{font-weight:700;font-size:.9rem;line-height:1.2;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}.bpks{font-size:.72rem;color:var(--mu);overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.bpk.inb{opacity:.45;filter:grayscale(.7)}
+.bpkempty{grid-column:1/-1;display:flex;flex-direction:column;align-items:center;gap:14px;padding:24px 8px;text-align:center}.bpkempty p{font-size:1.05rem;margin:0}
+.bpkscan{min-height:64px;padding:0 28px;font-size:1.25rem;border-radius:18px}.bpksearch{min-height:44px}
+.btake{min-height:44px;margin:0 0 10px;font-weight:700;grid-column:1/-1}
+.addToast .bundo{font-size:1.05rem;min-width:140px}
