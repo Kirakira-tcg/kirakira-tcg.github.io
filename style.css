@@ -907,3 +907,5 @@ details.kaAdv{margin:10px 0;border:1px solid rgba(255,255,255,.18);border-radius
 details.kaAdv>summary{list-style:none}details.kaAdv>summary::-webkit-details-marker{display:none}details.kaAdv>summary::before{content:"▸";margin-right:8px;transition:transform .15s}details.kaAdv[open]>summary::before{transform:rotate(90deg)}
 /* v184 (NEU-B) */.kaShell{display:flex;align-items:center;gap:10px;min-height:120px;justify-content:center;font-weight:700;color:var(--mu)}.kaShell i{width:24px;height:24px;border-radius:50%;border:3px solid rgba(255,255,255,.25);border-top-color:#ffcf3f;animation:kaSpinB .8s linear infinite}@keyframes kaSpinB{to{transform:rotate(360deg)}}
 /* v184 (NEU-B) */.kaHoloIO .tile .holo{animation-play-state:paused}.kaHoloIO .tile.kaVis .holo{animation-play-state:running}
+
+/* v184 (Nr. 106): Ein-Tipp-Sprachwahl in der Scan-Kachel */.nmlq{display:block;font-weight:700;color:#ffcf3f;font-size:.85em;margin-top:4px}.nmlqb{display:flex;gap:6px;justify-content:center;margin-top:4px}.nmlqb .chip{min-width:44px;min-height:40px;display:inline-flex;align-items:center;justify-content:center}
