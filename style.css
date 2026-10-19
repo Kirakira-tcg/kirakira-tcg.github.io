@@ -821,3 +821,6 @@ dialog.bpickdlg{width:min(96vw,980px);max-width:none;max-height:calc(100dvh - 24
 .bper{min-height:40px!important}.binderbar{position:relative}.binderbar::after{content:"← wischen";position:sticky;right:0;align-self:center;flex:none;font-size:.75rem;opacity:.6;padding:0 6px;pointer-events:none}
 .qhelp{min-width:44px!important;min-height:44px!important;width:44px!important;height:44px!important;font-size:1.1rem!important}
 .lchips .chip.on{outline:3px solid var(--ac2,#ffd84d);outline-offset:2px}
+/* v184 (Nr. 60): Abstand unten = Leiste + Überstand des runden Scan-Knopfs + Sicherheitsabstand; Binder-Pfeile über dem Knopf */
+@media(max-width:899px){body{padding-bottom:calc(var(--navh,72px) + 30px + env(safe-area-inset-bottom,0px) + 16px)!important}
+ #binderView .bnav{bottom:calc(var(--navh,72px) + 28px + env(safe-area-inset-bottom,0px))!important}}
