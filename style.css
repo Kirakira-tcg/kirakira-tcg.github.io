@@ -824,11 +824,20 @@ dialog.bpickdlg{width:min(96vw,980px);max-width:none;max-height:calc(100dvh - 24
 /* v184 (Nr. 60): Abstand unten = Leiste + Überstand des runden Scan-Knopfs + Sicherheitsabstand; Binder-Pfeile über dem Knopf */
 @media(max-width:899px){body{padding-bottom:calc(var(--navh,72px) + 30px + env(safe-area-inset-bottom,0px) + 16px)!important}
  #binderView .bnav{bottom:calc(var(--navh,72px) + 28px + env(safe-area-inset-bottom,0px))!important}}
-/* v184 (Nr. 63): keine Schrift unter 12 px auf dem Handy (Kacheln, Sortieren, Binder, EN-Bild, Leiste, Rechtliches) */
+/* v184 (Nr. 63): sichtbare Schrift ≥ 12 px bei 400 px (reine Zier-Glyphen dürfen kleiner bleiben) */
 nav button{font-size:.8rem!important}
-.stats span,.tile .s,.cgr,.cgv,.tsrc,.imgsrc,.imgnote,.slotsrc,.bpks,.bpkin,.pstand,.bstand,.oldnote,.sortbar,.sortbar select,.seg button,.binder-page .tile .n,.binder-page .tile .p b,.bslot .bn,.bslot b,.bslot span,.pnote,.ssrow span,.appfoot p,.cardph small,.cardph span,.cardph em,.cardph .phl,.cardph .phs,.isrc,.ownph,.lpill,.badge,.qty,.vswL .jpb,.xsplit,.spThumb,.sugItem,.spThumb .jpsub,.lchips .chip b,.cgp .pos,.cgp .neg,.cmab,.cmsl,.dtable .dsec th,.gyroBtn{font-size:.8rem!important}
-.slotsrc,.isrc,.cardph .phl,.cardph small,.cardph .phs,.bslot>.isrc{font-size:12px!important}
+.stats span,.tile .s,.cgr,.cgv,.tsrc,.imgsrc,.imgnote,.slotsrc,.bpks,.bpkin,.pstand,.bstand,.oldnote,.sortbar,.sortbar select,.seg button,.binder-page .tile .n,.binder-page .tile .p b,.bslot .bn,.bslot b,.bslot span,.pnote,.ssrow span,.appfoot p,.cardph small,.cardph span,.cardph em,.cardph .phl,.cardph .phs,.isrc,.isrcd,.ownph,.lpill,.badge,.qty,#sumBuyL,#sumGainL,.vswL .jpb,.xsplit,.spThumb,.sugItem,.spThumb .jpsub,.lchips .chip b,.cgp .pos,.cgp .neg,.cmab,.cmsl,.dtable .dsec th,.gyroBtn,.hcap>span,.charttip span,.bslot.empty span,.phtray .cardph b,.phtray .cardph small,.phtray .cardph span,.phthumb .cardph b,.jphit .dph .cardph b,.jphit .dph .cardph span,.nmgrid .spThumb span{font-size:max(12px,.8rem)!important}
+.slotsrc,.isrc,.isrcd,.cardph .phl,.cardph small,.cardph .phs,.bslot>.isrc,.badge,.qty,.lpill,.ownph{font-size:12px!important}
 .small,.muted.small{font-size:max(13px,.9rem)}
+/* Clamp-Böden auf 12 px, damit enge Kacheln nicht unter die Leseschwelle fallen */
+.cardph b{font-size:clamp(12px,10cqw,1.9rem)!important}
+.cardph span{font-size:clamp(12px,7cqw,1.25rem)!important}
+.cardph em,.cardph .phs{font-size:clamp(12px,5.6cqw,1.05rem)!important}
+.cardph small{font-size:clamp(12px,8cqw,1.05rem)!important}
+.cardph .phl{font-size:clamp(12px,4.8cqw,.9rem)!important}
+.bslot .cardph .phl{font-size:clamp(12px,9cqw,.75rem)!important}
+.bslot .cardph small{font-size:clamp(12px,16cqw,.9rem)!important}
+.dcard .isrcd,.isrcd{font-size:12px!important;line-height:1.2!important}/* v184 (Nr. 63) */
 /* v184 (Nr. 77): Querformat mit wenig Höhe (z. B. 1026×400): Seitenleiste kompakt und scrollbar, alle 6 Punkte erreichbar */
 @media(min-width:900px) and (max-height:560px){nav{overflow-y:auto;overscroll-behavior:contain;gap:2px!important;padding-top:62px!important;padding-bottom:6px!important}nav button{padding:4px 2px!important;min-height:52px!important}nav button i{font-size:1.1rem!important}nav .scanNav i{width:38px!important;height:38px!important;margin:0 auto 2px!important}}
 /* v184 (Nr. 79): Set-Kacheln mit fester Logo-Höhe (Logo, „kein Logo“ und JP-Cover gleich hoch) – kein Springen beim Laden */
