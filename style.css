@@ -816,3 +816,8 @@ dialog.bpickdlg{width:min(96vw,980px);max-width:none;max-height:calc(100dvh - 24
 .appfoot,.appfoot p{font-size:.82rem!important;color:#cfc8ea!important}
 .appfoot{padding-bottom:calc(var(--navh,72px) + env(safe-area-inset-bottom,0px) + 24px)!important}
 .tsrc,.imgsrc,.imgnote{font-size:12px!important}
+/* v184 (Nr. 65): „+“ auf Set-Kacheln beschriftet; (Nr. 66): „18/Seite“ erklärt, Binder-Tabs mit Wisch-Hinweis; (Nr. 69): „?“ größer, aktive Sprache klar */
+@media(max-width:899px){.cgadd{position:static!important;width:auto!important;min-height:44px!important;min-width:0!important;padding:6px 10px!important;font-size:.85rem!important;font-weight:800!important;border-radius:12px!important;margin:6px 8px 8px!important;background:var(--ac)!important;color:#fff!important}.cgadd::after{content:" Hinzufügen"}}
+.bper{min-height:40px!important}.binderbar{position:relative}.binderbar::after{content:"← wischen";position:sticky;right:0;align-self:center;flex:none;font-size:.75rem;opacity:.6;padding:0 6px;pointer-events:none}
+.qhelp{min-width:44px!important;min-height:44px!important;width:44px!important;height:44px!important;font-size:1.1rem!important}
+.lchips .chip.on{outline:3px solid var(--ac2,#ffd84d);outline-offset:2px}
