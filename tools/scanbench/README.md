@@ -23,3 +23,8 @@ Dauer: etwa 20 bis 25 Minuten für 600 Scans mit 4 Seiten auf 8 Kernen. Bei mehr
    - Bei Karten, die nicht übernommen wurden, wird die Ursache bestimmt: kein Fingerabdruck, Bildvergleich auf Platz 1 aber unter der Schwelle, Top 5 oder verfehlt.
 
 Wichtigste Kennzahl: **falsch auto** sollte ≈ 0 sein. Eine falsche Karte, die automatisch übernommen wird, ist schlimmer als eine Auswahl.
+
+## Spalten (v185)
+- `ocr_name` / `ocr_number`: rohes `analyze0`-Ergebnis. Der Name steht in der EN-Suchform (`deName`, z. B. Quaputzi → Poliwhirl), die Nummer vor der Gesamtzahl-Korrektur im Auswahlblatt (130/102 → 13).
+- `ui_name` / `ui_num`: Felder im Auswahlblatt, `ui_status_num`: Nummer aus der Statuszeile, `tile1`: erste Kachel – das sieht der Nutzer. `ui_num_ok` bewertet diese Nummer.
+- `true_lang` kommt aus `plang` (sonst TCGdex-Sprache). Bei echten Fotos `plang` setzen (z. B. DE-Grundset-Foto), sonst zählt das Blatt als falsche Sprache.

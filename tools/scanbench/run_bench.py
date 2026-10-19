@@ -21,7 +21,11 @@ const sl=x=>x&&{name:x.name,number:x.number,full:x.full,lang:x.lang,set:x.set,se
  imgHit:x.imgHit&&{cardId:x.imgHit.cardId,score:x.imgHit.score},img:(x.imgMatch||[]).slice(0,5).map(m=>m.cardId+':'+(+m.score).toFixed(3)),energy:!!x.energy,ms:x.ms};
 return {r:b.r?sl(r):null,r0:b.r0?sl(r0):null,tR:b.tR,tR0:b.tR0,sheet:!!f,nmst:f?f.querySelector('.nmst')?.textContent:'',cands:C,pick,
  sheetLang:f?(f.querySelector('.nmlang .chip.on')?.dataset.l||'-'):'',langEv:window.langEvDbg||'',
- status:document.getElementById('scanStatus2')?.textContent||'',imgVar:window.imgVar||''}}"""
+ status:document.getElementById('scanStatus2')?.textContent||'',imgVar:window.imgVar||'',
+ uiName:f&&f.name?f.name.value:'',uiNum:f&&f.num?f.num.value:'',tile1:C[0]?C[0].txt:''}}"""
+def stnum(t):
+    m = re.search(r'Nr\. ([0-9A-Za-z]+(?:/[0-9A-Za-z]+)?)', t or '')
+    return m.group(1) if m else ''
 ID_RE = re.compile(r'assets\.tcgdex\.net/(\w+)/[^/"]+/([^/"]+)/([^/"]+)/')
 
 async def worker(wid, br, url, q, out, args):
@@ -73,7 +77,11 @@ async def worker(wid, br, url, q, out, args):
                        t_result_ms=round(s['tR'] - t0) if s['tR'] else '', timeout5s=int(bool(rr.get('timeout'))),
                        ocr_name=(s['r0'] or rr).get('name') or '', ocr_number=(s['r0'] or rr).get('full') or (s['r0'] or rr).get('number') or '',
                        ocr_lang=rr.get('lang') or '', sheet_lang=s.get('sheetLang') or '', lang_ev=s.get('langEv') or '', img_top=' '.join(rr.get('img') or (s['r0'] or {}).get('img') or []),
-                       img_score=(rr.get('imgHit') or {}).get('score', ''), img_var=s['imgVar'], status=s['status'][:120], photo=os.path.basename(m['photo']), err='')
+                       img_score=(rr.get('imgHit') or {}).get('score', ''), img_var=s['imgVar'], status=s['status'][:120],
+                       # v185: ocr_name/ocr_number sind das ROHE analyze0-Ergebnis (Name in EN-Suchform via deName, Nummer vor der Gesamtzahl-Korrektur 130/102→13 im Blatt).
+                       # Was der Nutzer sieht: ui_name/ui_num (Felder im Auswahlblatt), ui_status_num (Nummer aus der Statuszeile), tile1 (erste Kachel)
+                       ui_name=s.get('uiName') or '', ui_num=s.get('uiNum') or '', ui_status_num=stnum(s['status']),
+                       tile1=s.get('tile1') or '', photo=os.path.basename(m['photo']), err='')
         except Exception as e:
             rec = dict(scan_id=m['scan_id'], id=m['id'], name=m['name'], cat=m['cat'], variant=m['variant'], rarity=m['rarity'], lang=m['lang'],
                        outcome='error', err=str(e)[:200], photo=os.path.basename(m['photo']))

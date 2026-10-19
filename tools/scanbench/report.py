@@ -47,6 +47,9 @@ def main():
         sl = (r.get('sheet_lang') or '').upper(); r['wrong_lang_sheet'] = (not au) and sl in ('DE', 'EN', 'JP') and sl != tl
         r['sheet_lang_none'] = (not au) and r.get('sheet_lang') == '-'
         r['num_ok'] = bool(num) and num == re.sub(r'\D', '', r['id'].rsplit('-', 1)[1]).lstrip('0')
+        # v185: Nummer, die die App zeigt (Blattfeld bzw. Statuszeile, nach der Gesamtzahl-Korrektur) – ocr_number ist roh
+        un = re.sub(r'\D', '', ((r.get('ui_num') or r.get('ui_status_num') or '')).split('/')[0]).lstrip('0')
+        r['ui_num_ok'] = bool(un) and un == re.sub(r'\D', '', r['id'].rsplit('-', 1)[1]).lstrip('0')
     def block(rows):
         n = len(rows); au = [r for r in rows if r['auto']]
         ts = [r['t'] for r in rows if r['t'] is not None]
@@ -84,7 +87,8 @@ def main():
         WL = [r for r in R if r['wrong_lang_auto'] or r['wrong_lang_sheet']]
         md.append(f"\n## Sprache\nFalsche Sprache bei Auto-Übernahme: {sum(r['wrong_lang_auto'] for r in R)}; falsch vorgewählt im Blatt: {sum(r['wrong_lang_sheet'] for r in R)}; Blatt ohne Vorwahl: {sum(r['sheet_lang_none'] for r in R)} von {sum(not r['auto'] and bool(r.get('sheet_lang')) for r in R)} Blättern\n" +
                   ''.join(f"- {r['id']} ({r['cat']}/{r['variant']}): echt {r['true_lang']}, übernommen {r['ocr_lang'] if r['auto'] else '–'}, Blatt {r.get('sheet_lang')}\n" for r in WL))
-    md.append(f"\n## OCR\nNummer richtig gelesen: {pct(sum(r['num_ok'] for r in R), len(R))} (Foto {pct(sum(r['num_ok'] for r in R if r['variant']=='photo'), sum(r['variant']=='photo' for r in R))}); Name gelesen (nicht leer): {pct(sum(bool(r['ocr_name']) for r in R), len(R))}\n")
+    md.append(f"\n## OCR\nNummer richtig gelesen: {pct(sum(r['num_ok'] for r in R), len(R))} (Foto {pct(sum(r['num_ok'] for r in R if r['variant']=='photo'), sum(r['variant']=='photo' for r in R))}); Name gelesen (nicht leer): {pct(sum(bool(r['ocr_name']) for r in R), len(R))}\n" +
+              f"Nummer in der App angezeigt richtig (nach Korrektur, Blatt/Statuszeile): {pct(sum(r['ui_num_ok'] for r in R), len(R))} – ocr_name/ocr_number sind roh (Name in EN-Suchform)\n")
     open(os.path.join(a.out, 'summary.md'), 'w').write(''.join(md))
     with open(os.path.join(a.out, 'results_scored.csv'), 'w', newline='') as f:
         w = csv.DictWriter(f, list(R[0].keys())); w.writeheader(); w.writerows(R)
