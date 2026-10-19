@@ -926,3 +926,11 @@ details.kaAdv>summary{list-style:none}details.kaAdv>summary::-webkit-details-mar
 /* v185 (Nr. 66): Ringlöcher – 4 gleichmäßige, runde Löcher statt eines Rings mit langem dunklem Balken; Handy links, PC in der Mitte der Doppelseite */
 .bpage::before{content:""!important;position:absolute!important;left:6px!important;top:5%!important;bottom:5%!important;width:16px!important;margin:0!important;border-radius:0!important;box-shadow:none!important;background:radial-gradient(circle at 50% 50%,#0c0a18 0 4px,rgba(255,255,255,.7) 4.5px 6px,rgba(0,0,0,.3) 6.4px 7.2px,transparent 7.6px) 0 0/16px 25% repeat-y!important;pointer-events:none}
 @media(min-width:900px){.bpage::before{left:50%!important;margin-left:-8px!important}}
+/* v185 (Nr. 66): Binder-Bild in Chips/Kopf/Liste (Kartenbild, Set-Logo oder Initialen-Kachel) */
+.bth{position:relative;display:inline-flex;align-items:center;justify-content:center;flex:none;width:26px;height:26px;border-radius:7px;overflow:hidden;background:linear-gradient(135deg,hsl(var(--bh,250) 55% 42%),hsl(calc(var(--bh,250) + 40) 55% 30%));color:#fff;font:800 11px/1 system-ui,sans-serif;letter-spacing:.02em;vertical-align:middle;margin-right:7px;box-shadow:inset 0 0 0 1px rgba(255,255,255,.18)}
+.bth::before{content:attr(data-i)}
+.bth>img,.bthumbs .bth>img{position:absolute;inset:0;width:100%!important;height:100%!important;margin:0!important;object-fit:cover;object-position:50% 20%;border-radius:0!important;box-shadow:none!important;background:#1d1a33}
+.bth.lg>img,.bthumbs .bth.lg>img{object-fit:contain;object-position:50% 50%;background:#f4f2fb;padding:2px;box-sizing:border-box}
+.bthumbs .bth.big{width:96px;height:64px;border-radius:10px;font-size:20px;margin:0}
+.bthumbs .bth.big.lg>img{padding:6px}
+.bhead .bth{width:30px;height:30px;margin-right:8px}
