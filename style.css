@@ -418,7 +418,7 @@ body:has(#addToast:not([hidden])) .scantray .trayall{bottom:calc(var(--navh,72px
 .tile.cg.oldp .cgp b{color:#8b8aa0;opacity:.75}
 .cgadd{position:absolute;right:.45rem;bottom:.45rem;width:2.1rem;height:2.1rem;min-height:0;border-radius:50%;padding:0;font-size:1.35rem;line-height:1;font-weight:800;background:#ff5fa2;color:#fff;border:0;box-shadow:0 2px 8px rgba(0,0,0,.35)}
 .tile.cg.owned{outline:2px solid rgba(74,222,128,.55)}
-.cghead{display:flex;align-items:center;gap:.4rem}
+.cghead{display:flex;align-items:center;gap:.4rem;flex-wrap:wrap;row-gap:.15rem}.cghead>span{white-space:nowrap}/* v183 (Liste Nr. 33): Kopfzeile bricht als Ganzes um, Datum nicht als eigene schmale Spalte */
 .navback{min-height:0;width:2.4rem;height:2.4rem;border-radius:50%;padding:0;font-size:1.3rem;line-height:1;flex:0 0 auto}
 .navback-d{position:sticky;top:0;z-index:3;float:left;margin:0 .4rem .2rem 0}
 .ownph{position:absolute;left:.3rem;bottom:.3rem;background:rgba(0,0,0,.68);color:#fff;font-size:.66rem;font-weight:700;padding:.1rem .35rem;border-radius:6px;pointer-events:none}
