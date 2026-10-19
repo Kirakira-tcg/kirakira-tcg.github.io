@@ -954,3 +954,5 @@ details.kaAdv>summary{list-style:none}details.kaAdv>summary::-webkit-details-mar
 .tile:not(.cg)>.p{flex-wrap:wrap;overflow:visible;column-gap:6px;row-gap:0}
 .tile:not(.cg)>.p>b,.tile:not(.cg)>.p>span{white-space:nowrap;flex:none}
 .tile:not(.cg)>.p>span{margin-left:auto}
+/* v186: Kartendetail am PC – „← Zurück“ in einer Zeile (vorher 38-px-Rundknopf aus .navback: Pfeil stand über dem Wort); Handy-Stil (48 px) bleibt */
+#dlg .navbar-d .navback-d{width:auto!important;min-width:0;white-space:nowrap;display:inline-flex;align-items:center;gap:.3em;padding:0 16px!important;border-radius:999px!important;flex:none}
