@@ -834,3 +834,5 @@ nav button{font-size:.8rem!important}
 /* v184 (Nr. 79): Set-Kacheln mit fester Logo-Höhe (Logo, „kein Logo“ und JP-Cover gleich hoch) – kein Springen beim Laden */
 .set img:not(.jpcover){height:48px;margin:0 auto 4px}.set .nologo{height:48px;margin-bottom:4px}
 .kaShifted{outline:3px solid var(--ac2,#ffd84d)!important}
+/* v184 (Nr. 82): Set ohne Logo – freundliche Karten-Kachel statt „Kein Logo“ (kein Bild aus fremden Quellen, Setname steht darunter) */
+.set .nologo{font-size:0!important;border:0!important;background:linear-gradient(135deg,rgba(255,95,162,.25),rgba(90,184,255,.25))!important}.set .nologo::before{content:'🃏';font-size:28px;line-height:1}
