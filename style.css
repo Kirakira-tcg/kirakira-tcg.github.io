@@ -934,3 +934,19 @@ details.kaAdv>summary{list-style:none}details.kaAdv>summary::-webkit-details-mar
 .bthumbs .bth.big{width:96px;height:64px;border-radius:10px;font-size:20px;margin:0}
 .bthumbs .bth.big.lg>img{padding:6px}
 .bhead .bth{width:30px;height:30px;margin-right:8px}
+/* v185 (Nr. 117): gleich hohe Kacheln in Reihen/Rastern – Preis + „Preis: … · Stand“ immer unten; Setname eine Zeile mit „…“; Bildquelle/EN-Bild als Overlay auf dem Bild statt Zeile zwischen Bild und Name */
+.tile:not(.cg){display:flex;flex-direction:column}:where(.tile:not(.cg)){min-width:0}
+.tile:not(.cg)>.p{margin-top:auto;padding-top:3px}
+.tile:not(.cg)>.tsrc{min-height:2.6em}
+.hscroll{align-items:stretch}
+#topList.hscroll>*,#trendList.hscroll>*{align-self:stretch!important}
+.tile .s{display:flex!important;-webkit-line-clamp:unset!important;white-space:nowrap!important;overflow:hidden;min-width:0}
+.tile .s .ss{flex:0 1 auto;min-width:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.tile .s .sr{flex:none;white-space:pre}
+.tile:not(.cg)>.imgnote{position:absolute;top:14px;left:14px;margin:0!important;z-index:3;pointer-events:none}
+.tile:not(.cg):has(>.badge)>.imgnote{top:42px}
+.cgim .imgnote{top:8px;left:8px;bottom:auto!important}
+.cgim:has(>.badge)>.imgnote{top:38px}
+.tile .im>.imgsrc.ov,.cgim>.imgsrc.ov{z-index:3;pointer-events:none;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.listsrc.lsrow{margin:-4px 0 6px}
+.binder-page .tile .s{display:none!important}
