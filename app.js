@@ -511,12 +511,12 @@ function detail({api:c,item,list}){if(c&&!c._tdx&&!c._syd&&window.Prices){c._syd
 const PTNEGK='ka_ptneg',PTNEGT=6*3600e3;const ptNeg=()=>{try{return JSON.parse(localStorage.getItem(PTNEGK)||'{}')}catch(e){return{}}};
 const ptNegSet=ids=>{try{const n=ptNeg(),t=Date.now();ids.forEach(i=>n[i]=t);for(const k in n)if(t-n[k]>PTNEGT)delete n[k];localStorage.setItem(PTNEGK,JSON.stringify(n))}catch(e){}};
 const ptcgOk=id=>{id=String(id||'');const m=id.match(/^([a-z0-9]+)-([a-z0-9]+)$/i);if(!m||/[A-Z]/.test(m[1]))return false;return !/^(me\d|30th)/.test(m[1])};
-async function refreshPrices(){const btn=$('#refresh');btn.textContent='…';const items=[...S.collection,...S.wishlist].filter(x=>x.apiId&&!/^(JP|JA)$/i.test(String(x.lang||'')));
+async function refreshPrices(){const btn=$('#refresh');btn.innerHTML='⏳ <span>lädt…</span>';/* v184 (Nr. 68): Beschriftung bleibt */const items=[...S.collection,...S.wishlist].filter(x=>x.apiId&&!/^(JP|JA)$/i.test(String(x.lang||'')));
  const NG=ptNeg(),ids=[...new Set(items.map(x=>x.apiId))].filter(id=>ptcgOk(id)&&!(NG[id]&&Date.now()-NG[id]<PTNEGT));
  /* v168: kein pokemontcg.io-API-Aufruf mehr; Preise über TCGdex + Cardmarket-Preisdatei */
  await Promise.all(items.map(async x=>{const c={id:x.apiId};if(await cmSync(c)){x.cm=cmInfo(c);const p=cmPrice(c);if(p!=null&&x.ownPrice==null){x.price=p;delete x.estimate}}}));
  for(const x of [...S.collection,...S.wishlist])if(x.type!=='sealed'&&tdxNeed(x))await tdxFill(x);
- S.collection.forEach(trackPrice);pStamp();btn.textContent='⟳';window._pLoad=false;save();snapshot();render()}
+ S.collection.forEach(trackPrice);pStamp();btn.innerHTML='⟳ <span>Preise</span>';window._pLoad=false;save();snapshot();render()}
 $('#refresh').onclick=refreshPrices;
 
 // Gewinn/Verlust nur für Karten mit Kaufpreis (>0); ohne Kaufpreis zählt nur der Wert
@@ -2282,3 +2282,8 @@ document.addEventListener('click',e=>{const b=e.target.closest&&e.target.closest
   const done=()=>{try{localStorage.setItem('kaInstHint','1')}catch(e){}d.remove()};d.querySelector('.kix').onclick=done;const ok=d.querySelector('.kiok');if(ok)ok.onclick=async()=>{try{bip.prompt();await bip.userChoice}catch(e){}done()};document.body.append(d)}catch(e){}},6000)}
 /* v184 (Nr. 83): gleicher Cardmarket-Preis für DE und EN ist kein Fehler – Cardmarket führt eine Produkt-ID für alle Sprachen; das steht jetzt sichtbar unter dem Preisguide (nicht bei JP) */
 {const d1=detail;detail=function(){const r=d1.apply(this,arguments);const note=()=>{try{const f=$('#dlgForm');if(!f||f.querySelector('.allLang'))return;const h=[...f.querySelectorAll('h3')].find(x=>/Preisguide \(Cardmarket\)/.test(x.textContent));if(!h||/JP-Markt/.test(f.textContent))return;h.insertAdjacentHTML('afterend','<p class="pnote allLang">Dieser Cardmarket-Preis gilt für alle Sprachen der Karte (DE, EN, FR, IT, ES, PT).</p>')}catch(e){}};if(r&&r.then)r.then(note,()=>{});else setTimeout(note,0);return r}}
+
+/* v184 (Nr. 68): Kopfzeile erklärt sich – „Währung“ als feste Beschriftung über EUR, Tipp auf ⟳ zeigt kurz „Preise neu laden“ */
+{const cu=$('#cur');if(cu&&!cu.closest('.hcap')){const l=document.createElement('label');l.className='hcap';l.innerHTML='<span>Währung</span>';cu.before(l);l.append(cu)}
+ const tip=(el,t)=>{let b=document.getElementById('kaTip');if(!b){b=document.createElement('div');b.id='kaTip';b.setAttribute('role','status');document.body.append(b)}b.textContent=t;const r=el.getBoundingClientRect();b.style.top=Math.round(r.bottom+6)+'px';b.style.right=Math.max(8,Math.round(innerWidth-r.right))+'px';b.classList.add('on');clearTimeout(b._t);b._t=setTimeout(()=>b.classList.remove('on'),1800)};
+ const rf=$('#refresh');if(rf){rf.title='Preise neu laden';rf.addEventListener('click',()=>tip(rf,'Preise neu laden …'),true)}}

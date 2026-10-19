@@ -862,3 +862,7 @@ html:has(dialog[open]){overflow:hidden}
 @media(min-width:900px){#kaInst{display:none}}
 body:has(#addToast:not([hidden])) #kaInst,body:has(#kaBackToast.on) #kaInst{display:none}
 /* v183: Installieren-Hinweis nie über Scan-Knöpfen (✕ Abbrechen, Auswahl, Bestätigung) */body:has(#v-scan.view.active) #kaInst,body:has(#nmSheet) #kaInst,body:has(#scanConfirm) #kaInst,body:has(#fxLayer.on) #kaInst{display:none}
+/* v184 (Nr. 68): Beschriftungen in der Kopfzeile */
+.hcap{display:flex;flex-direction:column;align-items:stretch;gap:0;margin:0}.hcap>span{font-size:.7rem;color:var(--mu);text-align:center;line-height:1;margin-bottom:2px}.hcap select{min-height:40px!important}
+#refresh{display:inline-flex;align-items:center;gap:4px;white-space:nowrap}
+#kaTip{position:fixed;z-index:210;padding:8px 12px;border-radius:12px;background:#fff;color:#1d1a33;font-weight:800;font-size:.9rem;box-shadow:0 6px 18px rgba(0,0,0,.4);opacity:0;pointer-events:none;transition:opacity .15s}#kaTip.on{opacity:1}
