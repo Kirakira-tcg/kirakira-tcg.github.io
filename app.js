@@ -1753,7 +1753,7 @@ $('#dlg').addEventListener('close',()=>{const d=$('#dlg');d._card=false;d._pop=f
 addEventListener('popstate',e=>{if(NAVIGN>0){NAVIGN--;return}const d=$('#dlg'),s=e.state||{};
  if(d&&d.open&&d._card){d._pop=true;d.close('cancel');return}
  if(s.lv==='set'&&s.setId){go('v-search');search('','','',s.setId);scrollTo(0,0);return}
- if(s.lv==='search'||(!s.lv&&$('#results')&&$('#results').classList.contains('cgset'))){go('v-search');const q=s.q||['','',''],R=$('#results');$('#qName').value=q[0]||'';$('#qNum').value=q[1]||'';if($('#qSet'))$('#qSet').value=q[2]||'';R.classList.remove('cgset','binder-src');
+ if(s.lv==='search'||(!s.lv&&$('#results')&&$('#results').classList.contains('cgset'))){go('v-search');const q=s.q||['','',''],R=$('#results');$('#qName').value=q[0]||'';$('#qNum').value=q[1]||'';if($('#qSet'))$('#qSet').value=q[2]||'';R.classList.remove('cgset','binder-src');/* v184 (Tester v182): alte Set-Ebenen im Verlauf nicht wieder aufmachen */kaBack.close('set');
   const y=s.y||0,sc=()=>scrollTo(0,y);if(q[0]||q[1]){Promise.resolve(search(q[0],q[1],q[2])).finally(()=>setTimeout(sc,60))}else{R.innerHTML='';requestAnimationFrame(sc)}}});
 
 // v118: Sortierung + Filter für Set-Ansicht und Suchergebnisse (pro Ansicht in localStorage, bleibt beim Zurückgehen erhalten)
