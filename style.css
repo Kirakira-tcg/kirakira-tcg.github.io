@@ -831,3 +831,6 @@ nav button{font-size:.8rem!important}
 .small,.muted.small{font-size:max(13px,.9rem)}
 /* v184 (Nr. 77): Querformat mit wenig Höhe (z. B. 1026×400): Seitenleiste kompakt und scrollbar, alle 6 Punkte erreichbar */
 @media(min-width:900px) and (max-height:560px){nav{overflow-y:auto;overscroll-behavior:contain;gap:2px!important;padding-top:62px!important;padding-bottom:6px!important}nav button{padding:4px 2px!important;min-height:52px!important}nav button i{font-size:1.1rem!important}nav .scanNav i{width:38px!important;height:38px!important;margin:0 auto 2px!important}}
+/* v184 (Nr. 79): Set-Kacheln mit fester Logo-Höhe (Logo, „kein Logo“ und JP-Cover gleich hoch) – kein Springen beim Laden */
+.set img:not(.jpcover){height:48px;margin:0 auto 4px}.set .nologo{height:48px;margin-bottom:4px}
+.kaShifted{outline:3px solid var(--ac2,#ffd84d)!important}

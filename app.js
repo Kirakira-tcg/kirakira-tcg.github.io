@@ -2247,3 +2247,9 @@ function tSrcD(best){let l=tSrc(best&&best.source);if(best&&!/Stand|\d{2}\.\d{2}
 
 /* v184 (Nr. 83): Ø-1-Tag über dem 2-fachen Trend ist ein Ausreißer (wenige Verkäufe) – Wert bleibt sichtbar, aber markiert und nicht als Hauptzahl. Nichts erfunden. */
 {const d0=detail;detail=function(){const r=d0.apply(this,arguments);const mark=()=>{try{const tb=$('#dlgForm .ptable');if(!tb)return;const rows=[...tb.querySelectorAll('tr')];const t=rows.find(x=>/Trend/.test(x.firstElementChild?.textContent||''));const tv=t&&parseFloat((t.lastElementChild.textContent||'').replace(/\./g,'').replace(',','.'));rows.forEach(x=>{if(!/^Ø 1 Tag/.test(x.firstElementChild?.textContent||''))return;const v=parseFloat((x.lastElementChild.textContent||'').replace(/\./g,'').replace(',','.'));if(tv>0&&v>tv*2){x.firstElementChild.textContent='Ø 1 Tag (Ausreißer, wenige Verkäufe)';x.style.opacity='.6'}})}catch(e){}};if(r&&r.then)r.then(mark,()=>{});else setTimeout(mark,0);return r}}
+
+/* v184 (Nr. 79): Tipp nach Layout-Sprung schlucken – hat sich die Seite in den letzten 0,6 s verschoben (Bilder/Preise geladen, Liste umsortiert),
+   öffnet ein Tipp auf Kachel/Set nicht versehentlich etwas anderes; der nächste Tipp wirkt normal */
+{let lastShift=0;try{new PerformanceObserver(l=>{for(const e of l.getEntries())if(!e.hadRecentInput&&e.value>0.005)lastShift=performance.now()}).observe({type:'layout-shift',buffered:false})}catch(e){}
+ let downAt=0,downShift=false;document.addEventListener('pointerdown',e=>{downAt=performance.now();downShift=downAt-lastShift<600},true);
+ document.addEventListener('click',e=>{if(!downShift)return;downShift=false;const t=e.target.closest&&e.target.closest('#results .tile,#setList .set,#setList .xgr,#collGrid .tile');if(t){e.preventDefault();e.stopImmediatePropagation();t.classList.add('kaShifted');setTimeout(()=>t.classList.remove('kaShifted'),400)}},true)}
