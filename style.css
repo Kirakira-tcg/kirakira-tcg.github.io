@@ -811,3 +811,8 @@ dialog.bpickdlg{width:min(96vw,980px);max-width:none;max-height:calc(100dvh - 24
 #binderView>.bdz{order:9;display:flex;justify-content:center;margin:28px 0 8px;padding-top:14px;border-top:1px dashed rgba(239,68,68,.35)}
 .bdz .bdel,#resetBtn{background:rgba(239,68,68,.14)!important;border:2px solid rgba(239,68,68,.7)!important;color:#fecaca!important;font-weight:800;min-height:48px}
 .dangerzone #resetBtn{width:100%;margin-top:8px}
+/* v184 (Nr. 67): Sammelzeile Quelle/Datum + lesbarer Rechtshinweis */
+.listsrc{grid-column:1/-1;display:flex;flex-wrap:wrap;gap:2px 12px;margin:2px 0 8px;font-size:.8rem;color:#d6d0f0;line-height:1.35}#binderView>.listsrc{order:0}
+.appfoot,.appfoot p{font-size:.82rem!important;color:#cfc8ea!important}
+.appfoot{padding-bottom:calc(var(--navh,72px) + env(safe-area-inset-bottom,0px) + 24px)!important}
+.tsrc,.imgsrc,.imgnote{font-size:12px!important}
