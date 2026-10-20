@@ -64,17 +64,17 @@
  <!-- Datenschutz: Entwurf – keine Rechtsberatung -->
  <h2>Datenschutz</h2>
  <div class="muted small legal">
-  <p><b>Deine Daten bleiben bei dir.</b> Sammlung, Wunschliste und Einstellungen werden nur in deinem Browser gespeichert (localStorage). Es gibt kein Konto, keine Cookies, kein Tracking und keine Werbung. Über „Export“ kannst du deine Daten sichern, über „Alles löschen“ entfernen.</p>
-  <p><b>Externe Dienste.</b> Für Suche, Preise und Bilder ruft dein Browser direkt folgende Dienste auf. Diese sehen dabei – wie bei jeder Webseite – deine IP-Adresse:</p>
+  <p><b>Deine Daten bleiben bei dir.</b> Sammlung, Wunschliste, Binder und Einstellungen speichert nur dein Browser auf deinem Gerät (localStorage). Eigene Kartenfotos und die Sprachdaten der Texterkennung liegen in IndexedDB, App-Dateien und Kartenbilder im Browser-Cache (Cache Storage), kurze technische Merker in sessionStorage. Kein Konto, keine Cookies, kein Tracking, keine Werbung. Über „Export“ sicherst du deine Daten, über „Alles löschen“ entfernst du sie.</p>
+  <p><b>Externe Dienste.</b> Dein Browser ruft diese Dienste direkt auf. Sie sehen dabei – wie bei jeder Webseite – deine IP-Adresse, bei der Suche auch den gesuchten Kartennamen bzw. die Nummer:</p>
   <ul>
-   <li>TCGdex (api.tcgdex.net, assets.tcgdex.net) – Kartendaten, Bilder (auch für japanische Karten), Cardmarket-Preise</li>
-   <li>Pokémon TCG API (api.pokemontcg.io, images.pokemontcg.io) – englische Kartendaten und Bilder</li>
-   <li>Frankfurter (api.frankfurter.dev) und ExchangeRate-API (open.er-api.com) – Wechselkurse</li>
-   <li>jsDelivr (cdn.jsdelivr.net) – Texterkennung (Tesseract) für den Scan</li>
-   <li>GitHub Pages (github.io) – liefert die App selbst aus</li>
+   <li>GitHub Pages (github.io) – liefert die App aus</li>
+   <li>TCGdex (api.tcgdex.net, assets.tcgdex.net) – Kartendaten, Bilder, Cardmarket-Preise</li>
+   <li>images.pokemontcg.io und images.scrydex.com – Kartenbilder (v. a. englische Karten)</li>
+   <li>jsDelivr (cdn.jsdelivr.net) – Texterkennung und Bilderkennung für den Scan, erst beim Scannen geladen</li>
+   <li>Frankfurter (api.frankfurter.dev) – Wechselkurs, nur wenn ein Preis nicht in Euro kommt</li>
   </ul>
   <p>Links zu Cardmarket und eBay öffnen sich nur, wenn du sie antippst.</p>
-  <p><b>Kamera.</b> Kamerabilder und hochgeladene Fotos werden nur auf deinem Gerät ausgewertet und nicht hochgeladen. Nur der erkannte Text (Name/Nummer) wird für die Suche verwendet.</p>
+  <p><b>Kamera und Fotos.</b> Kamerabilder und eigene Fotos werden nur auf deinem Gerät ausgewertet, nicht hochgeladen und bleiben auf deinem Gerät. Nur der erkannte Name bzw. die Nummer wird für die Suche verwendet.</p>
  </div>
 </section>
 </main>
