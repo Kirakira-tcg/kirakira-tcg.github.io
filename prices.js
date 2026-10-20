@@ -49,7 +49,7 @@ const pad3=n=>String(n).replace(/^0+/,'').padStart(3,'0');
 
 async function rate(cur){cur=(cur||'EUR').toUpperCase();if(cur==='EUR')return{rate:1,fallback:false};
  const k='fx:'+cur;const c=cget(k,FX_TTL);if(c)return c;
- for(const u of [`https://api.frankfurter.dev/v1/latest?base=${cur}&symbols=EUR`,`https://open.er-api.com/v6/latest/${cur}`]){
+ for(const u of [`https://api.frankfurter.dev/v1/latest?base=${cur}&symbols=EUR`]){/* v186 (Nr. 127): kein zweiter Kursdienst mehr – antwortet Frankfurter nicht, gilt FX_FALLBACK */
   try{const j=await (await fetch(u)).json();const r=j?.rates?.EUR;if(r>0){const v={rate:r,fallback:false,date:j.date||j.time_last_update_utc||null};cset(k,v);return v}}catch(e){}}
  return{rate:FX_FALLBACK[cur]??null,fallback:true};}
 async function toEUR(amount,cur){if(amount==null)return null;const r=await rate(cur);return r.rate==null?null:{eur:+(amount*r.rate).toFixed(2),rate:r.rate,fallback:r.fallback,umgerechnet:cur.toUpperCase()!=='EUR'}}
