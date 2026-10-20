@@ -2429,3 +2429,67 @@ setTimeout(()=>{jpCmVerifyAll()},2500);
   if(it&&it.cmUnsure&&it.price==null){f.querySelectorAll('.jpnone2 b').forEach(b=>b.textContent='Kein verlässlicher Cardmarket-Preis');f.querySelectorAll('.pcmp span.muted.small').forEach(x=>{if(x.textContent.trim()==='JP-Preis: keine Daten')x.textContent='Kein verlässlicher Cardmarket-Preis'})/* v186 (Nr. 113): auch die Spalte „JP-Markt“ */;const big=f.querySelector('.detail>.big');if(big&&!f.querySelector('.jpnone2')&&!f.querySelector('.cmuns'))big.insertAdjacentHTML('afterend','<p class="small cmuns" style="margin:.2rem 0"><b>Kein verlässlicher Cardmarket-Preis</b> <span class="muted">· nicht im Portfolio-Wert eingerechnet</span></p>')}}catch(e){}};
  fix();setTimeout(fix,0);setTimeout(fix,1600);setTimeout(fix,4100);
  if(it&&jpCmCand(it)&&jpCmHas(it))jpCmVerify(it).then(ch=>{if(ch){try{save();render();if($('#dlg').open)detail(o)}catch(e){}}});return r}}
+
+/* v187 (Nr. 143): Sammlung übernehmen beim Umzug auf die neue Adresse. Die alte Seite schickt die Sicherung (gleiches Format wie „Export“) im #-Teil: #umzug=1d.<base64url deflate-raw> bzw. 1j.<base64url JSON>.
+   Der #-Teil geht nie an einen Server, kein fremder Dienst. index.html liest ihn als Allererstes und löscht ihn sofort per history.replaceState (window.__kaUmzug). Streng geprüft (nur bekannte Schlüssel, JSON-Typen, max. 5 MB), nie eval. Vorhandene Sammlung wird zusammengeführt, nichts doppelt. */
+{const MAXH=2e6,MAXJ=5*1024*1024,DONEK='kaUmzugDone';
+ let raw=window.__kaUmzug;window.__kaUmzug=null;
+ if(raw==null){try{if(/^#umzug=/.test(location.hash)){raw=location.hash.slice(7);try{history.replaceState(history.state,'',location.pathname+location.search)}catch(e){location.replace('#')}}}catch(e){}}
+ let bip=null;addEventListener('beforeinstallprompt',e=>{e.preventDefault();bip=e;const b=document.querySelector('#kaMove .kminst');if(b)b.hidden=false});
+ const ios=/iphone|ipad|ipod/i.test(navigator.userAgent)||(/Macintosh/.test(navigator.userAgent)&&navigator.maxTouchPoints>1);
+ const inst=()=>matchMedia('(display-mode: standalone)').matches||navigator.standalone===true;
+ const n0=n=>n===1?'1 Karte':n.toLocaleString('de-DE')+' Karten';
+ /* --- Lesen & Prüfen --- */
+ const b64=s=>{const b=atob(s.replace(/-/g,'+').replace(/_/g,'/')+'==='.slice((s.length+3)%4));const u=new Uint8Array(b.length);for(let i=0;i<b.length;i++)u[i]=b.charCodeAt(i);return u};
+ async function decode(r){if(typeof r!=='string'||r.length>MAXH)throw new Error('big');const m=/^1([dj])\.([A-Za-z0-9_-]+)$/.exec(r);if(!m)throw new Error('bad');let u=b64(m[2]);
+  if(m[1]==='d'){if(!window.DecompressionStream)throw new Error('nods');const rd=new Blob([u]).stream().pipeThrough(new DecompressionStream('deflate-raw')).getReader();const parts=[];let n=0;
+   for(;;){const {done,value}=await rd.read();if(done)break;n+=value.length;if(n>MAXJ){try{rd.cancel()}catch(e){}throw new Error('big')}parts.push(value)}u=new Uint8Array(n);let o=0;for(const p of parts){u.set(p,o);o+=p.length}}
+  if(u.length>MAXJ)throw new Error('big');return JSON.parse(new TextDecoder('utf-8',{fatal:true}).decode(u))}
+ const BADK=new Set(['__proto__','constructor','prototype']),URLK=/^(img|url|href|link)$/i;
+ function cl(v,k,d){if(d>8)throw new Error('deep');if(v===null||typeof v==='boolean')return v;if(typeof v==='number')return isFinite(v)?v:null;
+  if(typeof v==='string'){let s=v.length>4000?v.slice(0,4000):v;s=s.replace(/[<>]/g,'');if(/^\s*(javascript|data|vbscript|blob|file):/i.test(s))return'';if(URLK.test(k||'')&&s&&!/^https:\/\//i.test(s))return'';return s}
+  if(Array.isArray(v)){if(v.length>50000)throw new Error('big');return v.map(x=>cl(x,k,d+1)).filter(x=>x!==undefined)}
+  if(typeof v==='object'){const o={};let c=0;for(const kk of Object.keys(v)){if(BADK.has(kk))continue;if(++c>300)break;const x=cl(v[kk],kk,d+1);if(x!==undefined)o[kk]=x}return o}return undefined}
+ const isO=x=>x&&typeof x==='object'&&!Array.isArray(x);
+ function item(x){if(!isO(x))return null;x=cl(x,'',1);if(typeof x.name!=='string'||!x.name.trim())return null;if(typeof x.uid!=='string'||!x.uid)x.uid=uid();x.qty=Math.max(1,Math.min(9999,Math.round(+x.qty||1)));
+  for(const f of ['price','buy','target','ownPrice'])if(f in x&&x[f]!==null&&typeof x[f]!=='number')x[f]=isFinite(+x[f])&&x[f]!==''?+x[f]:null;
+  x.binders=Array.isArray(x.binders)?[...new Set(x.binders.filter(b=>typeof b==='string'&&b))]:[];if(x.ph!=null&&!Array.isArray(x.ph))delete x.ph;if(Array.isArray(x.ph))x.ph=x.ph.filter(p=>isO(p)&&typeof p.d==='string'&&typeof p.p==='number').slice(-400);
+  for(const f of ['set','number','lang','cond','note','img','tdxId','apiId','setId','type'])if(f in x&&x[f]!=null&&typeof x[f]!=='string')x[f]=String(x[f]);if(x.tdx!=null&&!isO(x.tdx))delete x.tdx;return x}
+ function valid(d){if(!isO(d)||!Array.isArray(d.collection))throw new Error('bad');const o={collection:[],wishlist:[],snapshots:[],binders:[],settings:{cur:'EUR',tf:30},trade:{give:[],get:[]}};
+  o.collection=d.collection.map(item).filter(Boolean);if(Array.isArray(d.wishlist))o.wishlist=d.wishlist.map(item).filter(Boolean);
+  if(Array.isArray(d.snapshots))o.snapshots=d.snapshots.filter(s=>isO(s)&&typeof s.d==='string'&&/^\d{4}-\d{2}-\d{2}$/.test(s.d)&&typeof s.v==='number').map(s=>cl(s,'',2));
+  if(Array.isArray(d.binders))o.binders=d.binders.filter(b=>isO(b)&&typeof b.id==='string'&&b.id&&typeof b.name==='string').map(b=>cl(b,'',2));
+  if(isO(d.settings)){const s=cl(d.settings,'',2);for(const k in s)if(s[k]!==null&&typeof s[k]==='object')delete s[k];if(s.cur!=='USD')s.cur='EUR';if(typeof s.tf!=='number')s.tf=30;o.settings=s}
+  if(isO(d.trade)){const t=cl(d.trade,'',2);o.trade={give:Array.isArray(t.give)?t.give.filter(isO):[],get:Array.isArray(t.get)?t.get.filter(isO):[]}}
+  if(typeof d.pAt==='number'&&isFinite(d.pAt))o.pAt=d.pAt;const ui=isO(d._ui)?{big:d._ui.big===true,hc:d._ui.hc===true}:null;
+  if(!o.collection.length&&!o.wishlist.length)throw new Error('empty');return {d:o,ui}}
+ /* --- Zusammenführen (nichts doppelt) --- */
+ const cid=x=>x.tdxId||x.apiId||((x.name||'')+'|'+(x.set||'')+'|'+(x.number||''));
+ const sig=x=>JSON.stringify([cid(x),x.lang||'',x.cond||'',x.grade||x.graded||'',x.type||'',x.qty||1,+x.buy||0,x.note||'',x.added||'']);
+ const wsig=x=>cid(x)+'|'+(x.lang||'');
+ function merge(cur,inc){if(!(cur.collection||[]).length&&!(cur.wishlist||[]).length)return {S:inc,added:inc.collection.length,wl:inc.wishlist.length,fresh:true};
+  const out=JSON.parse(JSON.stringify(cur));out.binders??=[];out.wishlist??=[];out.snapshots??=[];const bm={};
+  for(const b of inc.binders){const same=out.binders.find(x=>x.id===b.id)||out.binders.find(x=>String(x.name).trim().toLowerCase()===String(b.name).trim().toLowerCase());if(same)bm[b.id]=same.id;else{out.binders.push(b);bm[b.id]=b.id}}
+  const mapB=a=>[...new Set((a||[]).map(id=>bm[id]).filter(Boolean))];const U=new Map(),G=new Map();for(const x of out.collection){U.set(x.uid,x);G.set(sig(x),x)}let added=0;
+  for(const x of inc.collection){const hit=U.get(x.uid)||G.get(sig(x));if(hit){hit.binders=[...new Set([...(hit.binders||[]),...mapB(x.binders)])];continue}x.binders=mapB(x.binders);out.collection.push(x);U.set(x.uid,x);G.set(sig(x),x);added++}
+  const WU=new Set(out.wishlist.map(x=>x.uid)),WS=new Set(out.wishlist.map(wsig));let wl=0;for(const x of inc.wishlist){if(WU.has(x.uid)||WS.has(wsig(x)))continue;out.wishlist.push(x);WU.add(x.uid);WS.add(wsig(x));wl++}
+  const SD=new Set(out.snapshots.map(s=>s.d));for(const s of inc.snapshots)if(!SD.has(s.d)){out.snapshots.push(s);SD.add(s.d)}out.snapshots.sort((a,b)=>a.d<b.d?-1:a.d>b.d?1:0);
+  if(!(out.trade&&((out.trade.give||[]).length||(out.trade.get||[]).length)))out.trade=inc.trade;if(inc.pAt&&!(out.pAt>=inc.pAt))out.pAt=inc.pAt;return {S:out,added,wl,fresh:false}}
+ /* --- Oberfläche (Bottom-Sheet, große Knöpfe) --- */
+ function sheet(html){document.getElementById('kaMove')?.remove();document.getElementById('kaInst')?.remove();const d=document.createElement('div');d.id='kaMove';d.setAttribute('role','dialog');d.setAttribute('aria-modal','true');d.setAttribute('aria-labelledby','kaMoveT');d.innerHTML=`<div class="kmbox">${html}</div>`;document.body.append(d);setTimeout(()=>{try{d.querySelector('.kmok')?.focus({preventScroll:true})}catch(e){}},60);return d}
+ const fail=()=>{const d=sheet(`<div class="kmico" aria-hidden="true">📄</div><p id="kaMoveT" class="kmt"><b>Bitte Sicherung als Datei nutzen</b></p><p>Der direkte Umzug hat nicht geklappt. Lade an der alten Adresse die <b>Sicherung als Datei</b> herunter und wähle sie hier aus.</p><button type="button" class="kmok">📂 Sicherung wählen</button><button type="button" class="kmlater">Schließen</button>`);
+  d.querySelector('.kmok').onclick=()=>{d.remove();const f=$('#importFile');if(f)f.click()};d.querySelector('.kmlater').onclick=()=>d.remove()};
+ function done(n,wl){try{localStorage.setItem('kaInstHint','1')}catch(e){}const how=ios?'Unten auf <b>Teilen ⬆️</b> tippen, dann <b>„Zum Home-Bildschirm“</b>.':'Im Browser-Menü <b>⋮</b> auf <b>„App installieren“</b> oder <b>„Zum Startbildschirm hinzufügen“</b> tippen.';
+  const d=sheet(`<div class="kmico" aria-hidden="true">🎉</div><p id="kaMoveT" class="kmt"><b>${n>0?'Fertig! '+n0(n)+' übernommen':'Fertig! Alles war schon da'}</b></p>${n>0||wl>0?(wl>0?`<p>Dazu ${wl} auf der Wunschliste.</p>`:''):'<p>Nichts wurde doppelt übernommen.</p>'}${inst()?'':`<p class="kmhow" hidden>${how}${ios?'<br><small>Danach die App vom Home-Bildschirm öffnen. Ist sie leer, an der alten Adresse „Sicherung als Datei“ nutzen.</small>':''}</p><button type="button" class="kmok kminst">📲 Als App installieren</button>`}<button type="button" class="${inst()?'kmok':'kmlater'}">Los geht’s</button>`);
+  const ib=d.querySelector('.kminst');if(ib)ib.onclick=async()=>{if(!ios&&bip){const p=bip;bip=null;try{p.prompt();await p.userChoice}catch(e){}d.remove();return}d.querySelector('.kmhow').hidden=false;ib.hidden=true};
+  d.querySelector('.kmlater,.kmok:not(.kminst)').onclick=()=>d.remove()}
+ function ask(v){const inc=v.d,cur=S,has=(cur.collection||[]).length,nb=inc.binders.length,nw=inc.wishlist.length;
+  const d=sheet(`<div class="kmico" aria-hidden="true">📦✨</div><p id="kaMoveT" class="kmt"><b>Deine Sammlung von der alten Adresse übernehmen?</b></p><p class="kmcnt"><b>${n0(inc.collection.length)}</b>${nb?` · ${nb} Binder`:''}${nw?` · ${nw} auf der Wunschliste`:''}</p>${has?`<p class="kmsm">Hier sind schon ${n0(has)}. Wir legen alles zusammen, nichts wird doppelt.</p>`:''}<button type="button" class="kmok">Übernehmen</button><button type="button" class="kmlater">Nicht jetzt</button>`);
+  d.querySelector('.kmlater').onclick=()=>d.remove();
+  d.querySelector('.kmok').onclick=()=>{try{const r=merge(cur,inc);localStorage.setItem(K,JSON.stringify(r.S));if(v.ui){let u={};try{u=JSON.parse(localStorage.getItem('kartenapp_ui')||'{}')||{}}catch(e){}if(r.fresh||!Object.keys(u).length)localStorage.setItem('kartenapp_ui',JSON.stringify(v.ui))}
+   try{sessionStorage.setItem(DONEK,JSON.stringify([r.added,r.wl]))}catch(e){}location.reload()}catch(e){console.warn('Umzug:',e&&e.message);fail()}}}
+ try{const dn=sessionStorage.getItem(DONEK);if(dn){sessionStorage.removeItem(DONEK);const [a,w]=JSON.parse(dn);setTimeout(()=>done(+a||0,+w||0),300)}}catch(e){}
+ const go=r=>decode(r).then(valid).then(ask,e=>{console.warn('Umzug:',e&&e.message);fail()});
+ if(raw!=null){go(raw);raw=null}
+ /* App schon offen und nur der #-Teil ändert sich: ebenso sofort lesen und löschen */
+ addEventListener('hashchange',()=>{try{if(!/^#umzug=/.test(location.hash))return;const r=location.hash.slice(7);try{history.replaceState(history.state,'',location.pathname+location.search)}catch(e){location.replace('#')}go(r)}catch(e){}})}

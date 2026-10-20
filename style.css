@@ -961,3 +961,10 @@ details.kaAdv>summary{list-style:none}details.kaAdv>summary::-webkit-details-mar
 #scanConfirm .scacts{display:flex;flex-wrap:wrap;gap:6px;align-items:center}
 #scanConfirm .scacts .scadd{flex:1 1 100%;margin:0}
 #scanConfirm.scstay .scfix{font-size:.9em}
+/* v187 (Nr. 143): Umzug – Sammlung übernehmen (Bottom-Sheet, Daumenbereich, große Knöpfe) */
+#kaMove{position:fixed;inset:0;z-index:95;display:flex;align-items:flex-end;justify-content:center;padding:0 10px calc(env(safe-area-inset-bottom,0px) + 10px);background:rgba(8,5,25,.55)}
+#kaMove .kmbox{box-sizing:border-box;width:100%;max-width:480px;max-height:calc(100% - 20px);overflow:auto;display:flex;flex-direction:column;gap:10px;padding:20px 16px 14px;border-radius:22px;background:rgba(20,14,50,.99);border:2px solid rgba(255,216,77,.6);color:#fff;box-shadow:0 -6px 30px rgba(0,0,0,.55);text-align:center}
+#kaMove .kmico{font-size:38px;line-height:1}#kaMove p{margin:0;font-size:17px;line-height:1.4;overflow-wrap:anywhere}#kaMove .kmt{font-size:20px}#kaMove .kmcnt{font-size:18px;color:#ffe9a3}#kaMove .kmsm{font-size:15px;color:#d6d0f0}
+#kaMove .kmhow{color:#ffe9a3;background:rgba(255,255,255,.07);border-radius:12px;padding:10px}#kaMove small{font-size:14px;color:#d6d0f0}
+#kaMove button{width:100%;min-height:56px;border-radius:16px;font-size:19px;font-weight:800;cursor:pointer;touch-action:manipulation}#kaMove .kmok{background:var(--ac2,#ffd84d);color:#2a1766;border:0}#kaMove .kmlater{min-height:50px;background:transparent;color:#d6d0f0;border:1px solid rgba(214,208,240,.4);font-weight:700;font-size:17px}
+#kaMove [hidden]{display:none!important}
