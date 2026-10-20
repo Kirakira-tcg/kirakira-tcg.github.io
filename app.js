@@ -2039,7 +2039,8 @@ const isJpLang=l=>/^(JP|JA)$/i.test(String(l||''));
 const isJpId=id=>{id=String(id||'');if(id.startsWith('jp:'))return true;const s=id.replace(/-[^-]*$/,'');return /[A-Z]/.test(s)&&!/^(P-A|A\d|B\d)/.test(s)};
 function jpGuard(it){if(!it||it.type==='sealed'||!isJpLang(it.lang))return false;let ch=false;if(it.lang!=='JP'){it.lang='JP';ch=true}
  if(it.ownPrice==null&&!it.estimate){const t=it.tdx||null,tid=t&&t.id,ok=it.price==null||(tid&&isJpId(tid)&&/TCGdex|^Cardmarket-Preisdatei/.test(t.src||'')&&!/pokemontcg/i.test(t.src||''));/* v165: Preise aus der Cardmarket-Preisdatei (über die JP-idProduct von TCGdex) sind JP-Preise */
-  if(!ok){it.price=null;it.noPrice=true;it.ph=[];it.tdx={label:'JP-Preis: keine Daten',id:tid&&isJpId(tid)?tid:(isJpId(it.tdxId)?it.tdxId:'')};ch=true}
+  if(!ok){const cmw=!!t&&(/Cardmarket/i.test(t.src||'')||/[?&]idProduct=\d+/.test(t.url||''))/* v186 (Nr. 113, nur Text): verworfener Cardmarket-Preis/-Link (nicht über TCGdex-JA bestätigt) -> „Kein verlässlicher Cardmarket-Preis“ statt „JP-Preis: keine Daten“ (dieser Schritt läuft vor der Nr.-113-Prüfung); Preis-Logik unverändert */;
+   it.price=null;it.noPrice=true;it.ph=[];it.tdx={label:cmw?'Kein verlässlicher Cardmarket-Preis':'JP-Preis: keine Daten',id:tid&&isJpId(tid)?tid:(isJpId(it.tdxId)?it.tdxId:'')};if(cmw){it.tdx.unsure=1;it.cmUnsure=true}ch=true}
   if(it.cm){delete it.cm;ch=true}if(it.apiPrice!=null){delete it.apiPrice;ch=true}}
  for(const k of ['img','image'])if(typeof it[k]==='string'&&it[k]&&!/assets\.tcgdex\.net\/ja\//.test(it[k])){it[k]='';ch=true}
  if(it.imgEn){delete it.imgEn;ch=true}
@@ -2411,6 +2412,8 @@ function jpCmSync(it){if(!jpCmCand(it))return false;if(!jpCmHas(it)){if(it.cmUns
  if(!tid||tid.startsWith('jp:'))return jpCmStrip(it,'jpcards.json hat keine Preise');if(JPONLY.has(set))return jpCmStrip(it,'Set '+set+' nicht bei TCGdex');
  if(pid&&(it.cmRej||[]).includes(pid))return jpCmStrip(it,'idProduct schon verworfen');if(it.cmUnsure){delete it.cmUnsure;return true}return false}
 {const JG=jpGuard;jpGuard=function(it){let ch=JG(it);try{if(jpCmSync(it))ch=true}catch(e){}return ch}}
+/* v186 (Nr. 113, nur Text): Kachel in Sammlung/Wunschliste – unsichere JP-Karte zeigt „Kein verlässlicher Cardmarket-Preis“ statt „JP-Preis: keine Daten“ */
+{const T13=tile;tile=function(o){const el=T13.apply(this,arguments);try{if(o&&o.price==null&&o.id){const id=String(o.id),u=[...(S.collection||[]),...(S.wishlist||[])].some(x=>x&&x.cmUnsure&&x.price==null&&isJpLang(x.lang)&&(x.tdxId===id||x.apiId===id||(x.tdx&&x.tdx.id)===id));if(u){const b=el.querySelector('.p b.jpnone');if(b){b.textContent='Kein verlässlicher Cardmarket-Preis';b.style.whiteSpace='normal';b.style.flex='1 1 0';b.style.minWidth='0';b.style.lineHeight='1.25'/* längerer Text bricht um statt abgeschnitten */}}}}catch(e){}return el}}
 const JPV=new Set();
 async function jpCmVerify(it){if(!jpCmCand(it)||!jpCmHas(it)||!window.Prices)return false;const tid=jpTid(it),k=tid+'|'+(it.tdx&&it.tdx.url||'');if(JPV.has(k))return false;JPV.add(k);
  let r=null;try{r=await Prices.byId(tid,'ja')}catch(e){return false}if(!r)return false/* Netz-/404-Fehler: nichts ändern, nächster Start prüft erneut */;
@@ -2421,6 +2424,6 @@ setTimeout(()=>{jpCmVerifyAll()},2500);
 /* Kartendetail: unsichere JP-Karte -> klarer Hinweis; Cardmarket-Link, der nur eine Suche ist, heißt auch so */
 {const D13=detail;detail=function(o){const r=D13.apply(this,arguments);const it=o&&o.item;const fix=()=>{try{const f=$('#dlgForm');if(!f||!f.querySelector('.detail'))return;
   f.querySelectorAll('.dphcm a, .jpcm a').forEach(a=>{if(/\/Products\/Search\?/.test(a.href))a.textContent='Bei Cardmarket suchen ↗'});
-  if(it&&it.cmUnsure&&it.price==null){f.querySelectorAll('.jpnone2 b').forEach(b=>b.textContent='Kein verlässlicher Cardmarket-Preis');const big=f.querySelector('.detail>.big');if(big&&!f.querySelector('.jpnone2')&&!f.querySelector('.cmuns'))big.insertAdjacentHTML('afterend','<p class="small cmuns" style="margin:.2rem 0"><b>Kein verlässlicher Cardmarket-Preis</b> <span class="muted">· nicht im Portfolio-Wert eingerechnet</span></p>')}}catch(e){}};
+  if(it&&it.cmUnsure&&it.price==null){f.querySelectorAll('.jpnone2 b').forEach(b=>b.textContent='Kein verlässlicher Cardmarket-Preis');f.querySelectorAll('.pcmp span.muted.small').forEach(x=>{if(x.textContent.trim()==='JP-Preis: keine Daten')x.textContent='Kein verlässlicher Cardmarket-Preis'})/* v186 (Nr. 113): auch die Spalte „JP-Markt“ */;const big=f.querySelector('.detail>.big');if(big&&!f.querySelector('.jpnone2')&&!f.querySelector('.cmuns'))big.insertAdjacentHTML('afterend','<p class="small cmuns" style="margin:.2rem 0"><b>Kein verlässlicher Cardmarket-Preis</b> <span class="muted">· nicht im Portfolio-Wert eingerechnet</span></p>')}}catch(e){}};
  fix();setTimeout(fix,0);setTimeout(fix,1600);setTimeout(fix,4100);
  if(it&&jpCmCand(it)&&jpCmHas(it))jpCmVerify(it).then(ch=>{if(ch){try{save();render();if($('#dlg').open)detail(o)}catch(e){}}});return r}}
