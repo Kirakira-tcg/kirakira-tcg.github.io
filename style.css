@@ -968,3 +968,6 @@ details.kaAdv>summary{list-style:none}details.kaAdv>summary::-webkit-details-mar
 #kaMove .kmhow{color:#ffe9a3;background:rgba(255,255,255,.07);border-radius:12px;padding:10px}#kaMove small{font-size:14px;color:#d6d0f0}
 #kaMove button{width:100%;min-height:56px;border-radius:16px;font-size:19px;font-weight:800;cursor:pointer;touch-action:manipulation}#kaMove .kmok{background:var(--ac2,#ffd84d);color:#2a1766;border:0}#kaMove .kmlater{min-height:50px;background:transparent;color:#d6d0f0;border:1px solid rgba(214,208,240,.4);font-weight:700;font-size:17px}
 #kaMove [hidden]{display:none!important}
+/* v187 (Nr. 148): Datei-Import – Ersetzen nur als zweite, deutlich rote Wahl */
+#kaMove .kmdanger{min-height:52px;background:transparent;color:#ff9aa4;border:2px solid rgba(255,93,108,.75);font-size:17px}#kaMove .kmdanger.kmsolid{background:#d92d3a;color:#fff;border:0;min-height:56px}
+#kaMove .kmwarn{background:rgba(255,93,108,.14);border:1px solid rgba(255,93,108,.5);border-radius:12px;padding:10px}
