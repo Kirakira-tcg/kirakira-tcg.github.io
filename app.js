@@ -52,17 +52,22 @@ const NAVDOC=Date.now().toString(36)+Math.random().toString(36).slice(2,6);if(na
    closeFn=null: Ebene wird entfernt und das popstate geht an die alten Handler weiter (Set -> Setliste wie seit v118).
    Unterste Ebene = Portfolio: 1. Zurück zeigt „Nochmal zurück zum Beenden“ (2 s), 2. Zurück verlässt die App.
    Ersetzt das eigene pushState/back von Kartendetail (Nr. 48) – eine Quelle, kein Doppel-Push, kein Neuladen. Alle <dialog>.showModal() werden automatisch Ebenen. */
-window.kaBack=(()=>{const L=[];let ign=0,pend=[],toastT=0,leaving=false,inPop=false;
+window.kaBack=(()=>{const L=[];let ign=0,debt=0,wd=0,pend=[],toastT=0,leaving=false,inPop=false;
+ /* Nr. 150: history.go(-n) löst genau EIN popstate aus (nicht n), und Safari verwirft ein zweites go(), solange das erste läuft.
+    Darum immer nur EIN stilles go() gleichzeitig (ign=0/1); weitere Schließungen sammeln sich in debt und gehen danach in einem Schritt zurück.
+    Vorher blieb ign nach go(-2) (Tab-Wechsel bei offenem Set) auf 1 hängen -> neue Ebenen landeten nie im Verlauf -> „Speichern“ ging aus der App. */
+ const flush=()=>{clearTimeout(wd);if(debt>0){const n=debt;debt=0;ign=1;wd=setTimeout(()=>{if(ign){ign=0;flush()}},3000);/* Wächter: kein popstate (z. B. Verlaufsanfang) -> nicht hängen bleiben */try{history.go(-n)}catch(e){ign=0}return}
+  ign=0;if(pend.length){const p=pend.splice(0);p.forEach(s=>{try{history.pushState(s,'')}catch(_){}})}};
  const st=(id,x)=>({...(x||{}),ka:id,kad:NAVDOC,kn:L.length});
- const push=s=>{if(ign>0)pend.push(s);else try{history.pushState(s,'')}catch(e){}};
+ const push=s=>{if(ign>0||debt>0)pend.push(s);else try{history.pushState(s,'')}catch(e){}};
  const guard=()=>push({ka:'home',kad:NAVDOC});
  /* Start: alter Eintrag nach Neuladen (andere NAVDOC) -> still ersetzen; dann Wurzel + Wächter */
  try{const s=history.state||{};if(s.ka||s.lv==='card'){history.replaceState({ka:'home',kad:NAVDOC},'')}else{history.replaceState({...s,ka:'root',kad:NAVDOC},'');history.pushState({ka:'home',kad:NAVDOC},'')}}catch(e){}
  const toast=()=>{let t=document.getElementById('kaBackToast');if(!t){t=document.createElement('div');t.id='kaBackToast';t.setAttribute('role','status');document.body.append(t)}t.textContent='Nochmal zurück zum Beenden';t.classList.add('on');clearTimeout(toastT);toastT=setTimeout(()=>{t.classList.remove('on');leaving=false;/* noch auf der Wurzel -> Wächter wieder setzen */if(!L.length&&(history.state||{}).ka!=='home')guard()},2000)};
  const api={open(id,fn,x){if(!id)return;const i=L.findIndex(l=>l.id===id);if(i>=0){L[i].fn=fn;return}L.push({id,fn});push(st(id,x))},
-  close(id){const i=L.findIndex(l=>l.id===id);if(i<0)return;const n=L.length-i;L.splice(i);ign+=n;history.go(-n)},
+  close(id){const i=L.findIndex(l=>l.id===id);if(i<0)return;let n=L.length-i;L.splice(i);/* noch nicht im Verlauf (wartet in pend) -> nur aus pend nehmen */while(n>0&&pend.length){pend.pop();n--}debt+=n;if(!ign)flush()},
   top(){return L.length?L[L.length-1].id:null},has(id){return L.some(l=>l.id===id)},get inPop(){return inPop},_L:L};
- addEventListener('popstate',e=>{if(ign>0){ign--;e.stopImmediatePropagation();if(!ign&&pend.length){const p=pend.splice(0);p.forEach(s=>{try{history.pushState(s,'')}catch(_){}})}return}
+ addEventListener('popstate',e=>{if(ign>0){e.stopImmediatePropagation();flush();return}
   const s=e.state||{};
   if(L.length){/* Ziel-Eintrag liegt unter der obersten Ebene -> oberste Ebene schließen */const l=L.pop();if(l.fn){e.stopImmediatePropagation();inPop=true;try{l.fn()}catch(err){console.warn('kaBack',l.id,err)}finally{inPop=false}}return}
   if(s.ka==='home'&&s.kad===NAVDOC)return;
@@ -305,7 +310,7 @@ function enTile(c){const p=cmPrice(c);const ci=cmInfo(c);const ch=ci&&ci.avg7&&p
  const el=tile({type:c.types&&c.types[0],img:c.images.small,name:c.name,sub:`${c.set.name} · ${nrLbl(c.number,c.set.printedTotal||setTotOf(c))}`,price:p,chg:ch,badge:owned(c.id)?'✓ BESITZ':c.rarity&&/Special|Hyper|Secret|Illustration/i.test(c.rarity)?'SAR/SIR':''});
  cmSync(c).then(ok=>{if(!ok)return;const pb=el.querySelector('.p b');if(pb)pb.textContent=money(cmPrice(c))});el.onclick=()=>detail({api:c});const a=document.createElement('div');a.className='acts';a.innerHTML='<button>+ Sammlung</button><button title="In Binder">🗂️</button><button>☆</button>';
  a.children[0].onclick=e=>{e.stopPropagation();addDialog(c,'coll')};a.children[1].onclick=e=>{e.stopPropagation();window._bndFocus=1;addDialog(c,'coll')};a.children[2].onclick=e=>{e.stopPropagation();addDialog(c,'wish')};el.append(a);return el}
-const PIO=('IntersectionObserver' in window)?new IntersectionObserver(es=>es.forEach(e=>{if(e.isIntersecting){PIO.unobserve(e.target);e.target._ld&&e.target._ld()}}),{rootMargin:'0px'}):null;
+const PIO=('IntersectionObserver' in window)?new IntersectionObserver(es=>es.forEach(e=>{if(e.isIntersecting){PIO.unobserve(e.target);e.target._ld&&e.target._ld()}}),{rootMargin:'800px 0px'}/* v187 (Nr. 152): Suchpreise ~2 Bildschirme vorladen, pool() bleibt bei 4 gleichzeitig */):null;
 // v113: TCGdex hat für viele EN-Karten (z.B. Trainer Gallery TG) kein Bild -> gleiches Bild bei images.pokemontcg.io (erlaubter Host)
 function ptcgImg(c){if(!c||c.lang==='ja'||String(c.id||'').startsWith('jp:'))return '';const e=imgMapGet(String(c.id||''),'en');return e?e.url:''/* v168: nur imgmap (wörtliche API-Adresse), nichts gebaut */}
 // v114: „In Binder“ direkt in der Trefferliste
@@ -463,7 +468,7 @@ function addDialog(c,mode,sealed){const manual=!c,scPh=window.pendingScan&&c?Own
  f.innerHTML=`<h3>${mode==='wish'?'Zur Wunschliste':sealed?'Display/Box hinzufügen':'Zur Sammlung'}</h3>
  ${manual?`<label>Name<input name="name" required placeholder="${sealed?'z.B. 30 Jahre Booster Bundle':''}"></label><label>Set<input type="search" id="setFlt" placeholder="Set filtern…" autocomplete="off" style="margin-bottom:.3rem"><select name="setSel" id="setSel"><option value="">Lade Sets…</option></select></label><label id="setOtherL" hidden>Anderes Set (Name oder Code)<input name="set"></label>${sealed?'':'<label>Nummer<input name="number"></label>'}<label>Bild-URL (optional)<input name="img"></label>`:`<p><b>${esc(c.name)}</b> – ${esc(c.set.name)} ${c.number}<br>${tx?esc(tx.best?tx.label:'Noch kein Preis – wird später nachgeladen'):'Cardmarket-Trend: '+money(p)}<br><span class="muted small" id="tdxLbl"></span></p>`}
  <label>Sprache<select name="lang">${LANGS.map(l=>`<option${l===dLang?' selected':''}>${l}</option>`).join('')}</select></label>${window.scanLang&&!(c&&c._tdx)?'<p class="muted small">Sprache per Scan erkannt: '+window.scanLang+'</p>':''}
- ${mode==='wish'?`<label>Zielpreis (€)<input name="target" type="number" step="0.01" required></label>`:
+ ${mode==='wish'?`<label>Zielpreis (€, optional)<input name="target" type="number" step="0.01" min="0" inputmode="decimal"></label>`:
  `${sealed?'<input type="hidden" name="cond" value="Sealed">':`<label>Zustand<select name="cond"><option>NM</option><option>EX</option><option>GD</option><option>LP</option><option>PL</option><optgroup label="Erweitert: bewertet (Graded)"><option>PSA 10</option><option>PSA 9</option><option>CGC 10</option><option>BGS 9.5</option><option>PSA/Graded</option></optgroup></select></label>`}
  ${sealed?'':'<label class="row" style="gap:.4rem;align-items:center"><input type="checkbox" name="first" style="width:auto"'+(window._first?' checked':'')+'> 1st Edition</label>'}<label>Anzahl<input name="qty" type="number" value="1" min="1"></label><label>Kaufpreis (€, optional)<input name="buy" type="text" inputmode="decimal" autocomplete="off" placeholder="z.B. 4,50 · leer = nicht in Gewinn/Verlust"></label>`}
  <input type="hidden" name="price">
@@ -478,7 +483,7 @@ function addDialog(c,mode,sealed){const manual=!c,scPh=window.pendingScan&&c?Own
  dlg.showModal();dlg.onclose=()=>{if(dlg.returnValue!=='ok')return;const v=Object.fromEntries(new FormData(f));
   const base=manual?{manual:true,setId:v.setSel&&v.setSel!=='__other'?v.setSel:undefined,name:v.name,set:v.set,number:v.number||'',img:v.img}:tx?{manual:true,tdxId:c.id,setId:c.set.id,name:c.name,set:c.set.name,number:c.number,img:c.images.large||c.images.small,types:[],tdx:tx.best?{label:tx.label,id:tx.id,src:tx.best.source,conv:tx.best.umgerechnet,url:tx.best.url,upd:tx.best.updated||null}:{label:'kein Preis',id:c.id}}:{apiId:c.id,name:c.name,set:c.set.name,number:c.number,img:c.images.small,apiPrice:p,cm:cmInfo(c),types:c.types||[]};
   if(sealed)base.type='sealed';let own=v.price?parseFloat(v.price):null;const tp=manual?window.tdxPick:null;window.tdxPick=null;let tpp=null;{const au=f.price&&f.price.dataset.auto;if(au&&own===+au){own=null;tpp=+au;base.tdx={label:f.price.dataset.lbl||'',id:f.price.dataset.aid||''}}}if(tp){base.tdx=tp.tdx;base.tdxId=tp.id;base.setId=tp.setId;if(tp.price!=null&&(own==null||own===tp.price)){own=null;tpp=tp.price}}
-  if(mode==='wish')S.wishlist.push({uid:uid(),...base,lang:v.lang,target:parseFloat(v.target),price:own??tpp??p,ownPrice:own});
+  if(mode==='wish')S.wishlist.push({uid:uid(),...base,lang:v.lang,target:(n=>Number.isFinite(n)&&n>0?n:null)(parseFloat(v.target))/* Nr. 151: Zielpreis optional */,price:own??tpp??p,ownPrice:own});
   else{const it={uid:uid(),...base,lang:v.lang,cond:v.cond,qty:parseInt(v.qty)||1,buy:(n=>Number.isNaN(n)?null:n)(parseEur(v.buy)),price:own??tpp??p,ownPrice:own,added:today()};if(v.first){it.variant='1st';if(window._first&&window._firstPrice!=null&&own==null){it.price=window._firstPrice;it.priceNote='';it.tdx={label:money(window._firstPrice)+' · TCGplayer (TCGdex) · 1st Edition',id:c&&c.id,src:'TCGplayer 1st',url:null}}else it.priceNote='Preis gilt nicht für 1st Edition';}window._first=false;if(it.price==null)it.noPrice=true;{const key=x=>[x.tdxId||x.apiId||'',x.lang,x.cond||'',x.variant||''].join('|'),k=key(it),ex=it.type!=='sealed'&&(it.tdxId||it.apiId)?S.collection.find(x=>key(x)===k):null;if(ex&&f.dataset.dup==='merge'){ex.qty=(ex.qty||1)+it.qty;window._mergedInto=ex;save();snapshot();render();return}}trackPrice(it);S.collection.push(it);setTimeout(()=>showAddedToast(it.uid),50);if(v.first&&!(it.tdx&&/1st/.test(it.tdx.src||'')))firstEd(it);window.FX&&FX.reveal(it)}
   save();snapshot();render();const nw=mode==='wish'?S.wishlist[S.wishlist.length-1]:S.collection[S.collection.length-1];
   if(scPh&&nw&&mode!=='wish'&&phId(nw))OwnPhoto.put(phId(nw),nw.lang,scPh).then(()=>render()).catch(()=>{});if(nw&&tdxNeed(nw))tdxFill(nw).then(ok=>{if(ok){pStamp();trackPrice(nw);save();snapshot();render()}})};
@@ -639,8 +644,8 @@ function render(){{const real=S.collection,es=$('#emptyStart');if(es){es.hidden=
  const s=$('#sort').value;let L=C.filter(x=>filt==='all'||(filt==='sealed')===(x.c.type==='sealed'));
  L.sort(s==='chg'?(a,b)=>(b.ch??-1e9)-(a.ch??-1e9):s==='name'?(a,b)=>a.c.name.localeCompare(b.c.name):s==='new'?(a,b)=>S.collection.indexOf(b.c)-S.collection.indexOf(a.c):(a,b)=>(b.c.price||0)*b.c.qty-(a.c.price||0)*a.c.qty);
  const G=$('#collGrid');const gs=SIG+'|'+filt+'|'+s+'|'+L.length;if(!(G._sig===gs&&G.childElementCount)){G._sig=gs;G.innerHTML='';if(!L.length)G.innerHTML='<p class="muted">Noch nichts hier – über Suche oder Scan hinzufügen.</p>';L.forEach(x=>G.append(mk(x,'collection')))}
- const W=$('#wishGrid');W.innerHTML='';for(const w of S.wishlist){const hit=w.price!=null&&w.price<=w.target;
-  const el=tile({lang:w.lang,id:w.tdxId||w.apiId,type:w.types&&w.types[0],img:w.img,name:w.name,sub:`Ziel ${money(w.target)} · ${w.lang}`,price:w.price,chg:itemChange(w,tf),hit,badge:hit?'✓ ZIEL':''});
+ const W=$('#wishGrid');W.innerHTML='';for(const w of S.wishlist){const hit=w.price!=null&&w.target!=null&&w.price<=w.target;
+  const el=tile({lang:w.lang,id:w.tdxId||w.apiId,type:w.types&&w.types[0],img:w.img,name:w.name,sub:`${w.target!=null?'Ziel '+money(w.target):'ohne Zielpreis'} · ${w.lang}`,price:w.price,chg:itemChange(w,tf),hit,badge:hit?'✓ ZIEL':''});
   if(w.price==null)el.querySelector('.p b').textContent='keine Daten';el.onclick=()=>detail({item:w,list:'wishlist'});wishImg(el,w);W.append(el)}
  renderTrade();drawChart(pts)}
 
